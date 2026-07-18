@@ -76,12 +76,104 @@ PERF_NEEDED_COLS: List[str] = [
 # hardcoded in scoring.py) so future profiles can reuse the same knobs
 # with different weightings, and so you can tune Profile A without
 # touching scoring logic.
+#
+# NOTE: these keys map to scoring.py's per-CONCEPT scores (each already
+# 0-100 and category-relative), not to individual raw metrics anymore.
+# See profiles/profile_a.py::compute_profile_A_score() for the mapping:
+#   performance        -> Performance_Score
+#   risk_adjusted       -> Risk_Adjusted_Score
+#   volatility          -> Volatility_Score      (lower vol/drawdown is better -- inverted in scoring)
+#   tracking            -> Tracking_Score         (lower tracking error is better -- inverted in scoring)
+#   liquidity_size       -> Liquidity_Size_Score
+#   quality_valuation    -> Quality_Valuation_Score
+#   costs               -> Costs_Score            (lower cost is better -- inverted in scoring)
+#   tax_income          -> Tax_Income_Score
 PROFILE_A_WEIGHTS = {
-    "return_3y": 0.30,
-    "return_5y": 0.20,
-    "sharpe_3y": 0.20,
-    "expense_ratio": 0.15,   # lower is better -- inverted in scoring
-    "risk_score": 0.15,      # lower is better -- inverted in scoring
+    "performance": 0.25,
+    "risk_adjusted": 0.20,
+    "volatility": 0.15,
+    "tracking": 0.05,
+    "liquidity_size": 0.05,
+    "quality_valuation": 0.10,
+    "costs": 0.15,
+    "tax_income": 0.05,
+}
+
+# Column-level weights INSIDE each concept function (e.g. how much
+# Total Return 3Y vs 5Y counts within Performance_Score). These are
+# separate from PROFILE_A_WEIGHTS above, which controls how much each
+# whole CONCEPT counts relative to the other concepts.
+#
+# This is the canonical default schema for `thresholds.concept_weights`
+# in the profile input YAML -- while you're still learning what each
+# column means and tuning weights, you can override just one or two
+# leaf values in the YAML (e.g. concept_weights.performance.return_3y)
+# and everything else here still applies via deep_merge_dicts().
+DEFAULT_CONCEPT_WEIGHTS = {
+    "performance": {
+        "return_3y": 0.40,
+        "return_5y": 0.35,
+        "return_1y": 0.10,
+        "rank_3y": 0.15,
+    },
+    "risk_adjusted": {
+        "sharpe_3y": 0.45,
+        "sharpe_1y": 0.10,
+        "upside": 0.25,
+        "downside": 0.20,
+    },
+    "volatility": {
+        "stdev_3y": 0.45,
+        "drawdown_3y": 0.30,
+        "drawdown_5y": 0.25,
+    },
+    "tracking": {
+        "tracking_error_3y": 0.65,
+        "tracking_error_1y": 0.35,
+    },
+    "liquidity_size": {
+        "fund_size": 0.60,
+        "trading_volume": 0.40,
+    },
+    "quality_valuation": {
+        "growth_grade": 0.35,
+        "financial_health": 0.35,
+        "price_fair_value": 0.30,
+    },
+    "costs": {
+        "net_expense_ratio": 0.75,
+        "management_fee": 0.25,
+    },
+    "tax_income": {
+        "tax_cost_ratio": 0.55,
+        "sec_yield": 0.45,
+    },
+}
+
+# Full default `thresholds` schema for the profile input YAML. Any keys
+# the user omits from their YAML fall back to these values via
+# deep_merge_dicts() in input_file.py, and nested dicts (weights,
+# concept_weights) are merged key-by-key rather than replaced wholesale
+# -- so overriding one leaf value never silently drops its siblings.
+DEFAULT_THRESHOLDS = {
+    "require_category": True,
+    "max_expense_ratio": 0.75,
+    "require_fund_size": True,
+    "min_fund_size": None,
+    "require_3y_return": True,
+    "min_3y_return": None,
+
+    # Structural/flag exclusions (see scoring.build_structure_flags).
+    "exclude_leveraged_funds": True,
+    "exclude_interval_funds": True,
+    "exclude_tender_offer_funds": True,
+
+    # Profile-level concept weights (how much each concept counts).
+    "weights": PROFILE_A_WEIGHTS,
+
+    # Column-level weights inside each concept (how much each raw
+    # metric counts within its own concept score).
+    "concept_weights": DEFAULT_CONCEPT_WEIGHTS,
 }
 
 # Grade-letter -> numeric mapping, shared by any profile that scores on

@@ -1,0 +1,145 @@
+Index: morningstar-search/etf_screener/scoring.py
+===================================================================
+diff --git a/morningstar-search/etf_screener/scoring.py b/etf_screener/scoring.py
+rename from morningstar-search/etf_screener/scoring.py
+rename to etf_screener/scoring.py
+--- a/morningstar-search/etf_screener/scoring.py	(revision 62e53cd893d5394781c7bb12a04b3e12950ebcb9)
++++ b/etf_screener/scoring.py	(date 1784173485801)
+@@ -259,14 +259,113 @@
+ 
+ # --- 5. Liquidity & size --------------------------------------------------
+ 
++def score_piecewise(
++    series: pd.Series,
++    floor: float,
++    target: float,
++    ceiling: float,
++    invert: bool = False,
++) -> pd.Series:
++    """
++    Non-normalized (NOT category-relative) piecewise scorer, used for
++    metrics whose meaning is stable across the whole ETF universe
++    (e.g. expense ratio, fund size) rather than dependent on
++    category/sub-industry peers.
++
++    Maps raw values to a fixed 0-100 scale using three business-defined
++    cutoffs instead of percentile rank within category:
++      - At/beyond `floor`  -> 0   (bad end of the range)
++      - At `target`        -> 80 ("good enough" -- most of the credit)
++      - At/beyond `ceiling` -> 100 (no extra benefit past this point)
++    Values between cutoffs are linearly interpolated. If `invert` is
++    False, higher raw values are better (e.g. Fund Size, Trading
++    Volume) so floor < target < ceiling. If `invert` is True, lower
++    raw values are better (e.g. Net Expense Ratio, Management Fee) so
++    floor > target > ceiling.
++
++    Missing/NaN inputs stay NaN in the output (same missing-data
++    convention as `normalize_within_category`).
++    """
++    numeric = pd.to_numeric(series, errors="coerce")
++
++    def _score_one(v: float) -> float:
++        if pd.isna(v):
++            return float("nan")
++        if not invert:
++            if v <= floor:
++                return 0.0
++            if v >= ceiling:
++                return 100.0
++            if v <= target:
++                return 80.0 * (v - floor) / (target - floor)
++            return 80.0 + 20.0 * (v - target) / (ceiling - target)
++        else:
++            if v >= floor:
++                return 0.0
++            if v <= ceiling:
++                return 100.0
++            if v >= target:
++                return 80.0 * (floor - v) / (floor - target)
++            return 80.0 + 20.0 * (target - v) / (target - ceiling)
++
++    return numeric.apply(_score_one).round(2)
++
++
+ def calculate_liquidity_size_score(
+     df: pd.DataFrame,
+     category_col: str = DEFAULT_CATEGORY_COL,
+     weights: Optional[Dict[str, float]] = None,
++    thresholds: Optional[Dict[str, Dict[str, float]]] = None,
+ ) -> pd.Series:
+     """
+-    Fund Size (AUM) and Trading Volume, normalized within category
+-    (higher = better, i.e. more liquid / less closure risk).
++    Fund Size (AUM) and Trading Volume, scored with FIXED thresholds
++    across the whole universe (NOT normalized within category).
++
++    Rationale: fund size and trading volume are driven mainly by fund
++    age, popularity, and provider scale -- not by sector/sub-industry
++    composition -- so a global "liquid enough" bar is more accurate
++    than comparing a fund only to peers that happen to share its
++    Morningstar Category. See docs/column_glossary.md, "Category
++    Dependence of the 8 Scored Concepts", for the full rationale.
++
++    Default thresholds (override via `thresholds` if needed):
++      - Fund Size ($):        floor=$10M, target=$500M, ceiling=$5B
++      - Trading Volume (shares/day): floor=5,000, target=100,000, ceiling=1,000,000
++    """
++    weights = weights or {"fund_size": 0.60, "trading_volume": 0.40}
++    thresholds = thresholds or {
++        "fund_size": {"floor": 10_000_000, "target": 500_000_000, "ceiling": 5_000_000_000},
++        "trading_volume": {"floor": 5_000, "target": 100_000, "ceiling": 1_000_000},
++    }
++
++    out = pd.DataFrame(index=df.index)
++    if "Fund Size" in df.columns:
++        t = thresholds["fund_size"]
++        out["Score_Fund_Size"] = score_piecewise(
++            df["Fund Size"], t["floor"], t["target"], t["ceiling"], invert=False
++        )
++    if "Trading Volume" in df.columns:
++        t = thresholds["trading_volume"]
++        out["Score_Trading_Volume"] = score_piecewise(
++            df["Trading Volume"], t["floor"], t["target"], t["ceiling"], invert=False
++        )
++
++    weight_map = {
++        "Score_Fund_Size": weights.get("fund_size", 0.60),
++        "Score_Trading_Volume": weights.get("trading_volume", 0.40),
++    }
++    return _weighted_average(out, weight_map)
++
++
++def calculate_liquidity_size_score_category_normalized(
++    df: pd.DataFrame,
++    category_col: str = DEFAULT_CATEGORY_COL,
++    weights: Optional[Dict[str, float]] = None,
++) -> pd.Series:
++    """
++    LEGACY VERSION (kept for comparison/rollback only -- not called by
++    any profile). Original category-relative percentile implementation
++    of Liquidity & Size, prior to the non-normalized rewrite above.
+     """
+     weights = weights or {"fund_size": 0.60, "trading_volume": 0.40}
+ 
+Index: morningstar-search/etf_screener/docs/profile_a_design.md
+===================================================================
+diff --git a/morningstar-search/etf_screener/docs/profile_a_design.md b/etf_screener/docs/profile_a_design.md
+rename from morningstar-search/etf_screener/docs/profile_a_design.md
+rename to etf_screener/docs/profile_a_design.md
+--- a/morningstar-search/etf_screener/docs/profile_a_design.md	(revision 62e53cd893d5394781c7bb12a04b3e12950ebcb9)
++++ b/etf_screener/docs/profile_a_design.md	(date 1784172562900)
+@@ -212,11 +212,3 @@
+ | `profiles/profile_a.py` | `apply_profile_A_filters()`, `compute_profile_A_score()` |
+ | `main.py` | Thin orchestrator: load → merge → score → filter → rank → export |
+ | `input_files/input_profile_a.yaml` | Profile A's run configuration |
+-
+-
+----
+-
+-## 11. how to run the fetch yahoo data
+-- python3 utils/fetch_yahoo_sector_data.py input_files/etf-tickers.txt --output-dir /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/results --chunk-size 200
+-- **if interrupted:**
+-- python3 utils/fetch_yahoo_sector_data.py your_ticker_list.txt --output-dir output --chunk-size 200 --resume
+diff --git a/morningstar-search/etf_screener/utils/compare_results.py b/etf_screener/utils/compare_results.py
+rename from morningstar-search/etf_screener/utils/compare_results.py
+rename to etf_screener/utils/compare_results.py

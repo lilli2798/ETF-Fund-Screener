@@ -1,3 +1,24 @@
+"""
+Compare N ETF result files (exported .xlsx outputs from main.py) side
+by side: weights/thresholds used for each run, per-ticker
+selection-flag differences, and a full score/rank matrix.
+
+Updated after the scoring.py refactor:
+  - The old "Norm_*" columns no longer exist -- they were replaced by
+    8 named concept-score columns (Performance Score, Risk Adjusted
+    Score, Volatility Score, Tracking Score, Liquidity Size Score,
+    Quality Valuation Score, Costs Score, Tax Income Score).
+  - Exported column headers are SPACE-separated, not underscore --
+    format_column_names_for_export() in export.py converts internal
+    names like "Profile_A_Score" to "Profile A Score" before writing
+    the .xlsx file. The old version of this script filtered on
+    underscore-style names, which never matched the actual exported
+    headers (a pre-existing bug, independent of the scoring refactor).
+  - Profile A now also produces an overall (cross-category) rank and
+    selected-flag, in addition to the per-category ones -- both are
+    now captured here too.
+"""
+
 import pandas as pd
 import yaml
 import os
@@ -5,7 +26,25 @@ import argparse
 from itertools import combinations
 from typing import Dict, Any, List
 
-NORM_AND_SCORE_PREFIXES = ("Norm_", "Profile_A_Score", "Profile_A_Rank", "Profile_A_Selected_Flag", "Profile A Rank Overall", "Profile A Selected Overall Flag")
+# Exact exported (space-separated) column-name prefixes to pull in for
+# comparison. Matches the output of export.format_column_names_for_export().
+SCORE_AND_RANK_PREFIXES = (
+    # Per-concept scores (0-100, category-relative)
+    "Performance Score",
+    "Risk Adjusted Score",
+    "Volatility Score",
+    "Tracking Score",
+    "Liquidity Size Score",
+    "Quality Valuation Score",
+    "Costs Score",
+    "Tax Income Score",
+    # Profile A composite score, ranks, and selection flags
+    "Profile A Score",
+    "Profile A Rank In Category",
+    "Profile A Selected Flag",
+    "Profile A Rank Overall",
+    "Profile A Selected Overall Flag",
+)
 
 
 def load_recorder(output_dir: str) -> dict:
@@ -16,14 +55,15 @@ def load_recorder(output_dir: str) -> dict:
 
 def build_file_ticker_map(output_dir: str, filename: str, recorder: dict, ticker_col: str = "Ticker") -> Dict[str, Any]:
     df = pd.read_excel(os.path.join(output_dir, filename))
-    relevant_cols = [c for c in df.columns if c.startswith(NORM_AND_SCORE_PREFIXES)]
+    relevant_cols = [c for c in df.columns if c.startswith(SCORE_AND_RANK_PREFIXES)]
     tickers = {}
     for _, row in df.iterrows():
         tickers[row[ticker_col]] = {col: row[col] for col in relevant_cols}
     entry = recorder.get(filename, {})
     return {
-        "thresholds": entry.get("thresholds", {}),
+        "thresholds": entry.get("thresholds", entry),  # recorder stores the full thresholds dict
         "weights": entry.get("weights", {}),
+        "concept_weights": entry.get("concept_weights", {}),
         "tickers": tickers,
     }
 
@@ -39,19 +79,25 @@ def find_flag_differences_pair(comparison_map: Dict[str, Any], file_a: str, file
     all_tickers = sorted(set(tickers_a) | set(tickers_b))
     rows = []
     for ticker in all_tickers:
-        flag_a = tickers_a.get(ticker, {}).get("Profile_A_Selected_Flag")
-        flag_b = tickers_b.get(ticker, {}).get("Profile_A_Selected_Flag")
-        if flag_a != flag_b:
+        flag_a = tickers_a.get(ticker, {}).get("Profile A Selected Flag")
+        flag_b = tickers_b.get(ticker, {}).get("Profile A Selected Flag")
+        overall_flag_a = tickers_a.get(ticker, {}).get("Profile A Selected Overall Flag")
+        overall_flag_b = tickers_b.get(ticker, {}).get("Profile A Selected Overall Flag")
+        if flag_a != flag_b or overall_flag_a != overall_flag_b:
             rows.append({
                 "Ticker": ticker,
                 "file_a": file_a,
                 "file_b": file_b,
-                "Flag_file_a": flag_a,
-                "Flag_file_b": flag_b,
-                "Score_file_a": tickers_a.get(ticker, {}).get("Profile_A_Score"),
-                "Score_file_b": tickers_b.get(ticker, {}).get("Profile_A_Score"),
-                "Rank_file_a": tickers_a.get(ticker, {}).get("Profile_A_Rank"),
-                "Rank_file_b": tickers_b.get(ticker, {}).get("Profile_A_Rank"),
+                "Flag_In_Category_file_a": flag_a,
+                "Flag_In_Category_file_b": flag_b,
+                "Flag_Overall_file_a": overall_flag_a,
+                "Flag_Overall_file_b": overall_flag_b,
+                "Score_file_a": tickers_a.get(ticker, {}).get("Profile A Score"),
+                "Score_file_b": tickers_b.get(ticker, {}).get("Profile A Score"),
+                "Rank_In_Category_file_a": tickers_a.get(ticker, {}).get("Profile A Rank In Category"),
+                "Rank_In_Category_file_b": tickers_b.get(ticker, {}).get("Profile A Rank In Category"),
+                "Rank_Overall_file_a": tickers_a.get(ticker, {}).get("Profile A Rank Overall"),
+                "Rank_Overall_file_b": tickers_b.get(ticker, {}).get("Profile A Rank Overall"),
             })
     return pd.DataFrame(rows)
 
@@ -68,15 +114,20 @@ def find_all_flag_differences(comparison_map: Dict[str, Any], filenames: List[st
 
 
 def build_ticker_matrix(comparison_map: Dict[str, Any], filenames: List[str]) -> pd.DataFrame:
+    """
+    One row per ticker, with every concept score, the composite score,
+    both ranks, and both selection flags -- per file, so you can eyeball
+    how a single ETF's full scoring breakdown shifted between runs
+    (e.g. after tweaking concept_weights.performance.return_3y).
+    """
     all_tickers = sorted(set().union(*[comparison_map[fn]["tickers"].keys() for fn in filenames]))
     rows = []
     for ticker in all_tickers:
         row = {"Ticker": ticker}
         for fn in filenames:
             info = comparison_map[fn]["tickers"].get(ticker, {})
-            row[f"{fn}::Profile_A_Score"] = info.get("Profile_A_Score")
-            row[f"{fn}::Profile_A_Rank"] = info.get("Profile_A_Rank")
-            row[f"{fn}::Profile_A_Selected_Flag"] = info.get("Profile_A_Selected_Flag")
+            for col in SCORE_AND_RANK_PREFIXES:
+                row[f"{fn}::{col}"] = info.get(col)
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -103,10 +154,11 @@ def main():
     for fn in filenames:
         print(f"\n{fn}")
         print("  thresholds:", comparison_map[fn]["thresholds"])
-        print("  weights:", comparison_map[fn]["weights"])
+        print("  weights (profile-level):", comparison_map[fn]["weights"])
+        print("  concept_weights (column-level):", comparison_map[fn]["concept_weights"])
 
     flag_diff_df = find_all_flag_differences(comparison_map, filenames)
-    print("\n=== All pairwise Profile_A_Selected_Flag differences ===")
+    print("\n=== All pairwise Profile A Selected Flag differences (category + overall) ===")
     print(flag_diff_df.to_string(index=False) if not flag_diff_df.empty else "No differences across any pair.")
 
     matrix_df = build_ticker_matrix(comparison_map, filenames)

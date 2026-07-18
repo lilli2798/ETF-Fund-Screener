@@ -5,6 +5,15 @@ Self-registers into scoring.PROFILE_FILTERS / PROFILE_SCORERS under the
 key "A" on import -- main.py just needs `import profiles.profile_a` once
 and this profile becomes available via process_data(profile_name="A").
 
+Updated to consume the new per-concept score columns produced by
+scoring.build_concept_scores() (Performance_Score, Risk_Adjusted_Score,
+Volatility_Score, Tracking_Score, Liquidity_Size_Score,
+Quality_Valuation_Score, Costs_Score, Tax_Income_Score) instead of the
+old flat Norm_* columns. Each of those concept scores is already
+computed WITHIN Morningstar Category, so Profile A just applies a
+second layer of weights across concepts -- it doesn't need to know
+anything about the underlying raw metriåcs.
+
 To add a new profile in the future:
   1. Copy this file to profiles/profile_b.py (or whatever name you like).
   2. Rename the functions and the registered key (e.g. "B").
@@ -29,6 +38,11 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
       - max_expense_ratio (float)
       - require_fund_size (bool)
       - require_3y_return (bool)
+
+    These stay as hard gates on the RAW columns (not the concept
+    scores), per the project decision that funds without a full 3-year
+    history or fund size are excluded entirely, not scored on
+    whatever shorter history they have.
     """
     start_count: int = len(df)
     eligible: pd.DataFrame = df.copy()
@@ -60,47 +74,74 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
         eligible = eligible[eligible["Total Return (3Y)"].notna()]
         print(f"  Profile A filter - has 3Y track record: {before} -> {len(eligible)}")
 
+    # Structural exclusions -- Profile A targets steady, long-term,
+    # low-risk holdings, so leveraged/interval/tender-offer funds are
+    # hard-excluded regardless of how well they score on the 8 weighted
+    # concepts. These flag columns are built unscored by
+    # scoring.build_structure_flags() (part of build_concept_scores()),
+    # so they must already exist on `df` by the time this filter runs.
+    exclude_leveraged_funds = thresholds.get("exclude_leveraged_funds", True)
+    exclude_interval_funds = thresholds.get("exclude_interval_funds", True)
+    exclude_tender_offer_funds = thresholds.get("exclude_tender_offer_funds", True)
+
+    if exclude_leveraged_funds and "Flag_Leveraged_Fund" in eligible.columns:
+        before = len(eligible)
+        eligible = eligible[~eligible["Flag_Leveraged_Fund"].fillna(False)]
+        print(f"  Profile A filter - exclude leveraged funds: {before} -> {len(eligible)}")
+
+    if exclude_interval_funds and "Flag_Interval_Fund" in eligible.columns:
+        before = len(eligible)
+        eligible = eligible[~eligible["Flag_Interval_Fund"].fillna(False)]
+        print(f"  Profile A filter - exclude interval funds: {before} -> {len(eligible)}")
+
+    if exclude_tender_offer_funds and "Flag_Tender_Offer" in eligible.columns:
+        before = len(eligible)
+        eligible = eligible[~eligible["Flag_Tender_Offer"].fillna(False)]
+        print(f"  Profile A filter - exclude tender-offer funds: {before} -> {len(eligible)}")
+
     print(f"Profile A eligibility filter: {start_count} -> {len(eligible)} rows remain.")
     return eligible
-
 
 
 @register_profile_scorer("A")
 def compute_profile_A_score(df: pd.DataFrame, top_n: int, thresholds: dict) -> pd.DataFrame:
     """
     Weights come from thresholds["weights"] in the input YAML if present,
-    otherwise fall back to config.PROFILE_A_WEIGHTS.
+    otherwise fall back to config.PROFILE_A_WEIGHTS. This blends the
+    already-category-relative concept scores (each 0-100) into a single
+    Profile_A_Score using Profile A's long-term/low-risk weighting
+    philosophy: performance and risk-adjusted return matter most, costs
+    and volatility next, other concepts lighter or zero by default.
+
+    Expects df to already have gone through
+    scoring.build_concept_scores(df) so the *_Score columns below exist.
     """
     scored: pd.DataFrame = df.copy()
 
     weights = thresholds.get("weights", PROFILE_A_WEIGHTS)
 
     weight_map = {
-        "Norm_Return_3Y": weights.get("return_3y", 0.30),
-        "Norm_Return_5Y": weights.get("return_5y", 0.20),
-        "Norm_Sharpe_3Y": weights.get("sharpe_3y", 0.20),
-        "Norm_Sharpe_1Y": weights.get("sharpe_1y", 0.0),
-        "Norm_Expense_Ratio": weights.get("expense_ratio", 0.15),
-        "Norm_Risk_Score": weights.get("risk_score", 0.15),
-        "Norm_Tracking_Error_3Y": weights.get("tracking_error_3y", 0.0),
-        "Norm_Tracking_Error_1Y": weights.get("tracking_error_1y", 0.0),
-        "Norm_Max_Drawdown": weights.get("max_drawdown", 0.0),
-        "Norm_Financial_Health": weights.get("financial_health", 0.0),
-        "Norm_Growth_Grade": weights.get("growth_grade", 0.0),
-        "Norm_Star_Rating": weights.get("star_rating", 0.0),
+        "Performance_Score": weights.get("performance", 0.30),
+        "Risk_Adjusted_Score": weights.get("risk_adjusted", 0.20),
+        "Volatility_Score": weights.get("volatility", 0.15),
+        "Tracking_Score": weights.get("tracking", 0.0),
+        "Liquidity_Size_Score": weights.get("liquidity_size", 0.0),
+        "Quality_Valuation_Score": weights.get("quality_valuation", 0.0),
+        "Costs_Score": weights.get("costs", 0.15),
+        "Tax_Income_Score": weights.get("tax_income", 0.0),
     }
 
     available_cols: List[str] = [c for c in weight_map if c in scored.columns]
     if not available_cols:
         raise ValueError(
-            "compute_profile_A_score(): none of the expected normalized "
-            "concept-score columns are present. Did you run "
-            "build_concept_scores() before calling this function?"
+            "compute_profile_A_score(): none of the expected concept-score "
+            "columns are present. Did you run build_concept_scores() "
+            "before calling this function?"
         )
     missing_cols = [c for c in weight_map if c not in scored.columns]
     if missing_cols:
         print(f"  Note: Profile A scoring proceeding without {missing_cols} "
-              f"(source column(s) not found) -- remaining weights re-normalized.")
+              f"(concept score(s) not found) -- remaining weights re-normalized.")
 
     def weighted_row_score(row: pd.Series) -> float:
         total_weight: float = 0.0
@@ -117,8 +158,6 @@ def compute_profile_A_score(df: pd.DataFrame, top_n: int, thresholds: dict) -> p
 
     scored["Profile_A_Score"] = scored[available_cols].apply(weighted_row_score, axis=1)
 
-    # Rank within category (1 = best). method='min' means ties share the
-    # same rank rather than an arbitrary tiebreak order.
     if "Morningstar Category" in scored.columns:
         scored["Profile_A_Rank_In_Category"] = (
             scored.groupby("Morningstar Category")["Profile_A_Score"]

@@ -1,0 +1,24 @@
+<changelist name="Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1" date="1784341274907" recycled="true" deleted="true">
+  <option name="PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/shelved.patch" />
+  <option name="DESCRIPTION" value="Uncommitted changes before Interactive in-memory rebase at 7/17/26, 10:20 PM [Changes]" />
+  <binary>
+    <option name="AFTER_PATH" value="yahoo_utils/fully_dynamic_screener.xlsx" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/fully_dynamic_screener.xlsx" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="yahoo_utils/etf_screener_report.xlsx" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/etf_screener_report.xlsx" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="yahoo_utils/lookthrough_holdings_screener.xlsx" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/lookthrough_holdings_screener.xlsx" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="yahoo_utils/sector_isolated_screener.xlsx" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/sector_isolated_screener.xlsx" />
+  </binary>
+  <binary>
+    <option name="AFTER_PATH" value="eTrade/Screener-Export.xls" />
+    <option name="SHELVED_PATH" value="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/Screener-Export.xls" />
+  </binary>
+</changelist>

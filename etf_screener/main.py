@@ -129,7 +129,7 @@ def process_data(
     df = apply_etf_only_filter(df)
 
     print("Building concept scores...")
-    df = build_concept_scores(df)
+    df = build_concept_scores(df, concept_weights=thresholds.get("concept_weights"))
 
     print(f"Applying Profile {profile_name} eligibility filters...")
     df_eligible: pd.DataFrame = PROFILE_FILTERS[profile_name](df, thresholds)

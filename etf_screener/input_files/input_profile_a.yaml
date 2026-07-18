@@ -1,0 +1,76 @@
+# input_profile_a.yaml
+profile: A
+struct_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/structural-data/
+perf_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/performance-data/
+out_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/results/
+top_n_per_category: 5
+
+thresholds:
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  require_category: true
+
+  # Structural hard exclusions -- funds matching these are dropped
+  # entirely, regardless of how well they score. Any key you omit here
+  # falls back to the default (true) in config.DEFAULT_THRESHOLDS.
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+
+  # PROFILE-LEVEL weights: how much each of the 8 concept scores counts
+  # relative to the other concepts. Must sum to ~1.0. Any key you omit
+  # falls back to config.PROFILE_A_WEIGHTS.
+  # See profiles/profile_a.py::compute_profile_A_score() for the mapping.
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.20
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.10
+    costs: 0.15
+    tax_income: 0.05
+
+  # COLUMN-LEVEL weights INSIDE each concept (e.g. how much Total
+  # Return 3Y vs 5Y counts within Performance_Score). Each concept's
+  # own weights should sum to ~1.0. You can override just ONE leaf
+  # value (e.g. only performance.return_3y) and every sibling key you
+  # don't list still falls back to config.DEFAULT_CONCEPT_WEIGHTS --
+  # nothing gets silently dropped. Handy while you're still learning
+  # what each column means and want to nudge one weight at a time.
+  concept_weights:
+    performance:
+      return_3y: 0.40
+      return_5y: 0.35
+      return_1y: 0.10
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.10
+      upside: 0.25
+      downside: 0.20
+    volatility:
+      stdev_3y: 0.45
+      drawdown_3y: 0.30
+      drawdown_5y: 0.25
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.60
+      trading_volume: 0.40
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.30
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+
+

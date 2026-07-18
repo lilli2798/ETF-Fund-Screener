@@ -1,0 +1,39 @@
+name: Daily ETF Screener
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-5'   # 9:00 AM ET (standard time) on weekdays — adjust for DST
+  workflow_dispatch:
+
+jobs:
+  screener:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch sector/performance data
+        working-directory: utils
+        run: python get_yahoo_dta.py
+
+      - name: Run screener pipeline
+        run: python run_ci.py
+
+      - name: Send alerts
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python alerts.py
+
+      - name: Upload output artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-screener-output
+          path: |
+            output/*.xlsx
+            utils/*.csv

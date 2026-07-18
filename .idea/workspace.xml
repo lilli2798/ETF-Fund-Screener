@@ -4,8 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee693f8f-df18-4107-aac7-64e643373734" name="Changes" comment="add file so the github will run and send me alert daily">
+    <list default="true" id="ee693f8f-df18-4107-aac7-64e643373734" name="Changes" comment="update script to test running the alert on github">
+      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/utils/fetch_yahoo_sector_data.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -39,23 +41,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.0" />
-      <entry key="S10" value="1.000000000005236" />
-      <entry key="S30" value="1.000769041485528" />
-      <entry key="S60" value="1.0908087039967513" />
-      <entry key="M2" value="2.0492903075474524" />
-      <entry key="M5" value="7.572074297756146" />
-      <entry key="M10" value="18.554253624492922" />
-      <entry key="M15" value="28.842943247018468" />
-      <entry key="M30" value="49.92643876741774" />
-      <entry key="H1" value="68.61592640318982" />
-      <entry key="H2" value="81.42808691471868" />
-      <entry key="H4" value="90.26372715964342" />
-      <entry key="D1" value="126.85217370186524" />
-      <entry key="W1" value="189.88126919316386" />
+      <entry key="MS100" value="1.0000574238731128" />
+      <entry key="MS500" value="1.3089730590189197" />
+      <entry key="S2" value="4.152871038666319" />
+      <entry key="S5" value="7.885401846492498" />
+      <entry key="S10" value="10.65165293495038" />
+      <entry key="S30" value="13.921513413580788" />
+      <entry key="S60" value="15.239785401412199" />
+      <entry key="M2" value="16.05809476955062" />
+      <entry key="M5" value="17.01392443611365" />
+      <entry key="M10" value="18.37056867183716" />
+      <entry key="M15" value="19.3220940683191" />
+      <entry key="M30" value="20.771950768135483" />
+      <entry key="H1" value="21.7717416963893" />
+      <entry key="H2" value="23.175023820097202" />
+      <entry key="H4" value="32.71237865404862" />
+      <entry key="D1" value="122.93063476917223" />
+      <entry key="W1" value="223.89714952933434" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -67,33 +69,33 @@
       <entry key="S60" value="0.0" />
       <entry key="M2" value="0.0" />
       <entry key="M5" value="0.0" />
-      <entry key="M10" value="6.505200429210412E-181" />
-      <entry key="M15" value="7.507703647381994E-121" />
-      <entry key="M30" value="8.664700599202476E-61" />
-      <entry key="H1" value="9.308437355003498E-31" />
-      <entry key="H2" value="9.648024334029988E-16" />
-      <entry key="H4" value="3.1061269024349344E-8" />
-      <entry key="D1" value="0.05606646817044882" />
-      <entry key="W1" value="0.6625876154909595" />
+      <entry key="M10" value="2.309636608613989E-206" />
+      <entry key="M15" value="8.110154041038187E-138" />
+      <entry key="M30" value="2.847833218613433E-69" />
+      <entry key="H1" value="5.336509363444823E-35" />
+      <entry key="H2" value="7.30514158893913E-18" />
+      <entry key="H4" value="2.7028025434609857E-9" />
+      <entry key="D1" value="0.037322356178115884" />
+      <entry key="W1" value="0.6251663287520399" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9201876506248751" />
-      <entry key="MS500" value="0.9835020740262483" />
-      <entry key="S2" value="0.9958497530944581" />
-      <entry key="S5" value="0.9983378297043665" />
-      <entry key="S10" value="0.9991685692188409" />
-      <entry key="S30" value="1.0004917239961577" />
-      <entry key="S60" value="1.0906643218363372" />
-      <entry key="M2" value="2.049161228686441" />
-      <entry key="M5" value="7.571540552261653" />
-      <entry key="M10" value="18.553400897494164" />
-      <entry key="M15" value="28.842076856755007" />
-      <entry key="M30" value="49.9257607404366" />
-      <entry key="H1" value="68.61549577636097" />
-      <entry key="H2" value="81.42782445547596" />
-      <entry key="H4" value="90.26351881029822" />
-      <entry key="D1" value="126.90810946400426" />
-      <entry key="W1" value="190.5438167805281" />
+      <entry key="MS100" value="0.9727105872164657" />
+      <entry key="MS500" value="1.2925943149019141" />
+      <entry key="S2" value="4.128616594439997" />
+      <entry key="S5" value="7.870137892117029" />
+      <entry key="S10" value="10.64258289138507" />
+      <entry key="S30" value="13.918050638593819" />
+      <entry key="S60" value="15.237980339322581" />
+      <entry key="M2" value="16.05716768561824" />
+      <entry key="M5" value="17.013474238283937" />
+      <entry key="M10" value="18.37023702957444" />
+      <entry key="M15" value="19.32181914733397" />
+      <entry key="M30" value="20.771771338399454" />
+      <entry key="H1" value="21.77163739882898" />
+      <entry key="H2" value="23.17496533192848" />
+      <entry key="H4" value="32.71233076740863" />
+      <entry key="D1" value="122.96786460501167" />
+      <entry key="W1" value="224.52227727359875" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -108,40 +110,40 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.a-merge-etrade-tabs-etf-fund.executor": "Run",
-    "Python.b-merge-etrade-etf-stock-analysis-etf (1).executor": "Run",
-    "Python.fetch_yahoo_sector_data.executor": "Run",
-    "Python.get_yahoo_dta (1).executor": "Run",
-    "Python.get_yahoo_dta.executor": "Run",
-    "Python.main (1).executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.merging.executor": "Run",
-    "Python.rotation.executor": "Run",
-    "Python.select-top-etrade-etf.executor": "Run",
-    "Python.serch-profile-a.executor": "Run",
-    "RunOnceActivity.OpenProjectViewOnStart": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/private/tmp/ETF-Fund-Screener",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.a-merge-etrade-tabs-etf-fund.executor&quot;: &quot;Run&quot;,
+    &quot;Python.b-merge-etrade-etf-stock-analysis-etf (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.fetch_yahoo_sector_data.executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_yahoo_dta (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_yahoo_dta.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.merging.executor&quot;: &quot;Run&quot;,
+    &quot;Python.rotation.executor&quot;: &quot;Run&quot;,
+    &quot;Python.select-top-etrade-etf.executor&quot;: &quot;Run&quot;,
+    &quot;Python.serch-profile-a.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/private/tmp/ETF-Fund-Screener&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;org.jetbrains.plugins.github.ui.GithubSettingsConfigurable&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="PyConsoleOptionsProvider">
     <option name="myPythonConsoleState">
       <console-settings module-name="PythonProjects" is-module-sdk="true">
@@ -154,7 +156,7 @@
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/morningstar-search/etf_screener/utils" />
-      <recent name="$PROJECT_DIR$/yahoo_utils" />
+      <recent name="$PROJECT_DIR$/etf_screener/utils" />
       <recent name="$PROJECT_DIR$/morningstar-search" />
       <recent name="$PROJECT_DIR$/morningstar-search/etf_screener" />
     </key>
@@ -198,13 +200,13 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/yahoo_utils" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener/utils" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/yahoo_utils/get_yahoo_dta.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -222,13 +224,13 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/morningstar-search/etf_screener/utils" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener/utils" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/morningstar-search/etf_screener/utils/get_yahoo_dta.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -246,13 +248,13 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/yahoo_utils" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener/utils" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="true" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/yahoo_utils/get_yahoo_dta.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -378,7 +380,23 @@
       <option name="project" value="LOCAL" />
       <updated>1784343596582</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="        working-directory: etf_screener/utils&#10;remove yahoo dir and update to the correct">
+      <option name="closed" value="true" />
+      <created>1784347836954</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1784347836954</updated>
+    </task>
+    <task id="LOCAL-00007" summary="update script to test running the alert on github">
+      <option name="closed" value="true" />
+      <created>1784396531983</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1784396531983</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -410,6 +428,8 @@
     <MESSAGE value="save for later compare" />
     <MESSAGE value="Initial check in after change the project name and directory. it is used to select etfs or funds bases morningstar spreasheet data" />
     <MESSAGE value="add file so the github will run and send me alert daily" />
-    <option name="LAST_COMMIT_MESSAGE" value="add file so the github will run and send me alert daily" />
+    <MESSAGE value="        working-directory: etf_screener/utils&#10;remove yahoo dir and update to the correct" />
+    <MESSAGE value="update script to test running the alert on github" />
+    <option name="LAST_COMMIT_MESSAGE" value="update script to test running the alert on github" />
   </component>
 </project>

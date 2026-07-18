@@ -1,8 +1,8 @@
 # input_profile_a.yaml
 profile: A
-struct_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/structural-data/
-perf_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/performance-data/
-out_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/results/
+struct_path: /Users/***/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/structural-data/
+perf_path: /Users/***/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/performance-data/
+out_path: /Users/***/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/results/
 top_n_per_category: 5
 
 thresholds:
@@ -53,9 +53,9 @@ thresholds:
       upside: 0.25
       downside: 0.20
     volatility:
-      stdev_3y: 0.45
-      drawdown_3y: 0.30
-      drawdown_5y: 0.25
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.30
     tracking:
       tracking_error_3y: 0.65
       tracking_error_1y: 0.35

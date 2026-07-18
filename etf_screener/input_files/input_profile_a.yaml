@@ -1,9 +1,8 @@
 # input_profile_a.yaml
 profile: A
-struct_path: /Users/***/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/structural-data/
-perf_path: /Users/***/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/performance-data/
-out_path: /Users/***/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/results/
-top_n_per_category: 5
+struct_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/structural-data/
+perf_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/performance-data/
+out_path: /Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/AA-FundResearchProject/A-Do-Not-Delete-DB/morningstarsearch/results/
 
 thresholds:
   max_expense_ratio: 0.75

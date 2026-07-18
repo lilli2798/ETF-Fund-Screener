@@ -4,48 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee693f8f-df18-4107-aac7-64e643373734" name="Changes" comment="save for later compare">
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]/Screener-Export.xls" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]/etf_screener_report.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]/fully_dynamic_screener.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]/lookthrough_holdings_screener.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]/sector_isolated_screener.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]/shelved.patch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/Screener-Export.xls" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/etf_screener_report.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/fully_dynamic_screener.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/lookthrough_holdings_screener.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/sector_isolated_screener.xlsx" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26,_10_20 PM_[Changes]1/shelved.patch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26__10_20PM__Changes_.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Interactive_in-memory_rebase_at_7_17_26__10_20PM__Changes_1.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/eTrade/a-merge-etrade-tabs-etf-fund.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/eTrade/b-merge-etrade-etf-stock-analysis-etf.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/eTrade/c_addon_queries.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/eTrade/select-top-etrade-etf.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/docs/Financial Sectors and Niche Sub-Sectors.rtf" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/docs/column_glossary.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/docs/profile_a_design.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/input_files/input_profile_a.yaml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/scoring.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/utils/fetch_yahoo_sector_data.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/yahoo_utils/get_yahoo_dta.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/eTrade/Screener-Export.xls" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/data_loading.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/data_loading.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/export.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/export.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/input_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/input_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/input_files/input_profile_a.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/merging.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/merging.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/profiles/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/profiles/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/profiles/profile_a.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/profiles/profile_a.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/scoring.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/etf_screener/utils/compare_results.py .py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/utils/compare_results.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/morningstar-search/serch-profile-a.py" beforeDir="false" />
+    <list default="true" id="ee693f8f-df18-4107-aac7-64e643373734" name="Changes" comment="add file so the github will run and send me alert daily">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/input_files/input_profile_a.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screener/input_files/input_profile_a.yaml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,40 +23,40 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "lilli2798"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;lilli2798&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/lilli2798/ETF-Fund-Screener.git",
-    "accountId": "b0e578a2-072b-4536-82d8-76ad87e5b3be"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/lilli2798/ETF-Fund-Screener.git&quot;,
+    &quot;accountId&quot;: &quot;b0e578a2-072b-4536-82d8-76ad87e5b3be&quot;
   }
-}]]></component>
+}</component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0" />
-      <entry key="MS500" value="1.0" />
-      <entry key="S2" value="1.0" />
-      <entry key="S5" value="1.0" />
-      <entry key="S10" value="1.0" />
-      <entry key="S30" value="1.0" />
-      <entry key="S60" value="1.0" />
-      <entry key="M2" value="1.0" />
-      <entry key="M5" value="1.0" />
-      <entry key="M10" value="1.0" />
-      <entry key="M15" value="1.0000000000007507" />
-      <entry key="M30" value="1.0000020460780517" />
-      <entry key="H1" value="1.0034723743015899" />
-      <entry key="H2" value="1.1604968577733712" />
-      <entry key="H4" value="2.7337511976727296" />
-      <entry key="D1" value="32.94147112842248" />
-      <entry key="W1" value="94.3618474491471" />
+      <entry key="MS100" value="1.952637998122902" />
+      <entry key="MS500" value="1.999881520242352" />
+      <entry key="S2" value="2.3180437975061117" />
+      <entry key="S5" value="2.860754907822714" />
+      <entry key="S10" value="3.9507717095920634" />
+      <entry key="S30" value="7.001265478993405" />
+      <entry key="S60" value="8.664447336584779" />
+      <entry key="M2" value="10.249492350392732" />
+      <entry key="M5" value="16.354043262369686" />
+      <entry key="M10" value="27.691323143610422" />
+      <entry key="M15" value="37.73022265472378" />
+      <entry key="M30" value="56.954850820399166" />
+      <entry key="H1" value="72.95289977111716" />
+      <entry key="H2" value="83.54193242823577" />
+      <entry key="H4" value="90.97528101074971" />
+      <entry key="D1" value="126.25118192593342" />
+      <entry key="W1" value="188.96670159774058" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -107,33 +68,33 @@
       <entry key="S60" value="0.0" />
       <entry key="M2" value="0.0" />
       <entry key="M5" value="0.0" />
-      <entry key="M10" value="1.247169297922924E-179" />
-      <entry key="M15" value="5.377952235968279E-120" />
-      <entry key="M30" value="2.3190412320543763E-60" />
-      <entry key="H1" value="1.5228398576522658E-30" />
-      <entry key="H2" value="1.2340339775112615E-15" />
-      <entry key="H4" value="3.512881975687857E-8" />
-      <entry key="D1" value="0.05722826679364729" />
-      <entry key="W1" value="0.6645318471967067" />
+      <entry key="M10" value="1.0261763960609418E-180" />
+      <entry key="M15" value="1.017375669404986E-120" />
+      <entry key="M30" value="1.0086504198209524E-60" />
+      <entry key="H1" value="1.0043158964294798E-30" />
+      <entry key="H2" value="1.0021556248554802E-15" />
+      <entry key="H4" value="3.1656841675307495E-8" />
+      <entry key="D1" value="0.05624422419353874" />
+      <entry key="W1" value="0.6628873088034618" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9794202975869268" />
-      <entry key="MS500" value="0.9958497530944581" />
-      <entry key="S2" value="0.998960819551523" />
-      <entry key="S5" value="0.9995841981612189" />
-      <entry key="S10" value="0.9997920774647191" />
-      <entry key="S30" value="0.9999306876841536" />
-      <entry key="S60" value="0.9999653432415313" />
-      <entry key="M2" value="0.9999826714706267" />
-      <entry key="M5" value="0.999993068552217" />
-      <entry key="M10" value="0.9999965342701028" />
-      <entry key="M15" value="0.999997689512817" />
-      <entry key="M30" value="1.0000008894143293" />
-      <entry key="H1" value="1.0034706142188718" />
-      <entry key="H2" value="1.1604717665448383" />
-      <entry key="H4" value="2.73366175067106" />
-      <entry key="D1" value="32.99858916136501" />
-      <entry key="W1" value="95.02634243431993" />
+      <entry key="MS100" value="1.8792260600105832" />
+      <entry key="MS500" value="1.9846820748609775" />
+      <entry key="S2" value="2.3136730768581955" />
+      <entry key="S5" value="2.8585515953364857" />
+      <entry key="S10" value="3.949229455284711" />
+      <entry key="S30" value="7.000381948424179" />
+      <entry key="S60" value="8.663897527723838" />
+      <entry key="M2" value="10.248908549376871" />
+      <entry key="M5" value="16.35278407501729" />
+      <entry key="M10" value="27.689999859876323" />
+      <entry key="M15" value="37.72906112529885" />
+      <entry key="M30" value="56.95406691419543" />
+      <entry key="H1" value="72.95243764746152" />
+      <entry key="H2" value="83.54166100761904" />
+      <entry key="H4" value="90.97506925518606" />
+      <entry key="D1" value="126.30729512627404" />
+      <entry key="W1" value="189.62954887407145" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -157,6 +118,7 @@
     "Python.fetch_yahoo_sector_data.executor": "Run",
     "Python.get_yahoo_dta (1).executor": "Run",
     "Python.get_yahoo_dta.executor": "Run",
+    "Python.main (1).executor": "Run",
     "Python.main.executor": "Run",
     "Python.merging.executor": "Run",
     "Python.rotation.executor": "Run",
@@ -171,7 +133,7 @@
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/Users/lihongfeng/Library/CloudStorage/OneDrive-Personal/Projects/ETF-Fund-Screener",
+    "last_opened_file_path": "/private/tmp/ETF-Fund-Screener",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -203,7 +165,7 @@
       <recent name="C:\Users\jelfx\OneDrive\Projects\PythonProjects\util" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.get_yahoo_dta">
+  <component name="RunManager" selected="Python.main (1)">
     <configuration name="a-merge-etrade-tabs-etf-fund" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
@@ -300,6 +262,30 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="main (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="ETF-Fund-Screener" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <option name="RUN_TOOL" value="" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
@@ -324,37 +310,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="merging" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="ETF-Fund-Screener" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/morningstar-search/etf_screener" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="DEBUG_JUST_MY_CODE" value="false" />
-      <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/morningstar-search/etf_screener/merging.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.main (1)" />
         <item itemvalue="Python.get_yahoo_dta" />
         <item itemvalue="Python.get_yahoo_dta (1)" />
         <item itemvalue="Python.a-merge-etrade-tabs-etf-fund" />
         <item itemvalue="Python.main" />
-        <item itemvalue="Python.merging" />
       </list>
     </recent_temporary>
   </component>
@@ -393,7 +355,31 @@
       <option name="project" value="LOCAL" />
       <updated>1784173740654</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Initial check in after change the project name and directory. it is used to select etfs or funds bases morningstar spreasheet data">
+      <option name="closed" value="true" />
+      <created>1784342228218</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1784342228218</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Initial check in after change the project name and directory. it is used to select etfs or funds bases morningstar spreasheet data">
+      <option name="closed" value="true" />
+      <created>1784342362645</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1784342362645</updated>
+    </task>
+    <task id="LOCAL-00005" summary="add file so the github will run and send me alert daily">
+      <option name="closed" value="true" />
+      <created>1784343596582</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1784343596582</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -423,6 +409,8 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="init check in project," />
     <MESSAGE value="save for later compare" />
-    <option name="LAST_COMMIT_MESSAGE" value="save for later compare" />
+    <MESSAGE value="Initial check in after change the project name and directory. it is used to select etfs or funds bases morningstar spreasheet data" />
+    <MESSAGE value="add file so the github will run and send me alert daily" />
+    <option name="LAST_COMMIT_MESSAGE" value="add file so the github will run and send me alert daily" />
   </component>
 </project>

@@ -23,9 +23,11 @@ jobs:
         run: python get_yahoo_dta.py
 
       - name: Run screener pipeline
+        working-directory: etf_screener
         run: python run_ci.py
 
       - name: Send alerts
+        working-directory: etf_screener
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
@@ -41,5 +43,5 @@ jobs:
         with:
           name: etf-screener-output
           path: |
-            output/*.xlsx
+            etf_screener/output/*.xlsx
             etf_screener/utils/*.csv

@@ -50,14 +50,22 @@ def build_alert_message(df: pd.DataFrame, selected_flag_col: str) -> tuple[str, 
     rank_col = next((c for c in df.columns if c == "Profile A Rank In Category"), None)
 
     lines = []
+    yahoo_issue_hits = 0
     for _, row in hits.iterrows():
         ticker = row.get("Ticker", "?")
         category = row.get("Morningstar Category", "Unknown Category")
         score_text = f" | Score: {row[score_col]:.2f}" if score_col and pd.notna(row.get(score_col)) else ""
         rank_text = f" | Rank in Category: {int(row[rank_col])}" if rank_col and pd.notna(row.get(rank_col)) else ""
-        lines.append(f"*{ticker}* — Selected ({category}{score_text}{rank_text})")
+        yahoo_note = ""
+        if pd.notna(row.get("Yahoo_Fetch_Error")) and str(row.get("Yahoo_Fetch_Error")).strip():
+            yahoo_issue_hits += 1
+            yahoo_note = " | Yahoo data issue logged"
+        lines.append(f"*{ticker}* — Selected ({category}{score_text}{rank_text}{yahoo_note})")
 
-    message = "\U0001F4C8 *Daily ETF Screener Alerts*\n" + "\n".join(lines[:20])
+    header = "\U0001F4C8 *Daily ETF Screener Alerts*"
+    if yahoo_issue_hits:
+        header += f"\n\u26A0\uFE0F Yahoo data issues flagged on {yahoo_issue_hits} selected row(s)."
+    message = header + "\n" + "\n".join(lines[:20])
     return message, hits
 
 

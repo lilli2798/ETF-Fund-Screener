@@ -16,7 +16,7 @@ Design notes (locked in from project discussion):
     filter-vs-score decision is finalized.
 """
 
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, List, Optional
 import pandas as pd
 
 from config import GRADE_TO_NUMERIC
@@ -30,7 +30,7 @@ from config import GRADE_TO_NUMERIC
 PROFILE_FILTERS: Dict[str, Callable[[pd.DataFrame, dict], pd.DataFrame]] = {}
 PROFILE_SCORERS: Dict[str, Callable[[pd.DataFrame, int, dict], pd.DataFrame]] = {}
 
-DEFAULT_CATEGORY_COL: str = "Morningstar Category"
+DEFAULT_CATEGORY_COL: str = "Yahoo_SubSector"
 
 
 def register_profile_filter(name: str):
@@ -133,6 +133,65 @@ def _weighted_average(df: pd.DataFrame, weight_map: Dict[str, float]) -> pd.Seri
     return df[available_cols].apply(_row_score, axis=1).round(2)
 
 
+
+# Every column-level weight key each concept function actually consumes.
+# Used by _require_weights() to enforce STRICT validation: a concept's
+# weight dict must supply every one of these keys explicitly (no partial
+# overrides silently filled with hardcoded defaults). To intentionally
+# drop/remove one metric from a concept, set its weight to 0.0 in
+# config.DEFAULT_CONCEPT_WEIGHTS / thresholds.concept_weights -- the key
+# must still be present, just zeroed out, so it's clear that was a
+# deliberate choice and not a missing/forgotten setting.
+REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
+    "performance": ["return_3y", "return_5y", "return_1y", "rank_3y"],
+    "risk_adjusted": [
+        "sharpe_3y", "sharpe_1y", "upside", "downside",
+        "yahoo_sharpe_3y", "yahoo_sharpe_1y", "yahoo_zscore_3y", "yahoo_zscore_1y",
+    ],
+    "volatility": ["stdev_3y", "drawdown_3y", "drawdown_5y"],
+    "tracking": ["tracking_error_3y", "tracking_error_1y"],
+    "liquidity_size": ["fund_size", "trading_volume"],
+    "quality_valuation": ["growth_grade", "financial_health", "price_fair_value"],
+    "costs": ["net_expense_ratio", "management_fee"],
+    "tax_income": ["tax_cost_ratio", "sec_yield"],
+}
+
+
+def _require_weights(weights: Optional[Dict[str, float]], concept_name: str) -> Dict[str, float]:
+    """Strictly validate a concept's weight map: it must be non-empty AND
+    contain every key listed in REQUIRED_CONCEPT_KEYS[concept_name] --
+    no silent fallback to a hardcoded default for the whole dict OR for
+    any individual missing key. Raises a specific ValueError naming the
+    concept and any missing key(s), so a forgotten/misspelled config
+    entry fails loudly and immediately instead of quietly using a
+    default weight nobody actually chose.
+
+    To intentionally remove a metric from a concept's score, set its
+    weight to 0.0 rather than omitting the key -- this keeps the choice
+    explicit and auditable in the used-weights report generated after
+    each run (see export.write_used_weights_report()).
+    """
+    if not weights:
+        raise ValueError(
+            f"Missing weights for concept '{concept_name}'. Add a "
+            f"'{concept_name}' entry to config.DEFAULT_CONCEPT_WEIGHTS "
+            f"(or thresholds.concept_weights.{concept_name} in your profile "
+            f"YAML) -- no hardcoded fallback is used, so this must be set explicitly."
+        )
+
+    required_keys = REQUIRED_CONCEPT_KEYS.get(concept_name, [])
+    missing_keys = [k for k in required_keys if k not in weights]
+    if missing_keys:
+        raise ValueError(
+            f"Concept '{concept_name}' is missing required weight key(s): "
+            f"{missing_keys}. Every key must be present in "
+            f"config.DEFAULT_CONCEPT_WEIGHTS['{concept_name}'] (or your profile "
+            f"YAML's thresholds.concept_weights.{concept_name}) -- set a key to "
+            f"0.0 to intentionally remove that metric, don't just omit it."
+        )
+    return weights
+
+
 # --- 1. Performance & return ranks -------------------------------------
 
 def calculate_performance_score(
@@ -145,7 +204,7 @@ def calculate_performance_score(
     with Morningstar's own Return Rank in Category (already category-
     relative, just needs flipping so higher = better).
     """
-    weights = weights or {"return_3y": 0.40, "return_5y": 0.35, "return_1y": 0.10, "rank_3y": 0.15}
+    weights = _require_weights(weights, "performance")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Return_3Y"] = normalize_within_category(df, "Total Return (3Y)", category_col)
@@ -157,10 +216,10 @@ def calculate_performance_score(
         out["Norm_Rank_3Y"] = (100.0 - rank).clip(lower=0, upper=100)
 
     weight_map = {
-        "Norm_Return_3Y": weights.get("return_3y", 0.40),
-        "Norm_Return_5Y": weights.get("return_5y", 0.35),
-        "Norm_Return_1Y": weights.get("return_1y", 0.10),
-        "Norm_Rank_3Y": weights.get("rank_3y", 0.15),
+        "Norm_Return_3Y": weights["return_3y"],
+        "Norm_Return_5Y": weights["return_5y"],
+        "Norm_Return_1Y": weights["return_1y"],
+        "Norm_Rank_3Y": weights["rank_3y"],
     }
     return _weighted_average(out, weight_map)
 
@@ -173,11 +232,13 @@ def calculate_risk_adjusted_score(
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Sharpe Ratio (3Y/1Y) plus Upside/Downside Capture Ratio, all
-    normalized within category. Downside capture is inverted (lower
-    downside capture = better).
+    Risk-adjusted score blending Morningstar Sharpe/upside/downside with
+    Yahoo-derived Sharpe and sector-relative Z-scores when available.
+    Downside capture is inverted (lower downside capture = better).
+    Missing Yahoo data simply drops out of the row-wise weighted average
+    instead of penalizing the fund.
     """
-    weights = weights or {"sharpe_3y": 0.45, "sharpe_1y": 0.10, "upside": 0.25, "downside": 0.20}
+    weights = _require_weights(weights, "risk_adjusted")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Sharpe_3Y"] = normalize_within_category(df, "Sharpe Ratio (3Y Monthly)", category_col)
@@ -186,12 +247,20 @@ def calculate_risk_adjusted_score(
     out["Norm_Downside_Capture"] = normalize_within_category(
         df, "Downside Capture Ratio (3Y)", category_col, invert=True
     )
+    out["Norm_Yahoo_Sharpe_3Y"] = normalize_within_category(df, "Sharpe_3Y", category_col)
+    out["Norm_Yahoo_Sharpe_1Y"] = normalize_within_category(df, "Sharpe_1Y", category_col)
+    out["Norm_Yahoo_ZScore_3Y"] = normalize_within_category(df, "Z_Score_3Y", category_col)
+    out["Norm_Yahoo_ZScore_1Y"] = normalize_within_category(df, "Z_Score_1Y", category_col)
 
     weight_map = {
-        "Norm_Sharpe_3Y": weights.get("sharpe_3y", 0.45),
-        "Norm_Sharpe_1Y": weights.get("sharpe_1y", 0.10),
-        "Norm_Upside_Capture": weights.get("upside", 0.25),
-        "Norm_Downside_Capture": weights.get("downside", 0.20),
+        "Norm_Sharpe_3Y": weights["sharpe_3y"],
+        "Norm_Sharpe_1Y": weights["sharpe_1y"],
+        "Norm_Upside_Capture": weights["upside"],
+        "Norm_Downside_Capture": weights["downside"],
+        "Norm_Yahoo_Sharpe_3Y": weights["yahoo_sharpe_3y"],
+        "Norm_Yahoo_Sharpe_1Y": weights["yahoo_sharpe_1y"],
+        "Norm_Yahoo_ZScore_3Y": weights["yahoo_zscore_3y"],
+        "Norm_Yahoo_ZScore_1Y": weights["yahoo_zscore_1y"],
     }
     return _weighted_average(out, weight_map)
 
@@ -208,7 +277,7 @@ def calculate_volatility_score(
     (lower volatility/drawdown = higher score) and normalized within
     category.
     """
-    weights = weights or {"stdev_3y": 0.45, "drawdown_3y": 0.30, "drawdown_5y": 0.25}
+    weights = _require_weights(weights, "volatility")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Stdev_3Y"] = normalize_within_category(
@@ -222,9 +291,9 @@ def calculate_volatility_score(
     )
 
     weight_map = {
-        "Norm_Stdev_3Y": weights.get("stdev_3y", 0.45),
-        "Norm_Drawdown_3Y": weights.get("drawdown_3y", 0.30),
-        "Norm_Drawdown_5Y": weights.get("drawdown_5y", 0.25),
+        "Norm_Stdev_3Y": weights["stdev_3y"],
+        "Norm_Drawdown_3Y": weights["drawdown_3y"],
+        "Norm_Drawdown_5Y": weights["drawdown_5y"],
     }
     return _weighted_average(out, weight_map)
 
@@ -240,7 +309,7 @@ def calculate_tracking_score(
     Tracking Error (1Y/3Y), inverted and normalized within category.
     Per project decision: only 1Y and 3Y are used, not 5Y/10Y+.
     """
-    weights = weights or {"tracking_error_3y": 0.65, "tracking_error_1y": 0.35}
+    weights = _require_weights(weights, "tracking")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Tracking_Error_3Y"] = normalize_within_category(
@@ -251,8 +320,8 @@ def calculate_tracking_score(
     )
 
     weight_map = {
-        "Norm_Tracking_Error_3Y": weights.get("tracking_error_3y", 0.65),
-        "Norm_Tracking_Error_1Y": weights.get("tracking_error_1y", 0.35),
+        "Norm_Tracking_Error_3Y": weights["tracking_error_3y"],
+        "Norm_Tracking_Error_1Y": weights["tracking_error_1y"],
     }
     return _weighted_average(out, weight_map)
 
@@ -332,7 +401,7 @@ def calculate_liquidity_size_score(
       - Fund Size ($):        floor=$10M, target=$500M, ceiling=$5B
       - Trading Volume (shares/day): floor=5,000, target=100,000, ceiling=1,000,000
     """
-    weights = weights or {"fund_size": 0.60, "trading_volume": 0.40}
+    weights = _require_weights(weights, "liquidity_size")
     thresholds = thresholds or {
         "fund_size": {"floor": 10_000_000, "target": 500_000_000, "ceiling": 5_000_000_000},
         "trading_volume": {"floor": 5_000, "target": 100_000, "ceiling": 1_000_000},
@@ -351,8 +420,8 @@ def calculate_liquidity_size_score(
         )
 
     weight_map = {
-        "Score_Fund_Size": weights.get("fund_size", 0.60),
-        "Score_Trading_Volume": weights.get("trading_volume", 0.40),
+        "Score_Fund_Size": weights["fund_size"],
+        "Score_Trading_Volume": weights["trading_volume"],
     }
     return _weighted_average(out, weight_map)
 
@@ -367,15 +436,15 @@ def calculate_liquidity_size_score_category_normalized(
     any profile). Original category-relative percentile implementation
     of Liquidity & Size, prior to the non-normalized rewrite above.
     """
-    weights = weights or {"fund_size": 0.60, "trading_volume": 0.40}
+    weights = _require_weights(weights, "liquidity_size")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Fund_Size"] = normalize_within_category(df, "Fund Size", category_col)
     out["Norm_Trading_Volume"] = normalize_within_category(df, "Trading Volume", category_col)
 
     weight_map = {
-        "Norm_Fund_Size": weights.get("fund_size", 0.60),
-        "Norm_Trading_Volume": weights.get("trading_volume", 0.40),
+        "Norm_Fund_Size": weights["fund_size"],
+        "Norm_Trading_Volume": weights["trading_volume"],
     }
     return _weighted_average(out, weight_map)
 
@@ -393,7 +462,7 @@ def calculate_quality_valuation_score(
     Price/Fair Value is inverted -- being priced above fair value
     (ratio > 1) is generally less attractive than trading at/below it.
     """
-    weights = weights or {"growth_grade": 0.35, "financial_health": 0.35, "price_fair_value": 0.30}
+    weights = _require_weights(weights, "quality_valuation")
 
     out = pd.DataFrame(index=df.index)
 
@@ -415,9 +484,9 @@ def calculate_quality_valuation_score(
         )
 
     weight_map = {
-        "Norm_Growth_Grade": weights.get("growth_grade", 0.35),
-        "Norm_Financial_Health": weights.get("financial_health", 0.35),
-        "Norm_Price_Fair_Value": weights.get("price_fair_value", 0.30),
+        "Norm_Growth_Grade": weights["growth_grade"],
+        "Norm_Financial_Health": weights["financial_health"],
+        "Norm_Price_Fair_Value": weights["price_fair_value"],
     }
     return _weighted_average(out, weight_map)
 
@@ -433,7 +502,7 @@ def calculate_costs_score(
     Net Expense Ratio and Management Fee, inverted and normalized
     within category (lower cost = higher score).
     """
-    weights = weights or {"net_expense_ratio": 0.75, "management_fee": 0.25}
+    weights = _require_weights(weights, "costs")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Expense_Ratio"] = normalize_within_category(
@@ -444,8 +513,8 @@ def calculate_costs_score(
     )
 
     weight_map = {
-        "Norm_Expense_Ratio": weights.get("net_expense_ratio", 0.75),
-        "Norm_Management_Fee": weights.get("management_fee", 0.25),
+        "Norm_Expense_Ratio": weights["net_expense_ratio"],
+        "Norm_Management_Fee": weights["management_fee"],
     }
     return _weighted_average(out, weight_map)
 
@@ -461,7 +530,7 @@ def calculate_tax_income_score(
     Tax Cost Ratio (inverted, lower is better) and SEC 30-Day Yield
     (higher is better), normalized within category.
     """
-    weights = weights or {"tax_cost_ratio": 0.55, "sec_yield": 0.45}
+    weights = _require_weights(weights, "tax_income")
 
     out = pd.DataFrame(index=df.index)
     out["Norm_Tax_Cost_Ratio"] = normalize_within_category(
@@ -470,8 +539,8 @@ def calculate_tax_income_score(
     out["Norm_SEC_Yield"] = normalize_within_category(df, "SEC 30-Day Yield", category_col)
 
     weight_map = {
-        "Norm_Tax_Cost_Ratio": weights.get("tax_cost_ratio", 0.55),
-        "Norm_SEC_Yield": weights.get("sec_yield", 0.45),
+        "Norm_Tax_Cost_Ratio": weights["tax_cost_ratio"],
+        "Norm_SEC_Yield": weights["sec_yield"],
     }
     return _weighted_average(out, weight_map)
 

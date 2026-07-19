@@ -25,11 +25,13 @@ from config import (
     DEFAULT_PERF_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
+    DEFAULT_YAHOO_METRICS,
 )
 from input_file import load_profile_input, ProfileInput
 from data_loading import load_structural_data, load_performance_data
 from merging import merge_datasets, apply_etf_only_filter
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
+from utils.yahoo_metrics import YahooMetricsConfig, get_yahoo_metrics_for_tickers
 
 from export import (
     write_excel_with_retry,
@@ -37,6 +39,7 @@ from export import (
     format_column_names_for_export,
     build_timestamped_output_path,
     append_to_recorder,   # NEW
+    write_used_weights_report,   # NEW
 )
 
 
@@ -128,6 +131,33 @@ def process_data(
     print("Filtering to ETFs only (excluding stocks)...")
     df = apply_etf_only_filter(df)
 
+    print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
+    yahoo_cfg = YahooMetricsConfig(**thresholds.get("yahoo_metrics", {}))
+    df_yahoo: pd.DataFrame = get_yahoo_metrics_for_tickers(df["Ticker"], cfg=yahoo_cfg)
+
+    # TEMP DEBUG (per user request 2026-07-19): print raw Yahoo results
+    # before merging into the Morningstar dataframe, for validation.
+    # Remove this print once satisfied the Yahoo fetch is trustworthy.
+    print("\n[DEBUG] Raw Yahoo metrics before merge:")
+    print(df_yahoo.to_string(index=False))
+    print()
+
+    df = pd.merge(df, df_yahoo, on="Ticker", how="left")
+
+    if "Inception Date" in df.columns:
+        three_years_ago = pd.Timestamp.now() - pd.Timedelta(days=3 * 365)
+        is_established: pd.Series = df["Inception Date"].notna() & (df["Inception Date"] <= three_years_ago)
+        yahoo_metric_cols = [c for c in ["Sharpe_3Y", "Z_Score_3Y"] if c in df.columns]
+        yahoo_missing: pd.Series = df[yahoo_metric_cols].isna().any(axis=1) if yahoo_metric_cols else pd.Series(False, index=df.index)
+        df["Yahoo_Data_Suspect"] = is_established & yahoo_missing
+
+        suspect_count = int(df["Yahoo_Data_Suspect"].sum())
+        if suspect_count > 0:
+            print(f"  Yahoo_Data_Suspect: {suspect_count} ETF(s) have 3y+ inception history but missing Yahoo Sharpe/Z-score data.")
+    else:
+        print("  Note: 'Inception Date' column not found -- skipping Yahoo_Data_Suspect check.")
+        df["Yahoo_Data_Suspect"] = False
+
     print("Building concept scores...")
     df = build_concept_scores(df, concept_weights=thresholds.get("concept_weights"))
 
@@ -155,6 +185,16 @@ def process_data(
         output_filename=os.path.basename(final_out_path),
         thresholds=thresholds,
     )
+
+    print("Writing used-weights report for this run...")
+    used_weights_path = write_used_weights_report(
+        out_path=out_path,
+        result_filename=os.path.basename(final_out_path),
+        profile_name=profile_name,
+        top_n=top_n,
+        thresholds=thresholds,
+    )
+    print(f"Used-weights report saved to: {used_weights_path}")
 
     return df_ranked, final_out_path
 

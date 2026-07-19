@@ -38,6 +38,47 @@ def append_to_recorder(output_dir: str, output_filename: str, thresholds: Dict[s
 
     return recorder_path
 
+def write_used_weights_report(
+    out_path: str,
+    result_filename: str,
+    profile_name: str,
+    top_n: int,
+    thresholds: Dict[str, Any],
+) -> str:
+    """
+    Write a human-readable YAML report of exactly what configuration
+    produced a given results file: profile name, top_n, and the fully
+    resolved (post-YAML-merge) weights/concept_weights actually used
+    by scoring.py for this run -- including any metric intentionally
+    zeroed out (weight 0.0) rather than silently defaulted.
+
+    Saved as {out_path}/{result_filename_without_ext}_used_weights.yaml,
+    named to sit right next to its corresponding results_*.xlsx file so
+    it's obvious which report belongs to which run.
+    """
+    Path(out_path).mkdir(parents=True, exist_ok=True)
+
+    base_name = os.path.splitext(result_filename)[0]
+    report_path = os.path.join(out_path, f"{base_name}_used_weights.yaml")
+
+    report_data = {
+        "result_file": result_filename,
+        "profile_name": profile_name,
+        "top_n_per_category": top_n,
+        "concept_level_weights": thresholds.get("weights", {}),
+        "column_level_weights_per_concept": thresholds.get("concept_weights", {}),
+        "other_thresholds": {
+            k: v for k, v in thresholds.items()
+            if k not in ("weights", "concept_weights")
+        },
+    }
+
+    with open(report_path, "w") as f:
+        yaml.safe_dump(report_data, f, default_flow_style=False, sort_keys=False)
+
+    return report_path
+
+
 def build_timestamped_output_path(out_path: str, prefix: str = "results") -> str:
     """
     Build a full output file path of the form:

@@ -117,10 +117,14 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "rank_3y": 0.15,
     },
     "risk_adjusted": {
-        "sharpe_3y": 0.45,
-        "sharpe_1y": 0.10,
-        "upside": 0.25,
-        "downside": 0.20,
+        "sharpe_3y": 0.1,
+        "sharpe_1y": 0.1,
+        "upside": 0.15,
+        "downside": 0.15,
+        "yahoo_sharpe_3y": 0.10,
+        "yahoo_sharpe_1y": 0.15,
+        "yahoo_zscore_3y": 0.10,
+        "yahoo_zscore_1y": 0.15,
     },
     "volatility": {
         "stdev_3y": 0.45,
@@ -150,6 +154,16 @@ DEFAULT_CONCEPT_WEIGHTS = {
     },
 }
 
+DEFAULT_YAHOO_METRICS = {
+    "batch_size": 20,
+    "rest_delay_seconds": 3.5,
+    "sample_stock_lookups": 5,
+    "max_download_retries": 3,
+    "risk_free_annual": 0.04,
+    "price_history_period": "3y",
+    "log_unmapped_keys": True,
+}
+
 # Full default `thresholds` schema for the profile input YAML. Any keys
 # the user omits from their YAML fall back to these values via
 # deep_merge_dicts() in input_file.py, and nested dicts (weights,
@@ -174,6 +188,9 @@ DEFAULT_THRESHOLDS = {
     # Column-level weights inside each concept (how much each raw
     # metric counts within its own concept score).
     "concept_weights": DEFAULT_CONCEPT_WEIGHTS,
+
+    # Yahoo Finance fetch/runtime settings used by utils.yahoo_metrics.
+    "yahoo_metrics": DEFAULT_YAHOO_METRICS,
 }
 
 # Grade-letter -> numeric mapping, shared by any profile that scores on

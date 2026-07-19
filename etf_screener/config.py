@@ -162,6 +162,9 @@ DEFAULT_YAHOO_METRICS = {
     "risk_free_annual": 0.04,
     "price_history_period": "3y",
     "log_unmapped_keys": True,
+    "subsector_cache_path": "utils/sector_cache.json",
+    "subsector_cache_max_age_days": 30,
+    "force_refresh_subsector": False,
 }
 
 # Full default `thresholds` schema for the profile input YAML. Any keys

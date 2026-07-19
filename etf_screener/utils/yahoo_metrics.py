@@ -23,9 +23,12 @@ Design goals:
 """
 from __future__ import annotations
 
+import json
+import os
 import time
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional
+from datetime import datetime, timedelta
+from typing import Any, Dict, Iterable, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -119,6 +122,9 @@ class YahooMetricsConfig:
     risk_free_annual: float = 0.04
     price_history_period: str = "3y"
     log_unmapped_keys: bool = True
+    subsector_cache_path: str = "utils/sector_cache.json"
+    subsector_cache_max_age_days: int = 30
+    force_refresh_subsector: bool = False
 
     @property
     def risk_free_monthly(self) -> float:
@@ -134,6 +140,44 @@ class YahooMetricsConfig:
         valid_fields = {f for f in cls.__dataclass_fields__}
         filtered = {k: v for k, v in overrides.items() if k in valid_fields}
         return cls(**filtered)
+
+
+# =========================================================================
+# SUB-SECTOR CACHE (disk-backed, monthly by default)
+# =========================================================================
+
+def _load_subsector_cache(cache_path: str) -> Dict[str, Dict[str, str]]:
+    """Load the on-disk sub-sector cache as {ticker: {sub_sector, cached_date}}.
+    Returns {} if the file doesn't exist or fails to parse -- never raises.
+    """
+    if not os.path.exists(cache_path):
+        return {}
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_subsector_cache(cache_path: str, cache_data: Dict[str, Dict[str, str]]) -> None:
+    """Write the sub-sector cache back to disk, creating parent dirs as needed."""
+    directory = os.path.dirname(cache_path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+    with open(cache_path, "w", encoding="utf-8") as f:
+        json.dump(cache_data, f, indent=2, sort_keys=True)
+
+
+def _is_cache_entry_fresh(entry: Dict[str, str], max_age_days: int) -> bool:
+    """True if entry has a parseable cached_date within max_age_days of now."""
+    cached_date_str = entry.get("cached_date")
+    if not cached_date_str:
+        return False
+    try:
+        cached_date = datetime.fromisoformat(cached_date_str)
+    except Exception:
+        return False
+    return (datetime.now() - cached_date) <= timedelta(days=max_age_days)
 
 
 # =========================================================================
@@ -195,6 +239,8 @@ def resolve_ticker_subsector(
     ticker: str,
     cfg: YahooMetricsConfig,
     errors: Optional[List[str]] = None,
+    subsector_cache: Optional[Dict[str, Dict[str, str]]] = None,
+    holding_info_cache: Optional[Dict[str, Any]] = None,
 ) -> str:
     """For a single ETF ticker, look through its top holdings, classify
     each holding's industryKey/sectorKey, and return the sub-sector with
@@ -202,7 +248,22 @@ def resolve_ticker_subsector(
     any missing/errored data -- never raises, so one bad ticker can't
     abort a batch. Any handled exception is appended to `errors` (if
     provided) for later diagnostic reporting.
+
+    `subsector_cache`: disk-backed {ticker: {sub_sector, cached_date}} dict.
+    If a fresh entry exists (within cfg.subsector_cache_max_age_days) and
+    cfg.force_refresh_subsector is False, the Yahoo funds_data/holdings
+    fetch is skipped entirely and the cached value is returned -- this is
+    the expensive call, so caching it is the main speed win.
+
+    `holding_info_cache`: in-memory {stock_symbol: info_dict} reused across
+    ALL tickers within a single run, so a holding shared by multiple ETFs
+    (e.g. AAPL, MSFT) only triggers one yf.Ticker(...).info call all run.
     """
+    if subsector_cache is not None and not cfg.force_refresh_subsector:
+        cached_entry = subsector_cache.get(ticker)
+        if cached_entry and _is_cache_entry_fresh(cached_entry, cfg.subsector_cache_max_age_days):
+            return cached_entry.get("sub_sector", DEFAULT_SUBSECTOR)
+
     try:
         t_obj = yf.Ticker(ticker)
         f_data = t_obj.funds_data
@@ -220,6 +281,7 @@ def resolve_ticker_subsector(
     weight_matrix: Dict[str, float] = {}
     top_stocks = holdings_df.index.tolist()
     loop_limit = min(len(top_stocks), cfg.sample_stock_lookups)
+    info_cache: Dict[str, Any] = holding_info_cache if holding_info_cache is not None else {}
 
     for stock_symbol in top_stocks[:loop_limit]:
         try:
@@ -227,7 +289,11 @@ def resolve_ticker_subsector(
             if _is_skippable_holding_symbol(stock_symbol):
                 continue
 
-            s_info = yf.Ticker(stock_symbol).info
+            if stock_symbol in info_cache:
+                s_info = info_cache[stock_symbol]
+            else:
+                s_info = yf.Ticker(stock_symbol).info
+                info_cache[stock_symbol] = s_info
             if not s_info:
                 continue
             ind_key = str(s_info.get("industryKey", "")).lower() if s_info.get("industryKey", "") else ""
@@ -241,12 +307,19 @@ def resolve_ticker_subsector(
         except Exception:
             continue
 
+    resolved_sub_sector = DEFAULT_SUBSECTOR
     if weight_matrix:
         max_sub_sector = max(weight_matrix, key=weight_matrix.get)
         if weight_matrix[max_sub_sector] > 0:
-            return max_sub_sector
+            resolved_sub_sector = max_sub_sector
 
-    return DEFAULT_SUBSECTOR
+    if subsector_cache is not None:
+        subsector_cache[ticker] = {
+            "sub_sector": resolved_sub_sector,
+            "cached_date": datetime.now().isoformat(),
+        }
+
+    return resolved_sub_sector
 
 
 # =========================================================================
@@ -372,6 +445,10 @@ def get_yahoo_metrics_for_tickers(
             "Z_Score_1Y", "Z_Score_3Y", "Yahoo_Fetch_Error",
         ])
 
+    subsector_cache = _load_subsector_cache(cfg.subsector_cache_path)
+    cache_hits_before = len(subsector_cache)
+    holding_info_cache: Dict[str, Any] = {}
+
     batches = [unique_tickers[i:i + cfg.batch_size] for i in range(0, len(unique_tickers), cfg.batch_size)]
     records: List[dict] = []
 
@@ -381,7 +458,11 @@ def get_yahoo_metrics_for_tickers(
 
         sub_sectors: Dict[str, str] = {}
         for ticker in batch:
-            sub_sectors[ticker] = resolve_ticker_subsector(ticker, cfg, errors=batch_errors)
+            sub_sectors[ticker] = resolve_ticker_subsector(
+                ticker, cfg, errors=batch_errors,
+                subsector_cache=subsector_cache,
+                holding_info_cache=holding_info_cache,
+            )
 
         raw_data = _download_price_history(batch, cfg, errors=batch_errors)
         sharpe_results = _compute_sharpe_for_batch(raw_data, batch, cfg, errors=batch_errors)
@@ -407,6 +488,13 @@ def get_yahoo_metrics_for_tickers(
 
         if batch_idx < len(batches):
             time.sleep(cfg.rest_delay_seconds)
+
+    _save_subsector_cache(cfg.subsector_cache_path, subsector_cache)
+    cache_hits_after = len(subsector_cache) - cache_hits_before
+    print(
+        f"  [Yahoo Metrics] Sub-sector cache: {cache_hits_before} entrie(s) loaded, "
+        f"{cache_hits_after} new/refreshed, saved to {cfg.subsector_cache_path}"
+    )
 
     df_matrix = pd.DataFrame.from_records(records)
 

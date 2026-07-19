@@ -14,7 +14,7 @@ if __name__ == "__main__":
         perf_path=profile_input.perf_path,
         out_path=profile_input.out_path,
         profile_name=profile_input.profile_name,
-        top_n=profile_input.top_n,
+        top_n=profile_input.top_n_per_category,
         thresholds=profile_input.thresholds,
     )
     print(f"CI run complete. Output written to: {out_path}")

@@ -1,5 +1,12 @@
 """Reads the latest screener output and delivers only high-signal rows
-(e.g. STRONG BUY / TACTICAL BUY) via Slack webhook and/or email.
+via Slack webhook and/or email.
+
+The screener pipeline (main.py / profiles/profile_a.py) exports a
+"Profile A Selected Flag" column (True for rows ranked in the top_n of
+their category) -- there is no "Decision" column in that output (that
+name only exists in the separate get_yahoo_dta.py Sharpe/Decision CSV
+workflow). Alert-worthy rows here are therefore rows where the profile's
+Selected Flag column is True.
 
 Email delivery is enabled by setting SMTP-related environment variables
 (see the EMAIL_* variables below). If they are not set, email sending is
@@ -16,7 +23,6 @@ import pandas as pd
 import requests
 
 OUTPUT_DIR = "output"
-ALERT_DECISIONS = {"STRONG BUY", "TACTICAL BUY", "BUY THE DIP"}
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
 # --- Email configuration (all optional; email is skipped if EMAIL_TO is unset) ---
@@ -35,12 +41,22 @@ def find_latest_file(directory: str, pattern: str) -> str | None:
     return max(files, key=os.path.getmtime) if files else None
 
 
-def build_alert_message(df: pd.DataFrame, decision_col: str) -> tuple[str, pd.DataFrame]:
-    hits = df[df[decision_col].str.contains("|".join(ALERT_DECISIONS), na=False)]
+def build_alert_message(df: pd.DataFrame, selected_flag_col: str) -> tuple[str, pd.DataFrame]:
+    hits = df[df[selected_flag_col].fillna(False).astype(bool)]
     if hits.empty:
         return "", hits
 
-    lines = [f"*{row.get('Ticker', '?')}* — {row[decision_col]}" for _, row in hits.iterrows()]
+    score_col = next((c for c in df.columns if c == "Profile A Score"), None)
+    rank_col = next((c for c in df.columns if c == "Profile A Rank In Category"), None)
+
+    lines = []
+    for _, row in hits.iterrows():
+        ticker = row.get("Ticker", "?")
+        category = row.get("Morningstar Category", "Unknown Category")
+        score_text = f" | Score: {row[score_col]:.2f}" if score_col and pd.notna(row.get(score_col)) else ""
+        rank_text = f" | Rank in Category: {int(row[rank_col])}" if rank_col and pd.notna(row.get(rank_col)) else ""
+        lines.append(f"*{ticker}* — Selected ({category}{score_text}{rank_text})")
+
     message = "\U0001F4C8 *Daily ETF Screener Alerts*\n" + "\n".join(lines[:20])
     return message, hits
 
@@ -104,12 +120,12 @@ def main():
         return
 
     df = pd.read_excel(latest_xlsx)
-    decision_col = next((c for c in df.columns if "Decision" in c), None)
-    if decision_col is None:
-        print("No Decision column found; skipping alerts.")
+    selected_flag_col = next((c for c in df.columns if c == "Profile A Selected Flag"), None)
+    if selected_flag_col is None:
+        print("No 'Profile A Selected Flag' column found; skipping alerts.")
         return
 
-    message, hits = build_alert_message(df, decision_col)
+    message, hits = build_alert_message(df, selected_flag_col)
     if hits.empty:
         print("No alert-worthy tickers today.")
         message = "No alert-worthy tickers today."

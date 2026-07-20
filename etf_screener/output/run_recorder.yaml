@@ -1,0 +1,369 @@
+results_profile_A_2026-07-18_21-50-20.xlsx:
+  require_category: true
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.2
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.1
+    costs: 0.15
+    tax_income: 0.05
+  concept_weights:
+    performance:
+      return_3y: 0.4
+      return_5y: 0.35
+      return_1y: 0.1
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.1
+      upside: 0.25
+      downside: 0.2
+    volatility:
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.3
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.6
+      trading_volume: 0.4
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.3
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+results_profile_A_2026-07-19_10-55-12.xlsx:
+  require_category: true
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.2
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.1
+    costs: 0.15
+    tax_income: 0.05
+  concept_weights:
+    performance:
+      return_3y: 0.4
+      return_5y: 0.35
+      return_1y: 0.1
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.1
+      upside: 0.25
+      downside: 0.2
+      yahoo_sharpe_3y: 0.1
+      yahoo_sharpe_1y: 0.15
+      yahoo_zscore_3y: 0.1
+      yahoo_zscore_1y: 0.15
+    volatility:
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.3
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.6
+      trading_volume: 0.4
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.3
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+  yahoo_metrics:
+    batch_size: 20
+    rest_delay_seconds: 3.5
+    sample_stock_lookups: 5
+    max_download_retries: 3
+    risk_free_annual: 0.04
+    price_history_period: 3y
+    log_unmapped_keys: true
+results_profile_A_2026-07-19_15-32-21.xlsx:
+  require_category: true
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.2
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.1
+    costs: 0.15
+    tax_income: 0.05
+  concept_weights:
+    performance:
+      return_3y: 0.4
+      return_5y: 0.35
+      return_1y: 0.1
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.1
+      upside: 0.25
+      downside: 0.2
+      yahoo_sharpe_3y: 0.1
+      yahoo_sharpe_1y: 0.15
+      yahoo_zscore_3y: 0.1
+      yahoo_zscore_1y: 0.15
+    volatility:
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.3
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.6
+      trading_volume: 0.4
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.3
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+  yahoo_metrics:
+    batch_size: 20
+    rest_delay_seconds: 3.5
+    sample_stock_lookups: 5
+    max_download_retries: 3
+    risk_free_annual: 0.04
+    price_history_period: 3y
+    log_unmapped_keys: true
+results_profile_A_2026-07-19_16-52-47.xlsx:
+  require_category: true
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.2
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.1
+    costs: 0.15
+    tax_income: 0.05
+  concept_weights:
+    performance:
+      return_3y: 0.4
+      return_5y: 0.35
+      return_1y: 0.1
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.1
+      upside: 0.25
+      downside: 0.2
+      yahoo_sharpe_3y: 0.1
+      yahoo_sharpe_1y: 0.15
+      yahoo_zscore_3y: 0.1
+      yahoo_zscore_1y: 0.15
+    volatility:
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.3
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.6
+      trading_volume: 0.4
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.3
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+  yahoo_metrics:
+    batch_size: 20
+    rest_delay_seconds: 3.5
+    sample_stock_lookups: 5
+    max_download_retries: 3
+    risk_free_annual: 0.04
+    price_history_period: 3y
+    log_unmapped_keys: true
+    subsector_cache_path: utils/sector_cache.json
+    subsector_cache_max_age_days: 30
+    force_refresh_subsector: false
+results_profile_A_2026-07-19_19-00-15.xlsx:
+  require_category: true
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.2
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.1
+    costs: 0.15
+    tax_income: 0.05
+  concept_weights:
+    performance:
+      return_3y: 0.4
+      return_5y: 0.35
+      return_1y: 0.1
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.1
+      upside: 0.25
+      downside: 0.2
+      yahoo_sharpe_3y: 0.1
+      yahoo_sharpe_1y: 0.15
+      yahoo_zscore_3y: 0.1
+      yahoo_zscore_1y: 0.15
+    volatility:
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.3
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.6
+      trading_volume: 0.4
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.3
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+  yahoo_metrics:
+    batch_size: 20
+    rest_delay_seconds: 3.5
+    sample_stock_lookups: 5
+    max_download_retries: 3
+    risk_free_annual: 0.04
+    price_history_period: 3y
+    log_unmapped_keys: true
+    subsector_cache_path: utils/sector_cache.json
+    subsector_cache_max_age_days: 30
+    force_refresh_subsector: false
+results_profile_A_2026-07-19_19-15-50.xlsx:
+  require_category: true
+  max_expense_ratio: 0.75
+  require_fund_size: true
+  min_fund_size: null
+  require_3y_return: true
+  min_3y_return: null
+  exclude_leveraged_funds: true
+  exclude_interval_funds: true
+  exclude_tender_offer_funds: true
+  weights:
+    performance: 0.25
+    risk_adjusted: 0.2
+    volatility: 0.15
+    tracking: 0.05
+    liquidity_size: 0.05
+    quality_valuation: 0.1
+    costs: 0.15
+    tax_income: 0.05
+  concept_weights:
+    performance:
+      return_3y: 0.4
+      return_5y: 0.35
+      return_1y: 0.1
+      rank_3y: 0.15
+    risk_adjusted:
+      sharpe_3y: 0.45
+      sharpe_1y: 0.1
+      upside: 0.25
+      downside: 0.2
+      yahoo_sharpe_3y: 0.1
+      yahoo_sharpe_1y: 0.15
+      yahoo_zscore_3y: 0.1
+      yahoo_zscore_1y: 0.15
+    volatility:
+      stdev_3y: 0.35
+      drawdown_3y: 0.35
+      drawdown_5y: 0.3
+    tracking:
+      tracking_error_3y: 0.65
+      tracking_error_1y: 0.35
+    liquidity_size:
+      fund_size: 0.6
+      trading_volume: 0.4
+    quality_valuation:
+      growth_grade: 0.35
+      financial_health: 0.35
+      price_fair_value: 0.3
+    costs:
+      net_expense_ratio: 0.75
+      management_fee: 0.25
+    tax_income:
+      tax_cost_ratio: 0.55
+      sec_yield: 0.45
+  yahoo_metrics:
+    batch_size: 20
+    rest_delay_seconds: 3.5
+    sample_stock_lookups: 5
+    max_download_retries: 3
+    risk_free_annual: 0.04
+    price_history_period: 3y
+    log_unmapped_keys: true
+    subsector_cache_path: utils/sector_cache.json
+    subsector_cache_max_age_days: 30
+    force_refresh_subsector: false

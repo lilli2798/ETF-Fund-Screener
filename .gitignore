@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+.DS_Store
+etf_screener/output/*.xlsx
+
+# Explicitly track the Yahoo sub-sector cache (needed for CI persistence)
+!etf_screener/utils/sector_cache.json

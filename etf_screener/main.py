@@ -138,9 +138,9 @@ def process_data(
     # TEMP DEBUG (per user request 2026-07-19): print raw Yahoo results
     # before merging into the Morningstar dataframe, for validation.
     # Remove this print once satisfied the Yahoo fetch is trustworthy.
-    print("\n[DEBUG] Raw Yahoo metrics before merge:")
-    print(df_yahoo.to_string(index=False))
-    print()
+    # print("\n[DEBUG] Raw Yahoo metrics before merge:")
+    # print(df_yahoo.to_string(index=False))
+    # print()
 
     df = pd.merge(df, df_yahoo, on="Ticker", how="left")
 

@@ -19,7 +19,8 @@ Design notes (locked in from project discussion):
 from typing import Callable, Dict, List, Optional
 import pandas as pd
 
-from config import GRADE_TO_NUMERIC
+from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC
+
 
 # --- Profile registry -------------------------------------------------
 # Each profile module (e.g. profiles/profile_a.py) registers its own
@@ -59,6 +60,15 @@ def _grade_to_numeric(value) -> Optional[float]:
         return None
     key = str(value).strip().upper()
     return GRADE_TO_NUMERIC.get(key)
+
+
+def _medalist_to_numeric(value) -> Optional[float]:
+    """Map Medalist Rating (e.g. 'Gold') to a numeric score via MEDALIST_TO_NUMERIC."""
+    if pd.isna(value):
+        return None
+    key = str(value).strip().upper()
+    return MEDALIST_TO_NUMERIC.get(key)
+
 
 
 def normalize_within_category(
@@ -151,7 +161,7 @@ REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "volatility": ["stdev_3y", "drawdown_3y", "drawdown_5y"],
     "tracking": ["tracking_error_3y", "tracking_error_1y"],
     "liquidity_size": ["fund_size", "trading_volume"],
-    "quality_valuation": ["growth_grade", "financial_health", "price_fair_value"],
+    "quality_valuation": ["growth_grade", "financial_health", "price_fair_value", "medalist" ],
     "costs": ["net_expense_ratio", "management_fee"],
     "tax_income": ["tax_cost_ratio", "sec_yield"],
 }
@@ -458,24 +468,48 @@ def calculate_quality_valuation_score(
 ) -> pd.Series:
     """
     Portfolio Growth/Financial Health letter grades (converted to
-    numeric) plus Price/Fair Value, normalized within category.
-    Price/Fair Value is inverted -- being priced above fair value
-    (ratio > 1) is generally less attractive than trading at/below it.
+    numeric), Medalist Rating, plus Price/Fair Value, normalized
+    within category.
+
+    Price/Fair Value is inverted -- priced above fair value (ratio > 1)
+    is generally less attractive than trading at/below it.
+    Medalist is higher-is-better (Gold > Silver > Bronze > Neutral).
     """
     weights = _require_weights(weights, "quality_valuation")
 
     out = pd.DataFrame(index=df.index)
 
     if "Portfolio Growth Grade" in df.columns:
-        growth_numeric = df["Portfolio Growth Grade"].apply(_grade_to_numeric)
-        out["Growth_Grade_Numeric"] = growth_numeric
-        out["Norm_Growth_Grade"] = normalize_within_category(out, "Growth_Grade_Numeric", category_col)
+        out["Growth_Grade_Numeric"] = df["Portfolio Growth Grade"].apply(_grade_to_numeric)
+        out["Norm_Growth_Grade"] = normalize_within_category(
+            out, "Growth_Grade_Numeric", category_col
+        )
 
     if "Portfolio Financial Health Grade" in df.columns:
-        fh_numeric = df["Portfolio Financial Health Grade"].apply(_grade_to_numeric)
-        out["Financial_Health_Grade_Numeric"] = fh_numeric
+        out["Financial_Health_Grade_Numeric"] = df["Portfolio Financial Health Grade"].apply(
+            _grade_to_numeric
+        )
         out["Norm_Financial_Health"] = normalize_within_category(
             out, "Financial_Health_Grade_Numeric", category_col
+        )
+
+    # NEW: Medalist Rating (Overall) -> numeric -> category percentile
+    medalist_col = None
+    for candidate in ("Medalist Rating (Overall)", "Medalist Rating", "Morningstar Medalist Rating"):
+        if candidate in df.columns:
+            medalist_col = candidate
+            break
+
+    if medalist_col is not None:
+        out["Medalist_Numeric"] = df[medalist_col].apply(_medalist_to_numeric)
+        out["Norm_Medalist"] = normalize_within_category(
+            out, "Medalist_Numeric", category_col
+        )
+    elif "Medalist_Numeric" in df.columns:
+        # already built by build_qualitative_review_columns
+        out["Medalist_Numeric"] = pd.to_numeric(df["Medalist_Numeric"], errors="coerce")
+        out["Norm_Medalist"] = normalize_within_category(
+            out, "Medalist_Numeric", category_col
         )
 
     if "Price/Fair Value" in df.columns:
@@ -487,6 +521,7 @@ def calculate_quality_valuation_score(
         "Norm_Growth_Grade": weights["growth_grade"],
         "Norm_Financial_Health": weights["financial_health"],
         "Norm_Price_Fair_Value": weights["price_fair_value"],
+        "Norm_Medalist": weights["medalist"],  # NEW
     }
     return _weighted_average(out, weight_map)
 

@@ -137,9 +137,10 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "trading_volume": 0.40,
     },
     "quality_valuation": {
-        "growth_grade": 0.35,
-        "financial_health": 0.35,
-        "price_fair_value": 0.30,
+        "growth_grade": 0.25,
+        "financial_health": 0.25,
+        "price_fair_value": 0.20,
+        "medalist": 0.30,   # NEW — raise/lower as you like; use 0.0 to ignore
     },
     "costs": {
         "net_expense_ratio": 0.75,
@@ -201,4 +202,15 @@ GRADE_TO_NUMERIC = {
     "C+": 6, "C": 5, "C-": 4,
     "D+": 3, "D": 2, "D-": 1,
     "F": 0,
+}
+
+# Medalist Rating (Overall) -> ordered numeric.
+# normalize_within_category turns this into 0-100 within peer group.
+# Do NOT merge into GRADE_TO_NUMERIC (different scale/meaning).
+MEDALIST_TO_NUMERIC = {
+    "GOLD": 5,
+    "SILVER": 4,
+    "BRONZE": 3,
+    "NEUTRAL": 2,
+    "NEGATIVE": 1,
 }

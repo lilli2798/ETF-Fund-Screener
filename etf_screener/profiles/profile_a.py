@@ -5,14 +5,22 @@ Self-registers into scoring.PROFILE_FILTERS / PROFILE_SCORERS under the
 key "A" on import -- main.py just needs `import profiles.profile_a` once
 and this profile becomes available via process_data(profile_name="A").
 
-Updated to consume the new per-concept score columns produced by
+Updated to consume the per-concept score columns produced by
 scoring.build_concept_scores() (Performance_Score, Risk_Adjusted_Score,
 Volatility_Score, Tracking_Score, Liquidity_Size_Score,
 Quality_Valuation_Score, Costs_Score, Tax_Income_Score) instead of the
 old flat Norm_* columns. Each of those concept scores is already
 computed WITHIN Morningstar Category, so Profile A just applies a
 second layer of weights across concepts -- it doesn't need to know
-anything about the underlying raw metriåcs.
+anything about the underlying raw metrics.
+
+Stage A rules (this profile):
+  - Score ONLY numeric concept columns listed in weight_map.
+  - Do NOT fold qualitative text fields (Medalist, letter grades,
+    Risk Label, Management Style, Morningstar Risk Rating text) into
+    Profile_A_Score. Those may exist on the frame for export/review only.
+  - Profile_A_Score / rank columns are forced to plain float64 so Excel
+    does not treat them as text.
 
 To add a new profile in the future:
   1. Copy this file to profiles/profile_b.py (or whatever name you like).
@@ -21,11 +29,34 @@ To add a new profile in the future:
 No other file needs to change.
 """
 
-from typing import List
+from __future__ import annotations
+
+from typing import Dict, List
+
+import numpy as np
 import pandas as pd
 
 from config import PROFILE_A_WEIGHTS
 from scoring import register_profile_filter, register_profile_scorer
+
+
+# Concept columns Profile A may weight. Anything not in this map is ignored
+# by the composite (including qualitative text columns).
+CONCEPT_WEIGHT_KEYS: Dict[str, str] = {
+    "Performance_Score": "performance",
+    "Risk_Adjusted_Score": "risk_adjusted",
+    "Volatility_Score": "volatility",
+    "Tracking_Score": "tracking",
+    "Liquidity_Size_Score": "liquidity_size",
+    "Quality_Valuation_Score": "quality_valuation",
+    "Costs_Score": "costs",
+    "Tax_Income_Score": "tax_income",
+}
+
+
+def _as_float_series(s: pd.Series) -> pd.Series:
+    """Coerce to float64; invalid values -> NaN. Never leave object/str."""
+    return pd.to_numeric(s, errors="coerce").astype("float64")
 
 
 @register_profile_filter("A")
@@ -59,10 +90,13 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
 
     if max_expense_ratio is not None and "Net Expense Ratio" in eligible.columns:
         before = len(eligible)
-        eligible = eligible[
-            eligible["Net Expense Ratio"].notna() & (eligible["Net Expense Ratio"] <= max_expense_ratio)
-        ]
-        print(f"  Profile A filter - expense ratio <= {max_expense_ratio}%: {before} -> {len(eligible)}")
+        # Ensure comparison is numeric even if loader left strings
+        expense = _as_float_series(eligible["Net Expense Ratio"])
+        eligible = eligible[expense.notna() & (expense <= float(max_expense_ratio))]
+        print(
+            f"  Profile A filter - expense ratio <= {max_expense_ratio}%: "
+            f"{before} -> {len(eligible)}"
+        )
 
     if require_fund_size and "Fund Size" in eligible.columns:
         before = len(eligible)
@@ -71,7 +105,8 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
 
     if require_3y_return and "Total Return (3Y)" in eligible.columns:
         before = len(eligible)
-        eligible = eligible[eligible["Total Return (3Y)"].notna()]
+        ret3 = _as_float_series(eligible["Total Return (3Y)"])
+        eligible = eligible[ret3.notna()]
         print(f"  Profile A filter - has 3Y track record: {before} -> {len(eligible)}")
 
     # Structural exclusions -- Profile A targets steady, long-term,
@@ -86,17 +121,20 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
 
     if exclude_leveraged_funds and "Flag_Leveraged_Fund" in eligible.columns:
         before = len(eligible)
-        eligible = eligible[~eligible["Flag_Leveraged_Fund"].fillna(False)]
+        flag = eligible["Flag_Leveraged_Fund"].fillna(False).astype(bool)
+        eligible = eligible[~flag]
         print(f"  Profile A filter - exclude leveraged funds: {before} -> {len(eligible)}")
 
     if exclude_interval_funds and "Flag_Interval_Fund" in eligible.columns:
         before = len(eligible)
-        eligible = eligible[~eligible["Flag_Interval_Fund"].fillna(False)]
+        flag = eligible["Flag_Interval_Fund"].fillna(False).astype(bool)
+        eligible = eligible[~flag]
         print(f"  Profile A filter - exclude interval funds: {before} -> {len(eligible)}")
 
     if exclude_tender_offer_funds and "Flag_Tender_Offer" in eligible.columns:
         before = len(eligible)
-        eligible = eligible[~eligible["Flag_Tender_Offer"].fillna(False)]
+        flag = eligible["Flag_Tender_Offer"].fillna(False).astype(bool)
+        eligible = eligible[~flag]
         print(f"  Profile A filter - exclude tender-offer funds: {before} -> {len(eligible)}")
 
     print(f"Profile A eligibility filter: {start_count} -> {len(eligible)} rows remain.")
@@ -115,66 +153,107 @@ def compute_profile_A_score(df: pd.DataFrame, top_n: int, thresholds: dict) -> p
 
     Expects df to already have gone through
     scoring.build_concept_scores(df) so the *_Score columns below exist.
+
+    Stage A: qualitative columns are never read here.
     """
+    if thresholds is None:
+        thresholds = {}
+
     scored: pd.DataFrame = df.copy()
+    weights = thresholds.get("weights", PROFILE_A_WEIGHTS) or {}
 
-    weights = thresholds.get("weights", PROFILE_A_WEIGHTS)
-
-    weight_map = {
-        "Performance_Score": weights.get("performance", 0.30),
-        "Risk_Adjusted_Score": weights.get("risk_adjusted", 0.20),
-        "Volatility_Score": weights.get("volatility", 0.15),
-        "Tracking_Score": weights.get("tracking", 0.0),
-        "Liquidity_Size_Score": weights.get("liquidity_size", 0.0),
-        "Quality_Valuation_Score": weights.get("quality_valuation", 0.0),
-        "Costs_Score": weights.get("costs", 0.15),
-        "Tax_Income_Score": weights.get("tax_income", 0.0),
-    }
+    # Build weight_map: concept_col -> weight
+    weight_map: Dict[str, float] = {}
+    for concept_col, yaml_key in CONCEPT_WEIGHT_KEYS.items():
+        weight_map[concept_col] = float(weights.get(yaml_key, 0.0))
 
     available_cols: List[str] = [c for c in weight_map if c in scored.columns]
     if not available_cols:
         raise ValueError(
             "compute_profile_A_score(): none of the expected concept-score "
             "columns are present. Did you run build_concept_scores() "
-            "before calling this function?"
+            "before calling this function?\n"
+            f"Expected any of: {list(CONCEPT_WEIGHT_KEYS)}\n"
+            f"Present columns sample: {list(scored.columns)[:40]}"
         )
+
     missing_cols = [c for c in weight_map if c not in scored.columns]
     if missing_cols:
-        print(f"  Note: Profile A scoring proceeding without {missing_cols} "
-              f"(concept score(s) not found) -- remaining weights re-normalized.")
+        print(
+            f"  Note: Profile A scoring proceeding without {missing_cols} "
+            f"(concept score(s) not found) -- remaining weights re-normalized."
+        )
 
-    def weighted_row_score(row: pd.Series) -> float:
-        total_weight: float = 0.0
-        weighted_sum: float = 0.0
-        for col in available_cols:
-            val = row[col]
-            if pd.notna(val):
-                w = weight_map[col]
-                weighted_sum += val * w
-                total_weight += w
-        if total_weight == 0.0:
-            return float("nan")
-        return weighted_sum / total_weight
+    # Coerce concept scores to float64 before weighting (fixes str/object leaks)
+    for col in available_cols:
+        scored[col] = _as_float_series(scored[col])
 
-    scored["Profile_A_Score"] = scored[available_cols].apply(weighted_row_score, axis=1)
+    # Drop zero-weight concepts from the active set (cleaner + avoids noise)
+    active_cols = [c for c in available_cols if weight_map[c] != 0.0]
+    if not active_cols:
+        # All weights zero or missing -- fall back to equal weight on available
+        print(
+            "  Warning: all Profile A concept weights are 0; "
+            "using equal weights on available concept scores."
+        )
+        active_cols = list(available_cols)
+        eq = 1.0 / len(active_cols)
+        for c in active_cols:
+            weight_map[c] = eq
 
+    active_weights = np.array([weight_map[c] for c in active_cols], dtype="float64")
+    concept_mat = scored[active_cols].to_numpy(dtype="float64", copy=True)
+
+    # Per-row: ignore NaN concepts and renormalize remaining weights
+    # score_i = sum(val_ij * w_j) / sum(w_j for j where val_ij is finite)
+    finite_mask = np.isfinite(concept_mat)
+    weighted_vals = np.where(finite_mask, concept_mat * active_weights, 0.0)
+    weight_sums = np.where(finite_mask, active_weights, 0.0).sum(axis=1)
+
+    with np.errstate(invalid="ignore", divide="ignore"):
+        row_scores = weighted_vals.sum(axis=1) / weight_sums
+    row_scores = np.where(weight_sums > 0.0, row_scores, np.nan)
+
+    # ---- numeric score (never object / never string) ----
+    scored["Profile_A_Score"] = pd.Series(row_scores, index=scored.index, dtype="float64")
+    scored["Profile_A_Score"] = _as_float_series(scored["Profile_A_Score"]).round(6)
+
+    # ---- ranks as float64 (Excel-friendly; still 1,2,3,...) ----
     if "Morningstar Category" in scored.columns:
         scored["Profile_A_Rank_In_Category"] = (
-            scored.groupby("Morningstar Category")["Profile_A_Score"]
+            scored.groupby("Morningstar Category", dropna=False)["Profile_A_Score"]
             .rank(method="min", ascending=False)
-            .astype("Int64")
         )
     else:
-        # No category column -- everything is effectively one big "category".
-        scored["Profile_A_Rank_In_Category"] = (
-            scored["Profile_A_Score"].rank(method="min", ascending=False).astype("Int64")
+        scored["Profile_A_Rank_In_Category"] = scored["Profile_A_Score"].rank(
+            method="min", ascending=False
         )
 
-    scored["Profile_A_Selected_Flag"] = scored["Profile_A_Rank_In_Category"] <= top_n
-
-    scored["Profile_A_Rank_Overall"] = (
-        scored["Profile_A_Score"].rank(method="min", ascending=False).astype("Int64")
+    scored["Profile_A_Rank_In_Category"] = _as_float_series(
+        scored["Profile_A_Rank_In_Category"]
     )
-    scored["Profile_A_Selected_Overall_Flag"] = scored["Profile_A_Rank_Overall"] <= top_n
+
+    scored["Profile_A_Selected_Flag"] = (
+        scored["Profile_A_Rank_In_Category"].le(float(top_n)).fillna(False).astype(bool)
+    )
+
+    scored["Profile_A_Rank_Overall"] = scored["Profile_A_Score"].rank(
+        method="min", ascending=False
+    )
+    scored["Profile_A_Rank_Overall"] = _as_float_series(scored["Profile_A_Rank_Overall"])
+
+    scored["Profile_A_Selected_Overall_Flag"] = (
+        scored["Profile_A_Rank_Overall"].le(float(top_n)).fillna(False).astype(bool)
+    )
+
+    # Console proof (helps catch str regression early)
+    print(
+        "  Profile A score dtypes: "
+        f"Score={scored['Profile_A_Score'].dtype}, "
+        f"RankInCat={scored['Profile_A_Rank_In_Category'].dtype}, "
+        f"RankOverall={scored['Profile_A_Rank_Overall'].dtype}"
+    )
+    if str(scored["Profile_A_Score"].dtype) == "object":
+        raise TypeError("Profile_A_Score is object/str after scoring -- aborting.")
 
     return scored

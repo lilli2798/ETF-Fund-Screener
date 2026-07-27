@@ -12,6 +12,13 @@ Run configuration (paths, profile name, top_n, thresholds) always comes
 from a profile input YAML file (e.g. input_profile_a.yaml) -- the script
 prompts for its path and retries on any load error, rather than accepting
 CLI flags or asking for each setting individually.
+
+Stage A note:
+  Composite score uses numeric metrics only (returns, Sharpe, fees, beta, etc.).
+  Qualitative fields (Medalist, grades, risk labels, management style) are
+  preserved on the frame for export/review but are not part of the score.
+  Enforcement of numeric dtypes on score/rank columns happens here before export
+  so Excel does not treat them as text.
 """
 
 from typing import List, Tuple
@@ -38,8 +45,8 @@ from export import (
     apply_header_formatting,
     format_column_names_for_export,
     build_timestamped_output_path,
-    append_to_recorder,   # NEW
-    write_used_weights_report,   # NEW
+    append_to_recorder,
+    write_used_weights_report,
 )
 
 
@@ -93,6 +100,64 @@ def _validate_profile_name(profile_name: str) -> None:
         )
 
 
+def ensure_profile_score_numeric(df: pd.DataFrame, profile_name: str) -> pd.DataFrame:
+    """
+    Stage A export safety: force profile score/rank columns to real floats.
+
+    Ranking logic is unchanged. This only fixes dtype/export issues where
+    Excel later shows Model/Profile scores as text (str/object).
+    """
+    out = df.copy()
+
+    candidates = [
+        f"Profile_{profile_name}_Score",
+        f"Profile_{profile_name}_Rank_In_Category",
+        f"Profile_{profile_name}_Rank_Overall",
+        # legacy / alternate names if a profile still emits them
+        "Model_Composite_Score",
+        "Model_Rank_In_Category",
+    ]
+
+    for col in candidates:
+        if col not in out.columns:
+            continue
+        out[col] = pd.to_numeric(out[col], errors="coerce")
+        # plain float64 (not pandas nullable Float64) plays better with openpyxl/Excel
+        out[col] = out[col].astype("float64")
+
+    # Selected flags stay boolean if present
+    for col in (
+        f"Profile_{profile_name}_Selected_Flag",
+        f"Profile_{profile_name}_Selected_Overall_Flag",
+        "Model_Selected_Flag",
+    ):
+        if col in out.columns:
+            out[col] = out[col].astype(bool)
+
+    return out
+
+
+def print_numeric_score_check(df: pd.DataFrame, profile_name: str) -> None:
+    """Quick console proof that score columns are numeric before Excel write."""
+    score_col = f"Profile_{profile_name}_Score"
+    rank_col = f"Profile_{profile_name}_Rank_In_Category"
+    cols = [c for c in (score_col, rank_col, "Model_Composite_Score") if c in df.columns]
+    if not cols:
+        print("  (No profile/model score columns found for numeric check.)")
+        return
+
+    print("  Numeric dtype check (pre-export):")
+    print(df[cols].dtypes.to_string())
+    print(df[cols].head(5).to_string(index=False))
+
+    for c in cols:
+        if str(df[c].dtype) == "object":
+            raise TypeError(
+                f"{c} is still object/str after ensure_profile_score_numeric(). "
+                "Fix the profile scorer to assign numeric Series, not strings."
+            )
+
+
 def process_data(
     struct_path: str = DEFAULT_STRUCT_PATH,
     perf_path: str = DEFAULT_PERF_PATH,
@@ -105,6 +170,7 @@ def process_data(
     Run the full pipeline end-to-end for a single profile:
       load -> merge -> ETF-only filter -> concept scores ->
       profile eligibility filter -> profile scoring/ranking ->
+      numeric score enforcement ->
       format for export -> save -> style header row.
 
     `thresholds` comes from the profile input YAML file (ProfileInput.thresholds)
@@ -113,6 +179,9 @@ def process_data(
     without editing code. Defaults to an empty dict if not provided, so
     each profile module's own `thresholds.get(key, default)` calls fall
     back safely.
+
+    Stage A: ranking/selection logic remains entirely inside PROFILE_SCORERS.
+    This function does not add quality/risk gates on qualitative fields.
     """
     if thresholds is None:
         thresholds = {}
@@ -167,8 +236,27 @@ def process_data(
     print(f"Computing Profile {profile_name} composite score and rankings...")
     df_ranked: pd.DataFrame = PROFILE_SCORERS[profile_name](df_eligible, top_n, thresholds)
 
+    # --- Stage A addition: numeric enforcement only (no logic change) ---
+    print("Enforcing numeric dtypes on profile score/rank columns...")
+    df_ranked = ensure_profile_score_numeric(df_ranked, profile_name=profile_name)
+    print_numeric_score_check(df_ranked, profile_name=profile_name)
+
     print("Formatting column names for export...")
     df_export: pd.DataFrame = format_column_names_for_export(df_ranked)
+
+    # Re-apply numeric cast after any export renaming (names may change)
+    df_export = ensure_profile_score_numeric(df_export, profile_name=profile_name)
+    # Also catch human-readable renamed headers if export renames them
+    for pretty in (
+        "Profile A Score",
+        f"Profile {profile_name} Score",
+        "Composite Score",
+        "Model Composite Score",
+        "Rank In Category",
+        "Rank Overall",
+    ):
+        if pretty in df_export.columns:
+            df_export[pretty] = pd.to_numeric(df_export[pretty], errors="coerce").astype("float64")
 
     final_out_path: str = build_timestamped_output_path(out_path, prefix=f"results_profile_{profile_name}")
     print(f"Output will be saved to: {final_out_path}")

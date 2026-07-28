@@ -1,24 +1,40 @@
 """
-Thin orchestrator for the ETF screener pipeline.
+ETF Fund Screener - Main Entry Point
 
-All reusable logic lives in dedicated modules (data_loading, merging,
-scoring, export, input_file). Profile-specific logic lives in profiles/*.py
-and self-registers via decorators in scoring.py -- so adding a new profile
-never requires editing this file's core logic, only:
-  1. Create profiles/profile_x.py (copy profiles/profile_a.py as a template)
-  2. Add one `import profiles.profile_x` line below
+This script runs the complete ETF analysis pipeline to help you find the best
+ETFs based on multiple financial metrics. It's designed to be easy to use:
+  1. Just run `python main.py` and it will prompt you for a configuration file
+  2. All settings are controlled via YAML files - no code changes needed
+  3. Results are exported to Excel with clear rankings and scores
 
-Run configuration (paths, profile name, top_n, thresholds) always comes
-from a profile input YAML file (e.g. input_profile_a.yaml) -- the script
-prompts for its path and retries on any load error, rather than accepting
-CLI flags or asking for each setting individually.
+HOW IT WORKS:
+  1. Loads structural and performance data from Morningstar Excel files
+  2. Merges the datasets and filters to ETFs only (no stocks)
+  3. Fetches additional metrics from Yahoo Finance (Sharpe ratios, Z-scores)
+  4. Calculates scores across 8 key dimensions (performance, risk, costs, etc.)
+  5. Applies your custom filters (expense ratio limits, fund size, etc.)
+  6. Ranks funds within each category and selects the top N per category
+  7. Exports results to Excel with formatted headers and all details
 
-Stage A note:
-  Composite score uses numeric metrics only (returns, Sharpe, fees, beta, etc.).
-  Qualitative fields (Medalist, grades, risk labels, management style) are
-  preserved on the frame for export/review but are not part of the score.
-  Enforcement of numeric dtypes on score/rank columns happens here before export
-  so Excel does not treat them as text.
+ADDING NEW INVESTMENT PROFILES:
+  To create a new investment strategy (e.g., aggressive growth, income-focused):
+  1. Copy profiles/profile_a.py as a template and name it profiles/profile_x.py
+  2. Add one line: `import profiles.profile_x`  (see line 55 below)
+  3. Create a YAML configuration file for your new profile
+  No other code changes needed - the profile self-registers automatically!
+
+CONFIGURATION:
+  All settings come from a YAML file (e.g., input_profile_a.yaml):
+  - Input file paths (structural data, performance data)
+  - Output directory
+  - Profile name (which investment strategy to use)
+  - Top N funds to select per category
+  - Custom thresholds and weights for scoring
+
+TECHNICAL NOTE:
+  The composite score uses numeric metrics only (returns, Sharpe, fees, etc.).
+  Qualitative fields like Medalist ratings and letter grades are preserved
+  in the output for reference but are not part of the numerical score.
 """
 
 from typing import List, Tuple

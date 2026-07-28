@@ -1,77 +1,157 @@
-# input_profile_a.yaml
+# ============================================================================
+# ETF Fund Screener - Profile A Configuration
+# ============================================================================
+#
+# This file controls how the screener analyzes and ranks ETFs.
+# Profile A is designed for long-term, low-risk, steady-return investing.
+#
+# QUICK START:
+# 1. Update the file paths below to point to your Morningstar Excel exports
+# 2. Adjust the thresholds and weights to match your preferences
+# 3. Run: python main.py
+# 4. When prompted, enter the path to this YAML file
+#
+# ============================================================================
+
+# Which investment profile to use (A = long-term, low-risk strategy)
 profile: A
-struct_path: data/structural-data/
-perf_path: data/performance-data/
+
+# INPUT FILES: Point these to your Morningstar Excel export directories
+struct_path: data/structural-data/   # Contains fund structural data (fees, holdings, etc.)
+perf_path: data/performance-data/    # Contains performance data (returns, risk metrics, etc.)
+
+# OUTPUT: Where to save the results Excel file
 out_path: output
 
+# ============================================================================
+# FILTERS & THRESHOLDS
+# ============================================================================
+# These settings control which ETFs are eligible for analysis.
+# Funds that don't meet these criteria are excluded before scoring.
+# ============================================================================
 
 thresholds:
-  max_expense_ratio: 0.75
-  require_fund_size: true
-  min_fund_size: null
-  require_3y_return: true
-  min_3y_return: null
-  require_category: true
+  # COST FILTERS
+  max_expense_ratio: 0.75           # Maximum expense ratio (0.75% = 0.0075 as decimal)
+                                    # Set lower to only consider very low-cost funds
 
-  # Structural hard exclusions -- funds matching these are dropped
-  # entirely, regardless of how well they score. Any key you omit here
-  # falls back to the default (true) in config.DEFAULT_THRESHOLDS.
-  exclude_leveraged_funds: true
-  exclude_interval_funds: true
-  exclude_tender_offer_funds: true
+  # SIZE FILTERS
+  require_fund_size: true           # Require funds to meet minimum size threshold
+  min_fund_size: null               # Minimum fund size in dollars (null = no minimum)
+                                    # Example: 100000000 for $100M minimum
 
-  # PROFILE-LEVEL weights: how much each of the 8 concept scores counts
-  # relative to the other concepts. Must sum to ~1.0. Any key you omit
-  # falls back to config.PROFILE_A_WEIGHTS.
-  # See profiles/profile_a.py::compute_profile_A_score() for the mapping.
+  # PERFORMANCE FILTERS
+  require_3y_return: true           # Only include funds with 3-year return history
+  min_3y_return: null               # Minimum 3-year annualized return (null = no minimum)
+                                    # Example: 0.05 for 5% minimum annual return
+
+  # CATEGORY FILTER
+  require_category: true            # Only include funds with a Morningstar Category assigned
+
+  # STRUCTURAL EXCLUSIONS (Hard filters - these funds are dropped entirely)
+  # Leveraged funds use debt to amplify returns (e.g., 2x, 3x funds) - higher risk
+  exclude_leveraged_funds: true     # Exclude leveraged/inverse ETFs
+
+  # Interval funds only allow redemptions at scheduled intervals - less liquid
+  exclude_interval_funds: true       # Exclude interval funds
+
+  # Tender offer funds have limited redemption options - less liquid
+  exclude_tender_offer_funds: true  # Exclude funds with active tender offers
+
+  # ============================================================================
+  # SCORING WEIGHTS
+  # ============================================================================
+  # These control how much each scoring dimension counts in the final score.
+  # Higher values = that dimension is more important to you.
+  # All weights should sum to approximately 1.0 (100%).
+  #
+  # You can omit any section here - it will use the default values from config.py
+  # ============================================================================
+
   weights:
+    # How much historical returns matter (25% of total score)
     performance: 0.25
+
+    # How much risk-adjusted performance matters (20% of total score)
     risk_adjusted: 0.20
+
+    # How much volatility/downside risk matters (15% of total score)
     volatility: 0.15
+
+    # How much tracking error matters (5% of total score)
+    # Lower tracking error = fund follows its benchmark more closely
     tracking: 0.05
+
+    # How much fund size and trading volume matter (5% of total score)
     liquidity_size: 0.05
+
+    # How much portfolio quality and valuation matter (10% of total score)
     quality_valuation: 0.10
+
+    # How much fees matter (15% of total score)
+    # Lower fees = better score
     costs: 0.15
+
+    # How much tax efficiency and dividend yield matter (5% of total score)
     tax_income: 0.05
 
-  # COLUMN-LEVEL weights INSIDE each concept (e.g. how much Total
-  # Return 3Y vs 5Y counts within Performance_Score). Each concept's
-  # own weights should sum to ~1.0. You can override just ONE leaf
-  # value (e.g. only performance.return_3y) and every sibling key you
-  # don't list still falls back to config.DEFAULT_CONCEPT_WEIGHTS --
-  # nothing gets silently dropped. Handy while you're still learning
-  # what each column means and want to nudge one weight at a time.
+  # ============================================================================
+  # DETAILED WEIGHTS WITHIN EACH SCORING DIMENSION
+  # ============================================================================
+  # These fine-tune how individual metrics are combined within each dimension.
+  # Each section should sum to approximately 1.0.
+  #
+  # TIP: You can override just ONE value (e.g., only return_3y) and all other
+  # values in that section will use their defaults. This makes it easy to
+  # experiment with small adjustments without changing everything.
+  # ============================================================================
+
   concept_weights:
+    # PERFORMANCE: How different time periods are weighted
     performance:
-      return_3y: 0.40
-      return_5y: 0.35
-      return_1y: 0.10
-      rank_3y: 0.15
+      return_3y: 0.40      # 3-year returns (most important)
+      return_5y: 0.35      # 5-year returns (second most important)
+      return_1y: 0.10      # 1-year returns (less important for long-term)
+      rank_3y: 0.15        # 3-year category ranking (vs peers)
+
+    # RISK-ADJUSTED: How different risk metrics are weighted
     risk_adjusted:
-      sharpe_3y: 0.45
-      sharpe_1y: 0.10
-      upside: 0.25
-      downside: 0.20
+      sharpe_3y: 0.45      # 3-year Sharpe ratio (return per unit of risk)
+      sharpe_1y: 0.10      # 1-year Sharpe ratio
+      upside: 0.25         # Upside capture (how well fund gains in up markets)
+      downside: 0.20        # Downside capture (how well fund protects in down markets)
+
+    # VOLATILITY: How different volatility measures are weighted
     volatility:
-      stdev_3y: 0.35
-      drawdown_3y: 0.35
-      drawdown_5y: 0.30
+      stdev_3y: 0.35       # 3-year standard deviation (price volatility)
+      drawdown_3y: 0.35    # 3-year maximum drawdown (largest peak-to-trough decline)
+      drawdown_5y: 0.30    # 5-year maximum drawdown
+
+    # TRACKING: How tracking error over different periods is weighted
     tracking:
-      tracking_error_3y: 0.65
-      tracking_error_1y: 0.35
+      tracking_error_3y: 0.65   # 3-year tracking error (deviation from benchmark)
+      tracking_error_1y: 0.35   # 1-year tracking error
+
+    # LIQUIDITY & SIZE: How size vs trading volume are weighted
     liquidity_size:
-      fund_size: 0.60
-      trading_volume: 0.40
+      fund_size: 0.60        # Total assets under management (AUM)
+      trading_volume: 0.40   # Average daily trading volume
+
+    # QUALITY & VALUATION: How different quality metrics are weighted
     quality_valuation:
-      growth_grade: 0.35
-      financial_health: 0.35
-      price_fair_value: 0.30
-      medalist: 0.30
+      growth_grade: 0.35         # Portfolio growth grade (A-F)
+      financial_health: 0.35     # Portfolio financial health grade (A-F)
+      price_fair_value: 0.30     # Price vs Morningstar's fair value estimate
+      medalist: 0.30             # Morningstar Medalist rating (Gold/Silver/Bronze)
+
+    # COSTS: How different fee measures are weighted
     costs:
-      net_expense_ratio: 0.75
-      management_fee: 0.25
+      net_expense_ratio: 0.75    # Net expense ratio (after fee waivers) - most important
+      management_fee: 0.25       # Management fee portion
+
+    # TAX & INCOME: How tax efficiency vs yield are weighted
     tax_income:
-      tax_cost_ratio: 0.55
-      sec_yield: 0.45
+      tax_cost_ratio: 0.55      # Tax cost ratio (how much taxes reduce returns)
+      sec_yield: 0.45           # SEC 30-day yield (standardized dividend yield)
 
 

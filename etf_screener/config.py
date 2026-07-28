@@ -1,12 +1,16 @@
 """
-Shared configuration and constants for the ETF screener pipeline.
+ETF Fund Screener - Configuration File
 
-Edit STRUCT_NEEDED_COLS / PERF_NEEDED_COLS to match the EXACT header text
-in your source Excel files. Any mismatch (trailing space, (R)/(TM) symbol,
-naming variant) will be silently dropped by pandas' usecols -- this is the
-bug we traced earlier, and data_loading.read_and_concat_excels() now prints
-a warning at runtime if a requested name doesn't exactly match the file's
-real header row.
+This file contains all the default settings, weights, and thresholds used by
+the screener. You typically don't need to edit this file directly - most
+settings can be overridden in your YAML configuration file (e.g., input_profile_a.yaml).
+
+IMPORTANT NOTE ABOUT COLUMN NAMES:
+  The STRUCT_NEEDED_COLS and PERF_NEEDED_COLS lists below must match the EXACT
+  column headers in your Morningstar Excel files. Any mismatch (extra spaces,
+  (R)/(TM) symbols, different capitalization) will cause those columns to be
+  silently dropped. If you see warnings about missing columns at runtime,
+  check your Excel file headers and update these lists to match exactly.
 """
 
 from typing import List

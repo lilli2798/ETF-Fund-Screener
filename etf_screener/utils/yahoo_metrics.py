@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import random
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -117,6 +118,7 @@ class YahooMetricsConfig:
     """
     batch_size: int = 50
     rest_delay_seconds: float = 60
+    rest_delay_jitter_seconds: float = 10.0
     sample_stock_lookups: int = 5
     max_download_retries: int = 3
     risk_free_annual: float = 0.04
@@ -125,6 +127,8 @@ class YahooMetricsConfig:
     subsector_cache_path: str = "utils/sector_cache.json"
     subsector_cache_max_age_days: int = 30
     force_refresh_subsector: bool = False
+    checkpoint_path: str = "utils/yahoo_checkpoint.json"
+    enable_resume: bool = True
 
     @property
     def risk_free_monthly(self) -> float:
@@ -451,8 +455,25 @@ def get_yahoo_metrics_for_tickers(
 
     batches = [unique_tickers[i:i + cfg.batch_size] for i in range(0, len(unique_tickers), cfg.batch_size)]
     records: List[dict] = []
+    
+    # Check for resume checkpoint
+    start_batch = 1
+    if cfg.enable_resume and os.path.exists(cfg.checkpoint_path):
+        try:
+            with open(cfg.checkpoint_path, "r", encoding="utf-8") as f:
+                checkpoint = json.load(f)
+                last_completed = checkpoint.get("last_completed_batch", 0)
+                if last_completed > 0 and last_completed < len(batches):
+                    start_batch = last_completed + 1
+                    print(f"  [Yahoo Metrics] Resuming from batch {start_batch}/{len(batches)} (checkpoint from {checkpoint.get('timestamp', 'unknown')})")
+        except Exception as e:
+            print(f"  [Yahoo Metrics] Warning: Failed to load checkpoint: {e}")
 
     for batch_idx, batch in enumerate(batches, start=1):
+        # Skip already completed batches when resuming
+        if batch_idx < start_batch:
+            continue
+            
         print(f"  [Yahoo Metrics] Batch {batch_idx}/{len(batches)} ({len(batch)} tickers)...")
         batch_errors: List[str] = []
 
@@ -487,7 +508,21 @@ def get_yahoo_metrics_for_tickers(
             })
 
         if batch_idx < len(batches):
-            time.sleep(cfg.rest_delay_seconds)
+            delay = cfg.rest_delay_seconds + random.uniform(0, cfg.rest_delay_jitter_seconds)
+            time.sleep(delay)
+            
+            # Save checkpoint for resume capability
+            if cfg.enable_resume:
+                checkpoint = {
+                    "last_completed_batch": batch_idx,
+                    "total_batches": len(batches),
+                    "timestamp": datetime.now().isoformat(),
+                }
+                try:
+                    with open(cfg.checkpoint_path, "w", encoding="utf-8") as f:
+                        json.dump(checkpoint, f, indent=2)
+                except Exception as e:
+                    print(f"  [Yahoo Metrics] Warning: Failed to save checkpoint: {e}")
 
     _save_subsector_cache(cfg.subsector_cache_path, subsector_cache)
     cache_hits_after = len(subsector_cache) - cache_hits_before

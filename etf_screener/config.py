@@ -157,8 +157,9 @@ DEFAULT_CONCEPT_WEIGHTS = {
 }
 
 DEFAULT_YAHOO_METRICS = {
-    "batch_size": 20,
-    "rest_delay_seconds": 3.5,
+    "batch_size": 50,
+    "rest_delay_seconds": 60.0,
+    "rest_delay_jitter_seconds": 10.0,
     "sample_stock_lookups": 5,
     "max_download_retries": 3,
     "risk_free_annual": 0.04,
@@ -167,6 +168,8 @@ DEFAULT_YAHOO_METRICS = {
     "subsector_cache_path": "utils/sector_cache.json",
     "subsector_cache_max_age_days": 30,
     "force_refresh_subsector": False,
+    "checkpoint_path": "utils/yahoo_checkpoint.json",
+    "enable_resume": True,
 }
 
 # Full default `thresholds` schema for the profile input YAML. Any keys

@@ -115,8 +115,8 @@ class YahooMetricsConfig:
     config.DEFAULT_YAHOO_METRICS + input_file.deep_merge_dicts), so
     behavior can be tuned per-profile without editing code.
     """
-    batch_size: int = 20
-    rest_delay_seconds: float = 3.5
+    batch_size: int = 50
+    rest_delay_seconds: float = 60
     sample_stock_lookups: int = 5
     max_download_retries: int = 3
     risk_free_annual: float = 0.04

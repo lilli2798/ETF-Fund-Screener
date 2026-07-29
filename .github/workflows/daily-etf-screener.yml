@@ -2,12 +2,15 @@ name: Daily ETF Screener
 
 on:
   schedule:
-    - cron: '0 13 * * 1-5'   # 9:00 AM ET (standard time) on weekdays — adjust for DST
+    - cron: '0 0 * * *'  # ~8 PM ET (varies by DST)
   workflow_dispatch:
 
 jobs:
   screener:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # required so the bot commit can push back to the repo
+
     steps:
       - uses: actions/checkout@v4
 
@@ -17,10 +20,6 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
-
-      - name: Fetch sector/performance data
-        working-directory: etf_screener/utils
-        run: python get_yahoo_dta.py
 
       - name: Run screener pipeline
         working-directory: etf_screener
@@ -38,10 +37,16 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: python alerts.py
 
+      - name: Commit updated sub-sector cache
+        run: |
+          git config user.name "etf-screener-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add etf_screener/utils/sector_cache.json
+          git diff --cached --quiet || git commit -m "Update Yahoo sub-sector cache [skip ci]"
+          git push
+
       - name: Upload output artifact
         uses: actions/upload-artifact@v4
         with:
           name: etf-screener-output
-          path: |
-            etf_screener/output/*.xlsx
-            etf_screener/utils/*.csv
+          path: etf_screener/output/*.xlsx

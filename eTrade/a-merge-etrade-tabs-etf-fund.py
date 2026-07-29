@@ -1,5 +1,32 @@
+"""
+E*TRADE ETF/Fund Data Processor
+
+This script processes E*TRADE ETF or Fund data by:
+1. Reading an Excel workbook with multiple tabs containing ETF/Fund information
+2. Merging all tabs into a single DataFrame based on the key column (ETF Name or Fund Name)
+3. Extracting ticker symbols from the name column (format: "Name (TICKER)")
+4. Applying filtering logic:
+   - Removes funds with "BOND" in the name (case-insensitive)
+   - Filters by inception date (keeps funds >= 1 year old) and/or since inception return (>= 20%)
+5. Converting column types (float and percentage columns)
+6. Outputting a merged Excel file with formatted columns
+7. Creating chunked CSV files (max 250 symbols per file) for Morningstar upload
+
+Purpose:
+The generated CSV files are used to upload ticker symbols to Morningstar to retrieve
+detailed analysis data, which is then fed into the ETF screener for further analysis.
+
+Input:
+- Excel file (.xls or .xlsx) containing E*TRADE ETF or Fund data across multiple tabs
+
+Output:
+- Merged Excel file (etrade-etfs.xlsx or etrade-funds.xlsx)
+- Chunked CSV files (tickers_part1.csv, tickers_part2.csv, etc.) with Symbol column
+"""
+
 from pathlib import Path
 from zipfile import BadZipFile
+from datetime import datetime, timedelta
 import pandas as pd
 
 
@@ -99,7 +126,7 @@ def to_float_series(series: pd.Series) -> pd.Series:
         .str.strip()
     )
     cleaned = cleaned.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA, "--": pd.NA})
-    return pd.to_numeric(cleaned, errors="coerce")
+    return pd.Series(pd.to_numeric(cleaned, errors="coerce"), index=cleaned.index)
 
 
 def percent_to_float_series(series: pd.Series) -> pd.Series:
@@ -110,7 +137,7 @@ def percent_to_float_series(series: pd.Series) -> pd.Series:
         .str.strip()
     )
     cleaned = cleaned.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA, "--": pd.NA})
-    return pd.to_numeric(cleaned, errors="coerce") / 100.0
+    return (pd.Series(pd.to_numeric(cleaned, errors="coerce"), index=cleaned.index) / 100.0).round(4)
 
 
 def convert_column_types(df: pd.DataFrame) -> pd.DataFrame:
@@ -156,6 +183,47 @@ def prepare_sheet(df: pd.DataFrame, key_col: str, sheet_name: str) -> pd.DataFra
     return df
 
 
+def filter_funds(df: pd.DataFrame) -> pd.DataFrame:
+    one_year_ago = datetime.now().date() - timedelta(days=365)
+
+    has_inception_date = "Inception Date" in df.columns
+    has_return = "Since Inception Return" in df.columns
+
+    if has_inception_date and has_return:
+        # Keep if: (>= 1 year old) OR (return >= 20%)
+        # Remove if: (< 1 year old) AND (return is blank OR < 20%)
+        df = df[
+            (df["Inception Date"].isna() | (df["Inception Date"] <= one_year_ago))
+            | (df["Since Inception Return"].notna() & (df["Since Inception Return"] >= 0.20))
+        ].copy()
+    elif has_inception_date:
+        df = df[df["Inception Date"].isna() | (df["Inception Date"] <= one_year_ago)].copy()
+    elif has_return:
+        df = df[
+            df["Since Inception Return"].isna() | (df["Since Inception Return"] >= 0.20)
+        ].copy()
+
+    # Filter out funds with "BOND" in name (case-insensitive)
+    for col in ["ETF Name", "Fund Group"]:
+        if col in df.columns:
+            df = df[~df[col].astype("string").str.contains("BOND", case=False, na=False)].copy()
+
+    return pd.DataFrame(df)
+
+
+def write_ticker_files(df: pd.DataFrame, output_path: Path) -> None:
+    symbols = df.index.tolist()
+    symbols = [s for s in symbols if pd.notna(s) and s != ""]
+
+    chunk_size = 250
+    for i in range(0, len(symbols), chunk_size):
+        chunk = symbols[i:i + chunk_size]
+        chunk_num = i // chunk_size + 1
+        ticker_file = output_path.parent / f"tickers_part{chunk_num}.csv"
+        ticker_df = pd.DataFrame({"Symbol": chunk})
+        ticker_df.to_csv(ticker_file, index=False)
+
+
 def write_output_excel(df: pd.DataFrame, output_path: Path) -> None:
     df = df.replace(to_replace=[r"^\s*--\s*$"], value=pd.NA, regex=True)
 
@@ -188,6 +256,9 @@ def write_output_excel(df: pd.DataFrame, output_path: Path) -> None:
                 worksheet.set_column(idx, idx, 18)
 
         worksheet.freeze_panes(1, 1)
+        worksheet.set_zoom(150)
+
+    write_ticker_files(df, output_path)
 
 
 def merge_etrade_workbook(input_path: Path) -> Path:
@@ -206,7 +277,6 @@ def merge_etrade_workbook(input_path: Path) -> Path:
             xls,
             sheet_name=sheet_name,
             dtype={key_col: "string"},
-            engine=engine,
         )
 
         df = prepare_sheet(df, key_col, sheet_name)
@@ -251,13 +321,15 @@ def merge_etrade_workbook(input_path: Path) -> Path:
     merged_df = merged_df[ordered_cols]
     merged_df = merged_df.set_index("Symbol", drop=True)
 
+    merged_df = filter_funds(merged_df)
+
     output_path = input_path.parent / output_name
     write_output_excel(merged_df, output_path)
 
     return output_path
 
 
-def main():
+def main() -> None:
     while True:
         try:
             input_path = get_valid_input_file()

@@ -1,0 +1,3 @@
+^IXIC
+^DJI
+^GSPC

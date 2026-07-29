@@ -1,0 +1,137 @@
+name: Update Yearly Returns Cache
+
+on:
+  schedule:
+    # Run on January 1st at 00:00 UTC every year
+    - cron: '0 0 1 1 *'
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  update-cache:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy yfinance openpyxl pyyaml
+      
+      - name: Update yearly returns cache
+        run: |
+          cd etf_screen_yahoo_by_date
+          python -c "
+          from yearly_cache_manager import load_yearly_history_csv, save_yearly_history_csv, make_return_series, to_date
+          from config import DEFAULT_CONFIG
+          from datetime import datetime
+          import pandas as pd
+          import yfinance as yf
+          
+          config = DEFAULT_CONFIG
+          cache_path = config['caching']['yearly_returns_cache_path']
+          
+          # Load tickers from existing CSV cache (index column)
+          cached_df = load_yearly_history_csv(cache_path)
+          
+          if cached_df.empty:
+              print(f'Cache file not found or empty: {cache_path}')
+              print('Please run the main script first to initialize the cache.')
+              exit(1)
+          
+          tickers = cached_df.index.tolist()
+          print(f'Loaded {len(tickers)} tickers from {cache_path}')
+          
+          # Get previous year only
+          current_year = datetime.now().year
+          previous_year = current_year - 1
+          
+          # Download only previous year's data
+          beginning_date = f'{previous_year}-01-01'
+          ending_date = f'{previous_year}-12-31'
+          
+          print(f'Downloading data for {beginning_date} to {ending_date}...')
+          
+          try:
+              adj = yf.download(
+                  tickers=tickers,
+                  start=beginning_date,
+                  end=ending_date,
+                  auto_adjust=False,
+                  progress=False,
+                  group_by='column',
+                  threads=True,
+              )
+              
+              if adj.empty:
+                  print('No data downloaded, skipping update.')
+                  exit(0)
+              
+              # Calculate yearly return for previous year
+              beginning_date_dt = to_date(beginning_date)
+              ending_date_dt = to_date(ending_date)
+              
+              if isinstance(adj.columns, pd.MultiIndex):
+                  if 'Adj Close' not in adj.columns.get_level_values(0):
+                      raise ValueError('Adj Close not found in Yahoo download')
+                  adj_close = adj['Adj Close'].copy()
+              else:
+                  if 'Adj Close' not in adj.columns:
+                      raise ValueError('Adj Close not found in Yahoo download')
+                  adj_close = adj[['Adj Close']].copy()
+              
+              if isinstance(adj_close, pd.Series):
+                  adj_close = adj_close.to_frame()
+              
+              adj_close.index = pd.to_datetime(adj_close.index).normalize()
+              adj_close = adj_close.sort_index()
+              
+              # Load existing CSV cache
+              cached_df = load_yearly_history_csv(cache_path)
+              
+              # Calculate yearly return for previous year only
+              year_start = pd.Timestamp(f'{previous_year}-01-01')
+              year_end = pd.Timestamp(f'{previous_year}-12-31')
+              
+              year_return = make_return_series(adj_close, year_start, year_end)
+              
+              # Create yearly data dict for previous year
+              yearly_data = {}
+              for ticker in tickers:
+                  yearly_data[ticker] = {}
+                  if ticker in year_return.index:
+                      yearly_data[ticker][str(previous_year)] = year_return[ticker]
+              
+              # Convert to DataFrame
+              new_df = pd.DataFrame.from_dict(yearly_data, orient='index')
+              
+              # Merge with existing cache (append previous year column)
+              if not cached_df.empty:
+                  # Add new column for previous year
+                  cached_df[str(previous_year)] = new_df[str(previous_year)]
+                  merged_df = cached_df
+              else:
+                  merged_df = new_df
+              
+              # Save updated CSV cache
+              save_yearly_history_csv(cache_path, merged_df)
+              print(f'Cache updated: added {previous_year} returns for {len(tickers)} tickers')
+              
+          except Exception as e:
+              print(f'Error updating cache: {e}')
+              exit(1)
+          "
+      
+      - name: Commit and push cache update
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add etf_screen_yahoo_by_date/sources/
+          git diff --staged --quiet || git commit -m "Update yearly returns cache for $(date +'%Y')"
+          git push

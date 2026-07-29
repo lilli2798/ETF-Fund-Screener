@@ -1,7 +1,7 @@
 """
 Configuration for Yahoo Finance historical data downloader.
 
-This module contains default settings for the download_analize_yahoo_data script,
+This module contains default settings for the user_defined_by_date_yahoo_analize script,
 including rate limiting, caching, and input/output paths.
 """
 from pathlib import Path

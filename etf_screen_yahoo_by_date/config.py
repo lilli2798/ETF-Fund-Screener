@@ -12,8 +12,8 @@ DEFAULT_INDEXES = ["^IXIC", "^DJI", "^GSPC"]
 # Rate limiting settings to avoid Yahoo Finance API limits
 DEFAULT_RATE_LIMITING = {
     "batch_size": 50,                    # Number of tickers per batch
-    "rest_delay_seconds": 30.0,          # Delay between batches
-    "rest_delay_jitter_seconds": 5.0,    # Random jitter to add to delay
+    "rest_delay_seconds": 10.0,          # Delay between batches
+    "rest_delay_jitter_seconds": 10.0,    # Random jitter to add to delay
     "max_download_retries": 3,           # Max retries for failed downloads
 }
 

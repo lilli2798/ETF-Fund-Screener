@@ -70,6 +70,36 @@ def make_return_series(adj_df, start_dt, end_dt):
 # DATA DOWNLOAD
 # =========================================================================
 
+def _get_rate_limit_config(config: Dict = None) -> Dict:
+    """Extract rate limiting configuration with defaults."""
+    if config is None:
+        config = DEFAULT_CONFIG
+    rate_config = config.get("rate_limiting", {})
+    return {
+        "batch_size": rate_config.get("batch_size", 50),
+        "rest_delay": rate_config.get("rest_delay_seconds", 10.0),
+        "jitter": rate_config.get("rest_delay_jitter_seconds", 10.0),
+        "max_retries": rate_config.get("max_download_retries", 3)
+    }
+
+
+def _batch_generator(all_symbols: List[str], batch_size: int):
+    """Generate batches with progress information.
+    
+    Args:
+        all_symbols: List of symbols to process
+        batch_size: Number of symbols per batch
+    
+    Yields:
+        Tuple of (batch_list, batch_number, total_batches)
+    """
+    total_batches = (len(all_symbols) + batch_size - 1) // batch_size
+    for i in range(0, len(all_symbols), batch_size):
+        batch = all_symbols[i:i + batch_size]
+        batch_num = i // batch_size + 1
+        print(f"  Batch {batch_num}/{total_batches}: {len(batch)} symbols")
+        yield batch, batch_num, total_batches
+
 def download_adj_close(tickers, start, end, config: Dict = None):
     """Download adjusted close prices with rate limiting and error handling.
     
@@ -89,14 +119,11 @@ def download_adj_close(tickers, start, end, config: Dict = None):
         - Retry logic for failed batches
         - Includes benchmark indexes from config
     """
-    if config is None:
-        config = DEFAULT_CONFIG
-    
-    rate_config = config.get("rate_limiting", {})
-    batch_size = rate_config.get("batch_size", 50)
-    rest_delay = rate_config.get("rest_delay_seconds", 30.0)
-    jitter = rate_config.get("rest_delay_jitter_seconds", 5.0)
-    max_retries = rate_config.get("max_download_retries", 3)
+    rate_config = _get_rate_limit_config(config)
+    batch_size = rate_config["batch_size"]
+    rest_delay = rate_config["rest_delay"]
+    jitter = rate_config["jitter"]
+    max_retries = rate_config["max_retries"]
     
     # For cache manager, don't automatically add indexes
     # Only download the requested tickers
@@ -108,12 +135,7 @@ def download_adj_close(tickers, start, end, config: Dict = None):
     adj = pd.DataFrame()
     failed_symbols = []
     
-    for i in range(0, len(all_symbols), batch_size):
-        batch = all_symbols[i:i + batch_size]
-        batch_num = i // batch_size + 1
-        total_batches = (len(all_symbols) + batch_size - 1) // batch_size
-        
-        print(f"  Batch {batch_num}/{total_batches}: {len(batch)} symbols")
+    for batch, batch_num, total_batches in _batch_generator(all_symbols, batch_size):
         
         retry_count = 0
         while retry_count < max_retries:
@@ -130,7 +152,6 @@ def download_adj_close(tickers, start, end, config: Dict = None):
                         batch_adj = batch_data["Adj Close"].copy()
                     elif "Close" in batch_data.columns.get_level_values(0):
                         batch_adj = batch_data["Close"].copy()
-                        batch_adj.columns.name = "Adj Close"
                     else:
                         raise ValueError("Neither Adj Close nor Close found in download")
                 else:
@@ -160,7 +181,7 @@ def download_adj_close(tickers, start, end, config: Dict = None):
                     failed_symbols.extend(batch)
         
         # Rate limiting between batches
-        if i + batch_size < len(all_symbols):
+        if batch_num < total_batches:
             wait_time = rest_delay + random.uniform(0, jitter)
             print(f"  Waiting {wait_time:.1f}s before next batch...")
             time.sleep(wait_time)
@@ -210,7 +231,9 @@ def save_yearly_history_csv(cache_path: str, df: pd.DataFrame) -> None:
     """
     cache_dir = Path(cache_path).parent
     cache_dir.mkdir(parents=True, exist_ok=True)
-    df.to_csv(cache_path)
+    # Sort columns in ascending order (chronological)
+    df_sorted = df[sorted(df.columns)]
+    df_sorted.to_csv(cache_path)
 
 
 # =========================================================================
@@ -363,6 +386,7 @@ def update_cache_for_new_tickers(new_tickers: List[str], config: Dict = None) ->
         
         # Convert to DataFrame and merge with existing cache
         new_df = pd.DataFrame.from_dict(yearly_data, orient='index')
+        merged_df = cached_df  # Initialize with existing cache
         
         if not new_df.empty:
             if not cached_df.empty:
@@ -474,66 +498,144 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     
     print(f"Downloading data from {beginning_date} to {ending_date} for {len(tickers_to_add)} new tickers...")
     
-    # Download price data
-    adj = download_adj_close(tickers_to_add, beginning_date, ending_date, config)
-    
-    if adj.empty:
-        print("No data downloaded. All tickers failed.")
-        save_missing_data_report(tickers_to_add)
-        return
-    
-    # Step 5: Calculate yearly returns for new tickers
-    print("Calculating yearly returns...")
+    # Step 5: Download and calculate incrementally for better performance
+    print("Downloading and calculating yearly returns incrementally...")
     beginning_date_dt = to_date(beginning_date)
     ending_date_dt = to_date(ending_date)
     
     yearly_data = {}
     failed_tickers = []
     
-    for ticker in tickers_to_add:
-        if ticker not in adj.columns:
-            failed_tickers.append(ticker)
-            continue
+    # Process in batches to overlap download and calculation
+    rate_config = _get_rate_limit_config(config)
+    batch_size = rate_config["batch_size"]
+    rest_delay = rate_config["rest_delay"]
+    jitter = rate_config["jitter"]
+    max_retries = rate_config["max_retries"]
+    
+    all_symbols = tickers_to_add
+    adj = pd.DataFrame()
+    
+    for batch, batch_num, total_batches in _batch_generator(all_symbols, batch_size):
         
-        yearly_data[ticker] = {}
-        ticker_has_data = False
-        
-        for year in range(beginning_date_dt.year, current_year):
-            year_start = pd.Timestamp(f"{year}-01-01")
-            year_end = pd.Timestamp(f"{year}-12-31")
-            
-            if year_end <= year_start:
-                continue
-            
+        retry_count = 0
+        while retry_count < max_retries:
             try:
-                ticker_adj = adj[[ticker]]
-                year_return = make_return_series(ticker_adj, year_start, year_end)
+                batch_data = yf.download(batch, start=beginning_date, end=ending_date, progress=False)
                 
-                if not year_return.empty and ticker in year_return.index:
-                    yearly_data[ticker][str(year)] = year_return[ticker]
-                    ticker_has_data = True
+                if batch_data.empty:
+                    print(f"    No data returned for batch {batch_num}")
+                    break
+                
+                # Handle different yfinance return formats
+                if isinstance(batch_data.columns, pd.MultiIndex):
+                    if "Adj Close" in batch_data.columns.get_level_values(0):
+                        batch_adj = batch_data["Adj Close"].copy()
+                    elif "Close" in batch_data.columns.get_level_values(0):
+                        batch_adj = batch_data["Close"].copy()
+                    else:
+                        raise ValueError("Neither Adj Close nor Close found in download")
+                else:
+                    if "Adj Close" in batch_data.columns:
+                        batch_adj = batch_data[["Adj Close"]].copy()
+                    elif "Close" in batch_data.columns:
+                        batch_adj = batch_data[["Close"]].copy()
+                        batch_adj.columns = ["Adj Close"]
+                    else:
+                        raise ValueError("Neither Adj Close nor Close found in download")
+                
+                # Handle single ticker case (Series vs DataFrame)
+                if isinstance(batch_adj, pd.Series):
+                    batch_adj = batch_adj.to_frame()
+                
+                # Calculate returns for this batch immediately
+                batch_yearly_data = {}
+                for ticker in batch:
+                    if ticker not in batch_adj.columns:
+                        failed_tickers.append(ticker)
+                        continue
+                    
+                    batch_yearly_data[ticker] = {}
+                    ticker_has_data = False
+                    
+                    for year in range(beginning_date_dt.year, current_year):
+                        year_start = pd.Timestamp(f"{year}-01-01")
+                        year_end = pd.Timestamp(f"{year}-12-31")
+                        
+                        if year_end <= year_start:
+                            continue
+                        
+                        try:
+                            ticker_adj = batch_adj[[ticker]]
+                            year_return = make_return_series(ticker_adj, year_start, year_end)
+                            
+                            if not year_return.empty and ticker in year_return.index:
+                                batch_yearly_data[ticker][str(year)] = year_return[ticker]
+                                ticker_has_data = True
+                        except Exception as e:
+                            print(f"    Warning: Failed to calculate {year} return for {ticker}: {e}")
+                    
+                    if not ticker_has_data:
+                        failed_tickers.append(ticker)
+                        del batch_yearly_data[ticker]
+                
+                # Merge batch results with yearly_data
+                yearly_data.update(batch_yearly_data)
+                
+                # Merge with accumulated price data
+                adj = pd.concat([adj, batch_adj], axis=1)
+                
+                print(f"    Calculated returns for batch {batch_num} ({len(batch_yearly_data)} tickers)")
+                
+                # Clear batch data from memory to save space
+                del batch_yearly_data
+                del batch_adj
+                del batch_data
+                
+                break
+                
             except Exception as e:
-                print(f"    Warning: Failed to calculate {year} return for {ticker}: {e}")
+                retry_count += 1
+                if retry_count < max_retries:
+                    wait_time = rest_delay + random.uniform(0, jitter)
+                    print(f"    Retry {retry_count}/{max_retries} after error: {e}")
+                    print(f"    Waiting {wait_time:.1f}s...")
+                    time.sleep(wait_time)
+                else:
+                    print(f"    Failed to download batch {batch_num} after {max_retries} retries: {e}")
+                    failed_tickers.extend(batch)
         
-        if not ticker_has_data:
-            failed_tickers.append(ticker)
-            del yearly_data[ticker]
+        # Rate limiting delay between batches (except last batch)
+        if batch_num < total_batches:
+            wait_time = rest_delay + random.uniform(0, jitter)
+            print(f"  Waiting {wait_time:.1f}s before next batch...")
+            time.sleep(wait_time)
     
-    # Step 6: Merge with existing cache and save to CSV
-    yearly_df = pd.DataFrame.from_dict(yearly_data, orient='index')
+    if adj.empty:
+        print("No data downloaded. All tickers failed.")
+        save_missing_data_report(tickers_to_add)
+        return
     
-    if not yearly_df.empty:
+    # Convert yearly_data to DataFrame and merge with existing cache
+    new_df = pd.DataFrame.from_dict(yearly_data, orient='index')
+    
+    if not new_df.empty:
         if not cached_df.empty:
-            # Merge new data with existing cache
-            merged_df = pd.concat([cached_df, yearly_df]).groupby(level=0).last()
-            print(f"Merged {len(yearly_df)} new tickers with {len(cached_df)} existing tickers")
+            final_merged = pd.concat([cached_df, new_df]).groupby(level=0).last()
         else:
-            merged_df = yearly_df
-            print(f"Created new cache with {len(yearly_df)} tickers")
+            final_merged = new_df
         
-        save_yearly_history_csv(cache_path, merged_df)
-        print(f"Yearly history saved to {cache_path}")
-        print(f"Total tickers in cache: {len(merged_df)}")
+        save_yearly_history_csv(cache_path, final_merged)
+        print(f"Processing complete. Successfully processed {len(yearly_data)} tickers")
+        print(f"Total tickers in cache: {len(final_merged)}")
+    else:
+        print("No valid data to save.")
+    
+    print(f"Failed tickers: {len(failed_tickers)}")
+    
+    # Clear large data structures from memory
+    del adj
+    del yearly_data
     
     # Step 7: Report failed tickers
     if failed_tickers:

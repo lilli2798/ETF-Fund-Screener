@@ -23,8 +23,11 @@ import pandas as pd
 import yaml
 import os
 import argparse
+from datetime import datetime
 from itertools import combinations
 from typing import Dict, Any, List
+from openpyxl import load_workbook
+from openpyxl.styles import Font
 
 # Exact exported (space-separated) column-name prefixes to pull in for
 # comparison. Matches the output of export.format_column_names_for_export().
@@ -140,15 +143,21 @@ def load_filenames_from_list_file(list_file_path: str) -> List[str]:
 
 def main():
     parser = argparse.ArgumentParser(description="Compare N ETF result files listed in a text file.")
-    parser.add_argument("list_file", help="Path to a text file containing one result .xlsx filename per line")
-    parser.add_argument("--output-dir", default="output")
     args = parser.parse_args()
 
-    filenames = load_filenames_from_list_file(args.list_file)
+    # Read arguments from a YAML file
+    print("Enter the path to your YAML config file:")
+    config_file = input("Config file path: ").strip()
+
+    with open(config_file, "r") as f:
+        config = yaml.safe_load(f)
+
+    filenames = config.get("list_file", [])
+    output_dir = config.get("output_dir", "output")
     if len(filenames) < 2:
         raise ValueError("Need at least 2 filenames in the list file to compare.")
 
-    comparison_map = build_comparison_map(args.output_dir, filenames)
+    comparison_map = build_comparison_map(output_dir, filenames)
 
     print("=== Weights / Thresholds per file ===")
     for fn in filenames:
@@ -163,10 +172,22 @@ def main():
 
     matrix_df = build_ticker_matrix(comparison_map, filenames)
 
-    diff_out_path = os.path.join(args.output_dir, "compare_results_report.xlsx")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    diff_out_path = os.path.join(output_dir, f"compare_results_report_{timestamp}.xlsx")
     with pd.ExcelWriter(diff_out_path) as writer:
         flag_diff_df.to_excel(writer, sheet_name="flag_diffs", index=False)
         matrix_df.to_excel(writer, sheet_name="ticker_matrix", index=False)
+
+    # Format the Excel file: bold headers and 150% zoom
+    wb = load_workbook(diff_out_path)
+    for sheet_name in wb.sheetnames:
+        ws = wb[sheet_name]
+        # Set zoom to 150%
+        ws.sheet_view.zoomScale = 150
+        # Make headers bold
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+    wb.save(diff_out_path)
 
     print(f"\nReport written to {diff_out_path}")
 

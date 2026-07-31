@@ -210,15 +210,16 @@ def calculate_performance_score(
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Absolute Total Return (3Y/5Y/1Y) normalized within category, blended
+    Absolute Total Return (10Y/5Y/3Y/1Y) normalized within category, blended
     with Morningstar's own Return Rank in Category (already category-
     relative, just needs flipping so higher = better).
     """
     weights = _require_weights(weights, "performance")
 
     out = pd.DataFrame(index=df.index)
-    out["Norm_Return_3Y"] = normalize_within_category(df, "Total Return (3Y)", category_col)
+    out["Norm_Return_10Y"] = normalize_within_category(df, "Total Return (10Y)", category_col)
     out["Norm_Return_5Y"] = normalize_within_category(df, "Total Return (5Y)", category_col)
+    out["Norm_Return_3Y"] = normalize_within_category(df, "Total Return (3Y)", category_col)
     out["Norm_Return_1Y"] = normalize_within_category(df, "Total Return (1Y)", category_col)
 
     if "3Y Return Rank in Category" in df.columns:
@@ -226,10 +227,11 @@ def calculate_performance_score(
         out["Norm_Rank_3Y"] = (100.0 - rank).clip(lower=0, upper=100)
 
     weight_map = {
-        "Norm_Return_3Y": weights["return_3y"],
-        "Norm_Return_5Y": weights["return_5y"],
-        "Norm_Return_1Y": weights["return_1y"],
-        "Norm_Rank_3Y": weights["rank_3y"],
+        "Norm_Return_10Y": weights.get("return_10y", 0.0),
+        "Norm_Return_5Y": weights.get("return_5y", 0.0),
+        "Norm_Return_3Y": weights.get("return_3y", 0.0),
+        "Norm_Return_1Y": weights.get("return_1y", 0.0),
+        "Norm_Rank_3Y": weights.get("rank_3y", 0.0),
     }
     return _weighted_average(out, weight_map)
 

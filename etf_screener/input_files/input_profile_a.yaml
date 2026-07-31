@@ -66,17 +66,33 @@ thresholds:
   # All weights should sum to approximately 1.0 (100%).
   #
   # You can omit any section here - it will use the default values from config.py
+  #
+  # MORNINGSTAR LONG-TERM CRITERIA (recommended by Morningstar):
+  # To use Morningstar's recommended long-term investment weights, replace the
+  # weights section below with:
+  #
+  #   weights:
+  #     performance: 0.45      # Combined 5Y (25%) + 10Y (20%) returns
+  #     risk_adjusted: 0.20    # 3Y Sharpe ratio
+  #     volatility: 0.15        # Drawdown (3Y and 5Y)
+  #     quality_valuation: 0.10 # Quality metrics
+  #     costs: 0.10            # Expense ratio
+  #     tracking: 0.00         # Not used
+  #     liquidity_size: 0.00    # Not used
+  #     tax_income: 0.00       # Not used
+  #
+  # And update concept_weights (see below) to match Morningstar's emphasis.
   # ============================================================================
 
   weights:
     # How much historical returns matter (25% of total score)
-    performance: 0.25
+    performance: 0.35
 
     # How much risk-adjusted performance matters (20% of total score)
-    risk_adjusted: 0.20
+    risk_adjusted: 0.15
 
     # How much volatility/downside risk matters (15% of total score)
-    volatility: 0.15
+    volatility: 0.10
 
     # How much tracking error matters (5% of total score)
     # Lower tracking error = fund follows its benchmark more closely
@@ -86,13 +102,8 @@ thresholds:
     liquidity_size: 0.05
 
     # How much portfolio quality and valuation matter (10% of total score)
-    quality_valuation: 0.10
-
-    # How much fees matter (15% of total score)
-    # Lower fees = better score
-    costs: 0.15
-
-    # How much tax efficiency and dividend yield matter (5% of total score)
+    quality_valuation: 0.15
+    costs: 0.10
     tax_income: 0.05
 
   # ============================================================================
@@ -104,13 +115,42 @@ thresholds:
   # TIP: You can override just ONE value (e.g., only return_3y) and all other
   # values in that section will use their defaults. This makes it easy to
   # experiment with small adjustments without changing everything.
+  #
+  # MORNINGSTAR LONG-TERM CONCEPT WEIGHTS:
+  # To use Morningstar's criteria, replace the concept_weights section below with:
+  #
+  #   concept_weights:
+  #     performance:
+  #       return_5y: 0.56      # 5Y returns (55.6% of performance weight)
+  #       return_10y: 0.44     # 10Y returns (44.4% of performance weight)
+  #       return_3y: 0.00      # Not emphasized
+  #       return_1y: 0.00      # Not emphasized for long-term
+  #       rank_3y: 0.00        # Not used
+  #     risk_adjusted:
+  #       sharpe_3y: 1.00      # 100% on 3Y Sharpe
+  #       sharpe_1y: 0.00      # Not used
+  #       upside: 0.00         # Not used
+  #       downside: 0.00       # Not used
+  #     volatility:
+  #       stdev_3y: 0.00      # Not used
+  #       drawdown_3y: 0.50   # 3Y drawdown (50% of volatility weight)
+  #       drawdown_5y: 0.50   # 5Y drawdown (50% of volatility weight)
+  #     quality_valuation:
+  #       growth_grade: 0.40   # Growth grade (40% of quality weight)
+  #       financial_health: 0.40 # Financial health (40% of quality weight)
+  #       price_fair_value: 0.20 # Price vs fair value (20% of quality weight)
+  #       medalist: 0.00       # Not used
+  #     costs:
+  #       net_expense_ratio: 1.00 # 100% on expense ratio
+  #       management_fee: 0.00    # Not used
   # ============================================================================
 
   concept_weights:
     # PERFORMANCE: How different time periods are weighted
     performance:
-      return_3y: 0.40      # 3-year returns (most important)
+      return_10y: 0.20     # 10-year returns (optional for long-term focus)
       return_5y: 0.35      # 5-year returns (second most important)
+      return_3y: 0.20      # 3-year returns (most important)
       return_1y: 0.10      # 1-year returns (less important for long-term)
       rank_3y: 0.15        # 3-year category ranking (vs peers)
 

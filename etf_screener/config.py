@@ -100,6 +100,25 @@ PROFILE_A_WEIGHTS = {
     "tax_income": 0.05,
 }
 
+# Morningstar's recommended long-term investment criteria weights.
+# Based on Morningstar's guidance for long-term ETF selection:
+# - 5Y Return: 25%
+# - 10Y Return: 20%
+# - 3Y Sharpe: 20%
+# - Drawdown: 15%
+# - Expense: 10%
+# - Quality: 10%
+MORNINGSTAR_LONG_TERM_WEIGHTS = {
+    "performance": 0.45,  # Combined 5Y (25%) + 10Y (20%) = 45%
+    "risk_adjusted": 0.20,  # 3Y Sharpe: 20%
+    "volatility": 0.15,  # Drawdown: 15%
+    "quality_valuation": 0.10,  # Quality: 10%
+    "costs": 0.10,  # Expense: 10%
+    "tracking": 0.00,  # Not used in Morningstar's criteria
+    "liquidity_size": 0.00,  # Not used in Morningstar's criteria
+    "tax_income": 0.00,  # Not used in Morningstar's criteria
+}
+
 # Column-level weights INSIDE each concept function (e.g. how much
 # Total Return 3Y vs 5Y counts within Performance_Score). These are
 # separate from PROFILE_A_WEIGHTS above, which controls how much each
@@ -112,8 +131,9 @@ PROFILE_A_WEIGHTS = {
 # and everything else here still applies via deep_merge_dicts().
 DEFAULT_CONCEPT_WEIGHTS = {
     "performance": {
-        "return_3y": 0.40,
+        "return_10y": 0.00,     # 10-year returns (optional for long-term focus)
         "return_5y": 0.35,
+        "return_3y": 0.40,
         "return_1y": 0.10,
         "rank_3y": 0.15,
     },
@@ -153,6 +173,55 @@ DEFAULT_CONCEPT_WEIGHTS = {
     "tax_income": {
         "tax_cost_ratio": 0.55,
         "sec_yield": 0.45,
+    },
+}
+
+# Morningstar's recommended concept weights for long-term investing.
+# Emphasizes 5Y/10Y returns, 3Y Sharpe, drawdown, expense ratio, and quality.
+MORNINGSTAR_CONCEPT_WEIGHTS = {
+    "performance": {
+        "return_5y": 0.56,  # 25% / 45% = 55.6% of performance weight
+        "return_10y": 0.44,  # 20% / 45% = 44.4% of performance weight
+        "return_3y": 0.00,   # Not emphasized in Morningstar's criteria
+        "return_1y": 0.00,   # Not emphasized for long-term
+        "rank_3y": 0.00,     # Not used
+    },
+    "risk_adjusted": {
+        "sharpe_3y": 1.00,  # 100% on 3Y Sharpe per Morningstar's criteria
+        "sharpe_1y": 0.00,   # Not used
+        "upside": 0.00,      # Not used
+        "downside": 0.00,    # Not used
+        "yahoo_sharpe_3y": 0.00,  # Not used
+        "yahoo_sharpe_1y": 0.00,  # Not used
+        "yahoo_zscore_3y": 0.00,  # Not used
+        "yahoo_zscore_1y": 0.00,  # Not used
+    },
+    "volatility": {
+        "stdev_3y": 0.00,   # Not used - drawdown is the key metric
+        "drawdown_3y": 0.50,  # 3Y drawdown (50% of volatility weight)
+        "drawdown_5y": 0.50,  # 5Y drawdown (50% of volatility weight)
+    },
+    "tracking": {
+        "tracking_error_3y": 0.00,  # Not used in Morningstar's criteria
+        "tracking_error_1y": 0.00,  # Not used
+    },
+    "liquidity_size": {
+        "fund_size": 0.00,    # Not used
+        "trading_volume": 0.00,  # Not used
+    },
+    "quality_valuation": {
+        "growth_grade": 0.40,      # Growth grade (40% of quality weight)
+        "financial_health": 0.40,  # Financial health (40% of quality weight)
+        "price_fair_value": 0.20,  # Price vs fair value (20% of quality weight)
+        "medalist": 0.00,           # Not explicitly mentioned
+    },
+    "costs": {
+        "net_expense_ratio": 1.00,  # 100% on expense ratio per Morningstar's criteria
+        "management_fee": 0.00,     # Not used
+    },
+    "tax_income": {
+        "tax_cost_ratio": 0.00,  # Not used
+        "sec_yield": 0.00,       # Not used
     },
 }
 

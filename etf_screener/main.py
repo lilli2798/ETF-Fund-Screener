@@ -206,10 +206,9 @@ def process_data(
     df: pd.DataFrame = load_data(data_path, exclude_dir=out_path)
     print(f"After load: {len(df)} rows")
 
-    # Temporarily disable ETF filter since data is already filtered to top ETFs
-    print("Skipping ETF-only filter (data is already filtered to top ETFs)")
-    # df = apply_etf_only_filter(df)
-    print(f"After ETF filter (skipped): {len(df)} rows")
+    print("Filtering to ETFs only (excluding stocks)...")
+    df = apply_etf_only_filter(df)
+    print(f"After ETF filter: {len(df)} rows")
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
     yahoo_cfg = YahooMetricsConfig(**thresholds.get("yahoo_metrics", {}))

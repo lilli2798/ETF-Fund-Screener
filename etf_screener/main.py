@@ -44,15 +44,14 @@ import os
 
 from config import (
     DEFAULT_TOP_N_PER_CATEGORY,
-    DEFAULT_STRUCT_PATH,
-    DEFAULT_PERF_PATH,
+    DEFAULT_DATA_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
     DEFAULT_YAHOO_METRICS,
 )
 from input_file import load_profile_input, ProfileInput
-from data_loading import load_structural_data, load_performance_data
-from merging import merge_datasets, apply_etf_only_filter
+from data_loading import load_data
+from merging import apply_etf_only_filter
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
 from utils.yahoo_metrics import YahooMetricsConfig, get_yahoo_metrics_for_tickers
 
@@ -175,8 +174,7 @@ def print_numeric_score_check(df: pd.DataFrame, profile_name: str) -> None:
 
 
 def process_data(
-    struct_path: str = DEFAULT_STRUCT_PATH,
-    perf_path: str = DEFAULT_PERF_PATH,
+    data_path: str = DEFAULT_DATA_PATH,
     out_path: str = DEFAULT_OUT_PATH,
     profile_name: str = DEFAULT_PROFILE_NAME,
     top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
@@ -184,7 +182,7 @@ def process_data(
 ) -> Tuple[pd.DataFrame, str]:
     """
     Run the full pipeline end-to-end for a single profile:
-      load -> merge -> ETF-only filter -> concept scores ->
+      load -> ETF-only filter -> concept scores ->
       profile eligibility filter -> profile scoring/ranking ->
       numeric score enforcement ->
       format for export -> save -> style header row.
@@ -204,17 +202,14 @@ def process_data(
 
     _validate_profile_name(profile_name)
 
-    print("Loading structural data...")
-    df_struct: pd.DataFrame = load_structural_data(struct_path, exclude_dir=out_path)
+    print("Loading data (performance + structural combined)...")
+    df: pd.DataFrame = load_data(data_path, exclude_dir=out_path)
+    print(f"After load: {len(df)} rows")
 
-    print("Loading performance data...")
-    df_perf: pd.DataFrame = load_performance_data(perf_path, exclude_dir=out_path)
-
-    print("Merging datasets on Ticker...")
-    df: pd.DataFrame = merge_datasets(df_struct, df_perf)
-
-    print("Filtering to ETFs only (excluding stocks)...")
-    df = apply_etf_only_filter(df)
+    # Temporarily disable ETF filter since data is already filtered to top ETFs
+    print("Skipping ETF-only filter (data is already filtered to top ETFs)")
+    # df = apply_etf_only_filter(df)
+    print(f"After ETF filter (skipped): {len(df)} rows")
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
     yahoo_cfg = YahooMetricsConfig(**thresholds.get("yahoo_metrics", {}))
@@ -348,8 +343,7 @@ def main() -> None:
     profile_input = get_profile_input_interactively()
 
     df_ranked, final_out_path = process_data(
-        struct_path=profile_input.struct_path,
-        perf_path=profile_input.perf_path,
+        data_path=profile_input.data_path,
         out_path=profile_input.out_path,
         profile_name=profile_input.profile_name,
         top_n=profile_input.top_n_per_category,

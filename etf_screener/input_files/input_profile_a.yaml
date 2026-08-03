@@ -16,9 +16,8 @@
 # Which investment profile to use (A = long-term, low-risk strategy)
 profile: A
 
-# INPUT FILES: Point these to your Morningstar Excel export directories
-struct_path: data/structural-data/   # Contains fund structural data (fees, holdings, etc.)
-perf_path: data/performance-data/    # Contains performance data (returns, risk metrics, etc.)
+# INPUT FILES: Point this to your Morningstar Excel export directory
+data_path: data/   # Contains all Morningstar data files (performance + structural combined)
 
 # OUTPUT: Where to save the results Excel file
 out_path: output
@@ -31,6 +30,9 @@ out_path: output
 # ============================================================================
 
 thresholds:
+  # CATEGORY FILTER
+  require_category: true            # Only include funds with a Morningstar Category assigned
+
   # COST FILTERS
   max_expense_ratio: 0.75           # Maximum expense ratio (0.75% = 0.0075 as decimal)
                                     # Set lower to only consider very low-cost funds
@@ -44,9 +46,6 @@ thresholds:
   require_3y_return: true           # Only include funds with 3-year return history
   min_3y_return: null               # Minimum 3-year annualized return (null = no minimum)
                                     # Example: 0.05 for 5% minimum annual return
-
-  # CATEGORY FILTER
-  require_category: true            # Only include funds with a Morningstar Category assigned
 
   # STRUCTURAL EXCLUSIONS (Hard filters - these funds are dropped entirely)
   # Leveraged funds use debt to amplify returns (e.g., 2x, 3x funds) - higher risk
@@ -168,9 +167,13 @@ thresholds:
       drawdown_5y: 0.30    # 5-year maximum drawdown
 
     # TRACKING: How tracking error over different periods is weighted
+    # Low tracking error: The fund closely follows its benchmark.
+    # Moderate to high tracking error: The fund's returns differ more from the benchmark.
+      # This may be expected if the fund uses active management, a concentrated strategy, derivatives, factor tilts,
+      # or holds securities that differ from the index
     tracking:
-      tracking_error_3y: 0.65   # 3-year tracking error (deviation from benchmark)
-      tracking_error_1y: 0.35   # 1-year tracking error
+      tracking_error_3y: 0.55   # 3-year tracking error (deviation from benchmark)
+      tracking_error_1y: 0.45   # 1-year tracking error
 
     # LIQUIDITY & SIZE: How size vs trading volume are weighted
     liquidity_size:

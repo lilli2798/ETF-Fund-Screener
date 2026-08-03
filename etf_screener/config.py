@@ -19,58 +19,102 @@ DEFAULT_TOP_N_PER_CATEGORY: int = 5
 
 # Default input/output paths -- adjust to your environment, or override at
 # runtime via get_paths_from_user() / CLI args.
-DEFAULT_STRUCT_PATH: str = "python-etfs.xlsx"
-DEFAULT_PERF_PATH: str = "performance-etfs.xlsx"
+DEFAULT_DATA_PATH: str = "data"
 DEFAULT_OUT_PATH: str = "output"
 
 # Default profile to run when none is specified.
 DEFAULT_PROFILE_NAME: str = "A"
 
-# --- Structural data columns (python-etfs.xlsx) ------------------------
-# TODO: replace with your exact column list if this differs from what
-# we've seen in this conversation's uploaded files. Leaving this as None
-# tells pandas to load ALL columns (safe default, no silent drops) --
-# set an explicit list here only once you've confirmed exact header text.
-STRUCT_NEEDED_COLS: List[str] = [
-    "Ticker", "Morningstar Category", "Exchange", "Exchange Country",
+# --- Combined data columns (new Morningstar format) ------------------
+# All columns needed from the new Morningstar profile-based Excel files.
+# These files contain both performance and structural data in a single file.
+# Updated to match the new Morningstar column names from the 7-file profile format.
+NEEDED_COLS: List[str] = [
+    # Identifier columns
+    "Ticker", "Name", "Morningstar Category", "Asset Class",
+    "Primary Benchmark", "Equity Style Box (Funds)", "Inception Date",
+
+    # Performance metrics
+    "Last Price", "Day Change (%)", "Day Change", "TTM Yield",
+    "Total Return (1M)", "Total Return (2M)", "Total Return (3M)",
+    "Total Return (6M)", "Total Return (9M)", "Total Return (YTD)",
+    "Total Return (1Y)", "Total Return (2Y)", "Total Return (3Y)",
+    "Total Return (4Y)", "Total Return (5Y)", "Total Return (10Y)",
+    "Total Return (Since Inception)",
+    "1M Return Rank in Category", "2M Return Rank in Category",
+    "3M Return Rank in Category", "6M Return Rank in Category",
+    "9M Return Rank in Category", "YTD Return Rank in Category",
+    "1Y Return Rank in Category", "2Y Return Rank in Category",
+    "3Y Return Rank in Category", "4Y Return Rank in Category",
+    "5Y Return Rank in Category", "10Y Return Rank in Category",
+
+    # Risk metrics
     "Sharpe Ratio (1Y Monthly)", "Sharpe Ratio (3Y Monthly)",
-    "Worst Three Month Return", "Portfolio Risk Score",
-    "Tracking Error (1Y Monthly)", "Tracking Error (3Y Monthly)",
-    "Primary Benchmark", "Net Expense Ratio", "Adjusted Expense Ratio",
-    "Management Fee", "Total Net Assets for Share Class", "Fund Size",
-    "Trading Volume", "Premium/Discount", "Trading Status",
+    "Sharpe Ratio (5Y Monthly)", "Sharpe Ratio (10Y Monthly)",
+    "Standard Deviation (1Y Monthly)", "Standard Deviation (3Y Monthly)",
+    "Standard Deviation (5Y Monthly)", "Standard Deviation (10Y Monthly)",
+    "Worst Three Month Return", "Best Three Month Return",
+    "Morningstar Risk Rating (Overall)", "Morningstar Risk Rating (3Y)",
+    "Morningstar Risk Rating (5Y)", "Morningstar Risk Rating (10Y)",
+    "Upside Capture Ratio (1Y)", "Upside Capture Ratio (3Y)",
+    "Upside Capture Ratio (5Y)", "Upside Capture Ratio (10Y)",
+    "Downside Capture Ratio (1Y)", "Downside Capture Ratio (3Y)",
+    "Downside Capture Ratio (5Y)", "Downside Capture Ratio (10Y)",
+    "Maximum Drawdown (1Y)", "Maximum Drawdown (3Y)",
+    "Maximum Drawdown (5Y)", "Maximum Drawdown (10Y)",
+    "Portfolio Risk Score", "Beta (3Y Monthly)", "Alpha (3Y Monthly)",
+
+    # Structural/fundamental fields
+    "Net Expense Ratio", "Adjusted Expense Ratio", "Management Fee",
+    "Total Net Assets for Share Class", "Fund Size",
+    "Premium/Discount", "Premium/Discount (1Y Avg)",
     "Portfolio Growth Grade", "Portfolio Financial Health Grade",
     "Portfolio Economic Moat Coverage (Wide)",
+    "Portfolio Economic Moat Coverage (Narrow)",
+    "Portfolio Economic Moat Coverage (None)",
     "Portfolio Return on Invested Capital", "Portfolio Price/Earnings",
     "Portfolio Price/Book", "Portfolio Price/Sales",
     "Portfolio Price/Free Cash Flow", "Portfolio Price/Fair Value",
-    "ETF Fair Value", "Fund Managers", "Number of Fund Managers",
-    "Longest Manager Tenure", "Longest Tenured Manager",
-    "Management Style", "Medalist Rating (Overall)",
-    "Tax Cost Ratio (1Y)", "Tax Cost Ratio (2Y)",
-    "Potential Capital Gains Exposure", "SEC 30-Day Yield",
-    "Leveraged Fund", "Interval Fund", "Fund of Funds",
-    "Investment Status", "Strategic Beta Group",
-    "Share Class Type", "Tender Offer", "Inception Date",
-]
+    "ETF Fair Value", "Yield to Maturity", "Effective Duration",
+    "Tracking Error (1Y Monthly)", "Tracking Error (3Y Monthly)",
+    "Tracking Error (5Y Monthly)", "Tracking Error (10Y Monthly)",
 
-# --- Performance data columns (performance-etfs.xlsx) ------------------
-# TODO: replace with your exact column list -- same caution as above.
-PERF_NEEDED_COLS: List[str] = [
-    "Ticker", "Name", "Last Price", "Day Change (%)",
-    "Equity Style Box (Funds)", "Asset Class", "TTM Yield",
-    "Total Return (1M)", "Total Return (3M)", "Total Return (6M)",
-    "Total Return (YTD)", "Total Return (1Y)", "Total Return (3Y)",
-    "Total Return (5Y)", "Total Return (10Y)",
-    "Total Return (Since Inception)",
-    "1Y Return Rank in Category", "3Y Return Rank in Category",
-    "5Y Return Rank in Category", "10Y Return Rank in Category",
-    "Morningstar Risk Rating (Overall)", "Morningstar Risk Rating (3Y)",
+    # Fund management and ratings
+    "Fund Managers", "Number of Fund Managers", "Longest Manager Tenure",
+    "Longest Tenured Manager", "Management Style",
+    "Medalist Rating (Overall)", "Medalist Rating (Parent)",
+    "Medalist Rating (People)", "Medalist Rating (Process)",
     "Morningstar Rating for Funds (Overall)",
     "Morningstar Rating for Funds (3Y)",
-    "Standard Deviation (3Y Monthly)", "Upside Capture Ratio (3Y)",
-    "Downside Capture Ratio (3Y)", "Maximum Drawdown (3Y)",
-    "Maximum Drawdown (5Y)", "Index Fund", "No Load Fund",
+    "Morningstar Rating for Funds (5Y)",
+    "Morningstar Rating for Funds (10Y)",
+    "Morningstar Return Rating (Overall)",
+    "Morningstar Return Rating (3Y)",
+    "Morningstar Return Rating (5Y)",
+    "Morningstar Return Rating (10Y)",
+
+    # Tax and income
+    "Tax Cost Ratio (1Y)", "Tax Cost Ratio (2Y)",
+    "Tax Cost Ratio (3Y)", "Tax Cost Ratio (5Y)",
+    "Tax Cost Ratio (10Y)",
+    "Potential Capital Gains Exposure", "SEC 30-Day Yield",
+    "SEC 7-Day Yield", "Dividend per Share (Trailing Annual)",
+    "Dividend per Share (Forward Annual)", "TTM Yield",
+
+    # Fund flags
+    "Leveraged Fund", "Interval Fund", "Fund of Funds",
+    "Investment Status", "Strategic Beta Group",
+    "Share Class Type", "Tender Offer", "Index Fund", "No Load Fund",
+    "Enhanced Index Fund",
+
+    # ESG columns (new in Morningstar format)
+    "Portfolio Corporate ESG Risk Score",
+    "Portfolio Environmental Risk Score",
+    "Portfolio Social Risk Score",
+    "Portfolio Governance Risk Score",
+    "Portfolio Carbon Risk Score",
+    "Portfolio ESG Risk Rating",
+    "Sustainable Investment",
 ]
 
 # Weights used by Profile A's composite score. Exposed here (rather than

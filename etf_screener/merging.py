@@ -73,6 +73,17 @@ def apply_etf_only_filter(df: pd.DataFrame) -> pd.DataFrame:
     has_expense_col: bool = "Net Expense Ratio" in filtered.columns
     has_fund_size_col: bool = "Fund Size" in filtered.columns
 
+    # Debug: show Share Class Type values
+    if has_share_class_col:
+        print(f"  Share Class Type unique values: {filtered['Share Class Type'].unique()[:10]}")
+    else:
+        print(f"  Share Class Type column not found in data")
+
+    if has_expense_col:
+        print(f"  Net Expense Ratio non-null count: {filtered['Net Expense Ratio'].notna().sum()}")
+    if has_fund_size_col:
+        print(f"  Fund Size non-null count: {filtered['Fund Size'].notna().sum()}")
+
     if has_share_class_col:
         is_etf_flagged: pd.Series = (
             filtered["Share Class Type"].astype(str).str.strip().str.upper() == "ETF"

@@ -53,7 +53,9 @@ from input_file import load_profile_input, ProfileInput
 from data_loading import load_data
 from merging import apply_etf_only_filter
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
-from utils.yahoo_metrics import YahooMetricsConfig, get_yahoo_metrics_for_tickers
+from utils import yahoo_metrics
+YahooMetricsConfig = yahoo_metrics.YahooMetricsConfig
+get_yahoo_metrics_for_tickers = yahoo_metrics.get_yahoo_metrics_for_tickers
 
 from export import (
     write_excel_with_retry,
@@ -62,6 +64,7 @@ from export import (
     build_timestamped_output_path,
     append_to_recorder,
     write_used_weights_report,
+    create_sheets_by_category,
 )
 
 
@@ -293,6 +296,18 @@ def process_data(
         thresholds=thresholds,
     )
     print(f"Used-weights report saved to: {used_weights_path}")
+
+    # Create separate files by category if columns exist
+    category_columns = ["Asset Class", "Morningstar Category", "Equity Style Box (Funds)"]
+    
+    # Create a subdirectory for category files with timestamp matching the results file
+    base_filename_no_ext = os.path.splitext(os.path.basename(final_out_path))[0]
+    category_output_dir = os.path.join(out_path, f"{base_filename_no_ext}_by_category")
+    os.makedirs(category_output_dir, exist_ok=True)
+    
+    for category_col in category_columns:
+        if category_col in df_export.columns:
+            create_sheets_by_category(df_export, category_col, category_output_dir)
 
     return df_ranked, final_out_path
 

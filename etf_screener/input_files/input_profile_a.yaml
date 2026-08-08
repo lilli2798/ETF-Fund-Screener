@@ -31,31 +31,31 @@ out_path: output
 
 thresholds:
   # CATEGORY FILTER
-  require_category: true            # Only include funds with a Morningstar Category assigned
+  require_category: false            # Only include funds with a Morningstar Category assigned
 
   # COST FILTERS
-  max_expense_ratio: 0.75           # Maximum expense ratio (0.75% = 0.0075 as decimal)
+  max_expense_ratio: 1.75           # Maximum expense ratio (0.75% = 0.0075 as decimal)
                                     # Set lower to only consider very low-cost funds
 
   # SIZE FILTERS
-  require_fund_size: true           # Require funds to meet minimum size threshold
+  require_fund_size: false           # Require funds to meet minimum size threshold
   min_fund_size: null               # Minimum fund size in dollars (null = no minimum)
                                     # Example: 100000000 for $100M minimum
 
   # PERFORMANCE FILTERS
-  require_3y_return: true           # Only include funds with 3-year return history
+  require_3y_return: false           # Only include funds with 3-year return history
   min_3y_return: null               # Minimum 3-year annualized return (null = no minimum)
                                     # Example: 0.05 for 5% minimum annual return
 
   # STRUCTURAL EXCLUSIONS (Hard filters - these funds are dropped entirely)
   # Leveraged funds use debt to amplify returns (e.g., 2x, 3x funds) - higher risk
-  exclude_leveraged_funds: true     # Exclude leveraged/inverse ETFs
+  exclude_leveraged_funds: false     # Exclude leveraged/inverse ETFs
 
   # Interval funds only allow redemptions at scheduled intervals - less liquid
-  exclude_interval_funds: true       # Exclude interval funds
+  exclude_interval_funds: false       # Exclude interval funds
 
   # Tender offer funds have limited redemption options - less liquid
-  exclude_tender_offer_funds: true  # Exclude funds with active tender offers
+  exclude_tender_offer_funds: false  # Exclude funds with active tender offers
 
   # ============================================================================
   # SCORING WEIGHTS

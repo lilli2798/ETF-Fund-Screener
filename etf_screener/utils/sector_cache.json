@@ -9111,6 +9111,10 @@
     "cached_date": "2026-07-29T03:33:57.678842",
     "sub_sector": "Electric, Gas, and Water Utilities"
   },
+  "SPMB": {
+    "cached_date": "2026-08-07T22:01:03.489001",
+    "sub_sector": "Broad Market Equity"
+  },
   "SPMD": {
     "cached_date": "2026-07-29T03:33:57.744881",
     "sub_sector": "Broad Market Equity"
@@ -10070,6 +10074,10 @@
   "USCA": {
     "cached_date": "2026-07-31T11:29:28.481553",
     "sub_sector": "Software & Services"
+  },
+  "USCI": {
+    "cached_date": "2026-08-06T08:55:37.652564",
+    "sub_sector": "Broad Market Equity"
   },
   "USCL": {
     "cached_date": "2026-07-29T05:33:20.908130",

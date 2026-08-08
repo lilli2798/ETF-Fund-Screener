@@ -164,7 +164,22 @@ def read_and_concat_excels(
         # we need to merge data from all files per ticker, not just keep the last one
         # Group by Ticker and combine non-null values from all files
         ticker_col = combined["Ticker"]
-        combined = combined.drop(columns=["Ticker"]).groupby(ticker_col).first().reset_index()
+        
+        # Custom aggregation: for each column, take the first non-null value across all rows
+        def coalesce_group(group):
+            result = {}
+            for col in group.columns:
+                if col == "__source_file":
+                    continue
+                # Get first non-null value for this column
+                non_null_vals = group[col].dropna()
+                if len(non_null_vals) > 0:
+                    result[col] = non_null_vals.iloc[0]
+                else:
+                    result[col] = None
+            return pd.Series(result)
+        
+        combined = combined.groupby(ticker_col, as_index=False).apply(coalesce_group)
         removed: int = before - len(combined)
         if removed > 0:
             print(f"  Deduplicated on Ticker: removed {removed} duplicate row(s) "

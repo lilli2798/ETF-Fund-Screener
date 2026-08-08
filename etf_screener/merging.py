@@ -68,6 +68,7 @@ def apply_etf_only_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
     filtered: pd.DataFrame = df.copy()
     start_count: int = len(filtered)
+    print(f"ETF-only filter: start count = {start_count}")
 
     has_share_class_col: bool = "Share Class Type" in filtered.columns
     has_expense_col: bool = "Net Expense Ratio" in filtered.columns

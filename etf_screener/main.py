@@ -44,17 +44,18 @@ import os
 
 from config import (
     DEFAULT_TOP_N_PER_CATEGORY,
-    DEFAULT_STRUCT_PATH,
-    DEFAULT_PERF_PATH,
+    DEFAULT_DATA_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
     DEFAULT_YAHOO_METRICS,
 )
 from input_file import load_profile_input, ProfileInput
-from data_loading import load_structural_data, load_performance_data
-from merging import merge_datasets, apply_etf_only_filter
+from data_loading import load_data
+from merging import apply_etf_only_filter
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
-from utils.yahoo_metrics import YahooMetricsConfig, get_yahoo_metrics_for_tickers
+from utils import yahoo_metrics
+YahooMetricsConfig = yahoo_metrics.YahooMetricsConfig
+get_yahoo_metrics_for_tickers = yahoo_metrics.get_yahoo_metrics_for_tickers
 
 from export import (
     write_excel_with_retry,
@@ -63,6 +64,7 @@ from export import (
     build_timestamped_output_path,
     append_to_recorder,
     write_used_weights_report,
+    create_sheets_by_category,
 )
 
 
@@ -175,8 +177,7 @@ def print_numeric_score_check(df: pd.DataFrame, profile_name: str) -> None:
 
 
 def process_data(
-    struct_path: str = DEFAULT_STRUCT_PATH,
-    perf_path: str = DEFAULT_PERF_PATH,
+    data_path: str = DEFAULT_DATA_PATH,
     out_path: str = DEFAULT_OUT_PATH,
     profile_name: str = DEFAULT_PROFILE_NAME,
     top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
@@ -184,7 +185,7 @@ def process_data(
 ) -> Tuple[pd.DataFrame, str]:
     """
     Run the full pipeline end-to-end for a single profile:
-      load -> merge -> ETF-only filter -> concept scores ->
+      load -> ETF-only filter -> concept scores ->
       profile eligibility filter -> profile scoring/ranking ->
       numeric score enforcement ->
       format for export -> save -> style header row.
@@ -204,17 +205,13 @@ def process_data(
 
     _validate_profile_name(profile_name)
 
-    print("Loading structural data...")
-    df_struct: pd.DataFrame = load_structural_data(struct_path, exclude_dir=out_path)
-
-    print("Loading performance data...")
-    df_perf: pd.DataFrame = load_performance_data(perf_path, exclude_dir=out_path)
-
-    print("Merging datasets on Ticker...")
-    df: pd.DataFrame = merge_datasets(df_struct, df_perf)
+    print("Loading data (performance + structural combined)...")
+    df: pd.DataFrame = load_data(data_path, exclude_dir=out_path)
+    print(f"After load: {len(df)} rows")
 
     print("Filtering to ETFs only (excluding stocks)...")
     df = apply_etf_only_filter(df)
+    print(f"After ETF filter: {len(df)} rows")
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
     yahoo_cfg = YahooMetricsConfig(**thresholds.get("yahoo_metrics", {}))
@@ -300,6 +297,18 @@ def process_data(
     )
     print(f"Used-weights report saved to: {used_weights_path}")
 
+    # Create separate files by category if columns exist
+    category_columns = ["Asset Class", "Morningstar Category", "Equity Style Box (Funds)"]
+    
+    # Create a subdirectory for category files with timestamp matching the results file
+    base_filename_no_ext = os.path.splitext(os.path.basename(final_out_path))[0]
+    category_output_dir = os.path.join(out_path, f"{base_filename_no_ext}_by_category")
+    os.makedirs(category_output_dir, exist_ok=True)
+    
+    for category_col in category_columns:
+        if category_col in df_export.columns:
+            create_sheets_by_category(df_export, category_col, category_output_dir)
+
     return df_ranked, final_out_path
 
 
@@ -348,8 +357,7 @@ def main() -> None:
     profile_input = get_profile_input_interactively()
 
     df_ranked, final_out_path = process_data(
-        struct_path=profile_input.struct_path,
-        perf_path=profile_input.perf_path,
+        data_path=profile_input.data_path,
         out_path=profile_input.out_path,
         profile_name=profile_input.profile_name,
         top_n=profile_input.top_n_per_category,

@@ -20,7 +20,7 @@ import glob
 from typing import List, Optional, Tuple
 import pandas as pd
 
-from config import STRUCT_NEEDED_COLS, PERF_NEEDED_COLS
+from config import NEEDED_COLS
 
 
 def resolve_files_in_path(
@@ -160,11 +160,30 @@ def read_and_concat_excels(
 
     if "Ticker" in combined.columns:
         before: int = len(combined)
-        combined = combined.drop_duplicates(subset="Ticker", keep="last")
+        # For the new Morningstar format where columns are split across files,
+        # we need to merge data from all files per ticker, not just keep the last one
+        # Group by Ticker and combine non-null values from all files
+        ticker_col = combined["Ticker"]
+        
+        # Custom aggregation: for each column, take the first non-null value across all rows
+        def coalesce_group(group):
+            result = {}
+            for col in group.columns:
+                if col == "__source_file":
+                    continue
+                # Get first non-null value for this column
+                non_null_vals = group[col].dropna()
+                if len(non_null_vals) > 0:
+                    result[col] = non_null_vals.iloc[0]
+                else:
+                    result[col] = None
+            return pd.Series(result)
+        
+        combined = combined.groupby(ticker_col, as_index=False).apply(coalesce_group)
         removed: int = before - len(combined)
         if removed > 0:
             print(f"  Deduplicated on Ticker: removed {removed} duplicate row(s) "
-                  f"(kept the version from the last-read file per ticker).")
+                  f"(merged data from all files per ticker).")
 
     combined = combined.drop(columns=["__source_file"], errors="ignore")
     return combined
@@ -252,13 +271,13 @@ def parse_portfolio_risk_score(val) -> Tuple[Optional[str], Optional[float]]:
     return (label if label else None, score)
 
 
-def load_structural_data(
+def load_data(
     path: str,
     file_pattern: str = None,
     exclude_dir: Optional[str] = None,
 ) -> pd.DataFrame:
     """
-    Load python-etfs.xlsx (structural/fundamental fields only).
+    Load Morningstar Excel files (combined performance + structural data).
 
     `path` can be:
       - a single file path, or
@@ -273,12 +292,28 @@ def load_structural_data(
     """
     file_pattern = file_pattern or path
     files: List[str] = resolve_files_in_path(path, file_pattern, exclude_dir=exclude_dir)
-    df: pd.DataFrame = read_and_concat_excels(files, usecols=STRUCT_NEEDED_COLS)
+
+    # Load all columns first (no usecols filtering) to avoid duplicate column issues
+    # when concatenating files with different column structures
+    df: pd.DataFrame = read_and_concat_excels(files, usecols=None)
+
+    # Filter to needed columns after concatenation
+    if NEEDED_COLS:
+        available_cols = [c for c in NEEDED_COLS if c in df.columns]
+        missing_cols = [c for c in NEEDED_COLS if c not in df.columns]
+        if missing_cols:
+            print(f"  Warning: {len(missing_cols)} expected columns not found in data: {missing_cols[:10]}")
+        df = df[available_cols]
+
+    # Remove duplicate columns (keep first occurrence)
+    df = df.loc[:, ~df.columns.duplicated()]
+
+    print(f"  Loaded {len(df)} rows from {len(files)} file(s)")
 
     required: List[str] = ["Ticker", "Morningstar Category"]
     missing: List[str] = [c for c in required if c not in df.columns]
     if missing:
-        raise ValueError(f"Structural data is missing required columns: {missing}")
+        raise ValueError(f"Data is missing required columns: {missing}")
 
     df = clean_dtypes(df)
 
@@ -288,30 +323,3 @@ def load_structural_data(
         df["Risk_Score_Numeric"] = parsed.apply(lambda t: t[1])
 
     return df
-
-
-def load_performance_data(
-    path: str,
-    file_pattern: str = None,
-    exclude_dir: Optional[str] = None,
-) -> pd.DataFrame:
-    """
-    Load performance-etfs.xlsx (returns, ranks, risk, capture, drawdowns).
-
-    `path` can be a single file or a directory containing one or more files
-    matching `file_pattern` (all matches are read and combined, deduplicated
-    on Ticker).
-
-    `exclude_dir`, if provided, skips any files located inside that
-    directory (e.g. your output/results folder).
-
-    Raises ValueError if the 'Ticker' join key is missing after load.
-    """
-    file_pattern = file_pattern or path
-    files: List[str] = resolve_files_in_path(path, file_pattern, exclude_dir=exclude_dir)
-    df: pd.DataFrame = read_and_concat_excels(files, usecols=PERF_NEEDED_COLS)
-
-    if "Ticker" not in df.columns:
-        raise ValueError("Performance data is missing the required 'Ticker' column.")
-
-    return clean_dtypes(df)

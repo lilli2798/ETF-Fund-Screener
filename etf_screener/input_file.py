@@ -15,7 +15,7 @@ from typing import Any, Dict
 import yaml
 
 from config import (
-    DEFAULT_STRUCT_PATH, DEFAULT_PERF_PATH, DEFAULT_OUT_PATH,
+    DEFAULT_DATA_PATH, DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME, DEFAULT_TOP_N_PER_CATEGORY,
     DEFAULT_THRESHOLDS,
 )
@@ -49,8 +49,7 @@ def deep_merge_dicts(defaults: Dict[str, Any], overrides: Dict[str, Any]) -> Dic
 @dataclass
 class ProfileInput:
     profile_name: str
-    struct_path: str
-    perf_path: str
+    data_path: str
     out_path: str
     top_n_per_category: int
     thresholds: Dict[str, Any]
@@ -99,8 +98,7 @@ def load_profile_input(input_file: str) -> ProfileInput:
 
     return ProfileInput(
         profile_name=profile_name.strip(),
-        struct_path=raw.get("struct_path") or DEFAULT_STRUCT_PATH,
-        perf_path=raw.get("perf_path") or DEFAULT_PERF_PATH,
+        data_path=raw.get("data_path") or DEFAULT_DATA_PATH,
         out_path=raw.get("out_path") or DEFAULT_OUT_PATH,
         top_n_per_category=int(raw.get("top_n_per_category", DEFAULT_TOP_N_PER_CATEGORY)),
         thresholds=thresholds,

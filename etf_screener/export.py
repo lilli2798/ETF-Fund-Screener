@@ -12,6 +12,7 @@ from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 import yaml
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict
 
@@ -244,4 +245,60 @@ def apply_header_formatting(
         )
     except PermissionError:
         print(f"\nPermissionError: '{path}' is open elsewhere; could not apply header formatting.")
+
+
+def create_sheets_by_category(
+    df: pd.DataFrame,
+    category_column: str,
+    output_dir: str,
+    base_filename: str = None,
+) -> List[str]:
+    """
+    Create separate Excel files for each unique value in the specified category column.
+    
+    This is useful for analyzing ETFs by Asset Class, Morningstar Category, or Equity Style Box.
+    Each category gets its own Excel file with the filtered data.
+    
+    Args:
+        df: DataFrame containing the data to split
+        category_column: Column name to split by (e.g., 'Asset Class', 'Morningstar Category')
+        output_dir: Directory where the category files will be saved
+        base_filename: Optional base name for output files (if None, uses category name only)
+    
+    Returns:
+        List of paths to the created files
+    """
+    if category_column not in df.columns:
+        print(f"  Warning: Category column '{category_column}' not found in data. Skipping category split.")
+        return []
+    
+    categories = df[category_column].unique()
+    print(f"  Creating separate files for {len(categories)} categories in '{category_column}'...")
+    
+    created_files = []
+    for category in categories:
+        if pd.isna(category) or str(category).strip() == '':
+            continue
+            
+        category_df = df[df[category_column] == category]
+        if category_df.empty:
+            continue
+        
+        # Sanitize category name for filename
+        category_clean = re.sub(r"\s+", "_", str(category))
+        category_clean = re.sub(r'[^a-zA-Z0-9_.-]', '', category_clean)
+        
+        # Create filename - use category name only for easier reading
+        filename = f"{category_clean}.xlsx"
+        output_path = os.path.join(output_dir, filename)
+        
+        # Write the file
+        write_excel_with_retry(category_df, output_path)
+        apply_header_formatting(output_path)
+        
+        created_files.append(output_path)
+        print(f"    Created: {filename} ({len(category_df)} rows)")
+    
+    print(f"  Created {len(created_files)} category-specific files.")
+    return created_files
 

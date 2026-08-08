@@ -10,8 +10,7 @@ PROFILE_INPUT_PATH = "input_files/input_profile_a.yaml"
 if __name__ == "__main__":
     profile_input = load_profile_input(PROFILE_INPUT_PATH)
     df, out_path = process_data(
-        struct_path=profile_input.struct_path,
-        perf_path=profile_input.perf_path,
+        data_path=profile_input.data_path,
         out_path=profile_input.out_path,
         profile_name=profile_input.profile_name,
         top_n=profile_input.top_n_per_category,

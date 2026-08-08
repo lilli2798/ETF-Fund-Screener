@@ -130,6 +130,11 @@ jobs:
               exit(1)
           "
       
+      - name: Run yearly returns analysis
+        run: |
+          cd etf_screen_yahoo_by_date
+          python analyze_yearly_returns.py
+      
       - name: Commit and push cache update
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"

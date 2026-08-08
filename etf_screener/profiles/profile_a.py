@@ -92,9 +92,11 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
         before = len(eligible)
         # Ensure comparison is numeric even if loader left strings
         expense = _as_float_series(eligible["Net Expense Ratio"])
-        eligible = eligible[expense.notna() & (expense <= float(max_expense_ratio))]
+        # Only filter out funds with non-null expense ratio that exceeds threshold
+        # Allow funds with NaN expense ratio to pass through
+        eligible = eligible[expense.isna() | (expense <= float(max_expense_ratio))]
         print(
-            f"  Profile A filter - expense ratio <= {max_expense_ratio}%: "
+            f"  Profile A filter - expense ratio <= {max_expense_ratio}% (or NaN): "
             f"{before} -> {len(eligible)}"
         )
 

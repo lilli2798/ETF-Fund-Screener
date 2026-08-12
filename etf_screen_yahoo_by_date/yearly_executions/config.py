@@ -32,9 +32,9 @@ DEFAULT_PATHS = {
     "sources_dir": "sources",              # Directory for tickers.txt and cache files
     "tickers_file": "sources/tickers.txt", # Path to tickers.txt file
     "default_input_dir": "../etf_screener/data/structural-data",  # Default directory to look for input files
-    "default_output_dir": "output",       # Default directory for output files
-    "screener_output_dir": "../etf_screener/output",  # ETF screener output directory for date extraction
-    "report_path": "output/run_recorder.yaml",  # Path for run metadata
+    "default_output_dir": "../output/yahoo_screen",       # Default directory for output files
+    "screener_output_dir": "../output/etf_screener",  # ETF screener output directory for date extraction
+    "report_path": "../output/yahoo_screen/run_recorder.yaml",  # Path for run metadata
 }
 
 # Report/metadata settings

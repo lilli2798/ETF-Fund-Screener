@@ -49,4 +49,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: etf-screener-output
-          path: etf_screener/output/*.xlsx
+          path: output/etf_screener/*.xlsx

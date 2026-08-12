@@ -133,7 +133,7 @@ jobs:
       - name: Run yearly returns analysis
         run: |
           cd etf_screen_yahoo_by_date
-          python analyze_yearly_returns.py
+          python yearly_executions/analyze_yearly_returns.py sources/etf_yearly_history.csv ../output/yahoo_screen/yearly_analysis_$(date +'%Y%m%d').xlsx
       
       - name: Commit and push cache update
         run: |

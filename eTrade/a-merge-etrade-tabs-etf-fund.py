@@ -323,7 +323,10 @@ def merge_etrade_workbook(input_path: Path) -> Path:
 
     merged_df = filter_funds(merged_df)
 
-    output_path = input_path.parent / output_name
+    # Use centralized output directory
+    output_dir = Path(__file__).parent.parent / "output" / "etrade"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / output_name
     write_output_excel(merged_df, output_path)
 
     return output_path

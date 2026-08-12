@@ -20,7 +20,7 @@ DEFAULT_TOP_N_PER_CATEGORY: int = 5
 # Default input/output paths -- adjust to your environment, or override at
 # runtime via get_paths_from_user() / CLI args.
 DEFAULT_DATA_PATH: str = "data"
-DEFAULT_OUT_PATH: str = "output"
+DEFAULT_OUT_PATH: str = "../output/etf_screener"
 
 # Default profile to run when none is specified.
 DEFAULT_PROFILE_NAME: str = "A"

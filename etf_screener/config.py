@@ -33,6 +33,7 @@ NEEDED_COLS: List[str] = [
     # Identifier columns
     "Ticker", "Name", "Morningstar Category", "Asset Class",
     "Primary Benchmark", "Equity Style Box (Funds)", "Inception Date",
+    "Broad Category Group",
 
     # Performance metrics
     "Last Price", "Day Change (%)", "Day Change", "TTM Yield",
@@ -208,7 +209,8 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "growth_grade": 0.25,
         "financial_health": 0.25,
         "price_fair_value": 0.20,
-        "medalist": 0.30,   # NEW — raise/lower as you like; use 0.0 to ignore
+        "medalist": 0.15,   # NEW — raise/lower as you like; use 0.0 to ignore
+        "economic_moat_wide": 0.15,  # NEW — Portfolio Economic Moat Coverage (Wide)
     },
     "costs": {
         "net_expense_ratio": 0.75,
@@ -254,10 +256,11 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
         "trading_volume": 0.00,  # Not used
     },
     "quality_valuation": {
-        "growth_grade": 0.40,      # Growth grade (40% of quality weight)
-        "financial_health": 0.40,  # Financial health (40% of quality weight)
-        "price_fair_value": 0.20,  # Price vs fair value (20% of quality weight)
-        "medalist": 0.00,           # Not explicitly mentioned
+        "growth_grade": 0.30,      # Growth grade (40% of quality weight)
+        "financial_health": 0.20,  # Financial health (40% of quality weight)
+        "price_fair_value": 0.15,  # Price vs fair value (20% of quality weight)
+        "medalist": 0.15,           # Not explicitly mentioned
+        "economic_moat_wide": 0.20,  # Not explicitly mentioned
     },
     "costs": {
         "net_expense_ratio": 1.00,  # 100% on expense ratio per Morningstar's criteria

@@ -46,15 +46,15 @@ def merge_datasets(df_struct: pd.DataFrame, df_perf: pd.DataFrame) -> pd.DataFra
     return merged
 
 
-def apply_etf_only_filter(df: pd.DataFrame) -> pd.DataFrame:
+def apply_fund_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Keep only true ETFs, excluding individual stocks that were included in
-    the Morningstar export.
+    Keep only ETFs and mutual funds, excluding individual stocks that were
+    included in the Morningstar export.
 
     Uses multiple signals, since a single column may be blank or unreliable
     for some rows:
-      1. 'Share Class Type' == 'ETF' (Morningstar's direct classification) -
-         strongest signal when present.
+      1. 'Share Class Type' == 'ETF' or contains 'FUND' (Morningstar's direct
+         classification) - strongest signal when present.
       2. 'Morningstar Category' is a recognized fund category (stocks
          usually have this blank, or show an equity sector/industry
          classification instead of a Morningstar fund category).
@@ -68,7 +68,7 @@ def apply_etf_only_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
     filtered: pd.DataFrame = df.copy()
     start_count: int = len(filtered)
-    print(f"ETF-only filter: start count = {start_count}")
+    print(f"Fund filter (ETFs + Mutual Funds): start count = {start_count}")
 
     has_share_class_col: bool = "Share Class Type" in filtered.columns
     has_expense_col: bool = "Net Expense Ratio" in filtered.columns
@@ -86,11 +86,12 @@ def apply_etf_only_filter(df: pd.DataFrame) -> pd.DataFrame:
         print(f"  Fund Size non-null count: {filtered['Fund Size'].notna().sum()}")
 
     if has_share_class_col:
-        is_etf_flagged: pd.Series = (
-            filtered["Share Class Type"].astype(str).str.strip().str.upper() == "ETF"
+        share_class_upper = filtered["Share Class Type"].astype(str).str.strip().str.upper()
+        is_fund_flagged: pd.Series = (
+            (share_class_upper == "ETF") | (share_class_upper.str.contains("FUND", na=False))
         )
     else:
-        is_etf_flagged = pd.Series(False, index=filtered.index)
+        is_fund_flagged = pd.Series(False, index=filtered.index)
 
     if has_expense_col and has_fund_size_col:
         has_fund_level_data: pd.Series = (
@@ -99,19 +100,19 @@ def apply_etf_only_filter(df: pd.DataFrame) -> pd.DataFrame:
     else:
         has_fund_level_data = pd.Series(True, index=filtered.index)
 
-    keep_mask: pd.Series = is_etf_flagged | (~has_share_class_col & has_fund_level_data)
+    keep_mask: pd.Series = is_fund_flagged | (~has_share_class_col & has_fund_level_data)
     if has_share_class_col:
-        keep_mask = is_etf_flagged | (filtered["Share Class Type"].isna() & has_fund_level_data)
+        keep_mask = is_fund_flagged | (filtered["Share Class Type"].isna() & has_fund_level_data)
 
     excluded: pd.DataFrame = filtered[~keep_mask]
     filtered = filtered[keep_mask]
 
     excluded_count: int = start_count - len(filtered)
     if excluded_count > 0:
-        print(f"ETF-only filter: excluded {excluded_count} non-ETF row(s).")
+        print(f"Fund filter: excluded {excluded_count} non-fund (stock) row(s).")
         if "Ticker" in excluded.columns:
             sample_tickers = excluded["Ticker"].dropna().astype(str).head(10).tolist()
             print(f"  Examples of excluded tickers: {sample_tickers}")
 
-    print(f"ETF-only filter: {start_count} -> {len(filtered)} rows remain.")
+    print(f"Fund filter: {start_count} -> {len(filtered)} rows remain.")
     return filtered

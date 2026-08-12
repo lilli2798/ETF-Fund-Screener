@@ -519,11 +519,18 @@ def calculate_quality_valuation_score(
             df, "Price/Fair Value", category_col, invert=True
         )
 
+    # Portfolio Economic Moat Coverage (Wide) - percentage of portfolio with wide moat
+    if "Portfolio Economic Moat Coverage (Wide)" in df.columns:
+        out["Norm_Economic_Moat_Wide"] = normalize_within_category(
+            df, "Portfolio Economic Moat Coverage (Wide)", category_col
+        )
+
     weight_map = {
         "Norm_Growth_Grade": weights["growth_grade"],
         "Norm_Financial_Health": weights["financial_health"],
         "Norm_Price_Fair_Value": weights["price_fair_value"],
         "Norm_Medalist": weights["medalist"],  # NEW
+        "Norm_Economic_Moat_Wide": weights["economic_moat_wide"],  # NEW
     }
     return _weighted_average(out, weight_map)
 

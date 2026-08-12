@@ -51,7 +51,7 @@ from config import (
 )
 from input_file import load_profile_input, ProfileInput
 from data_loading import load_data
-from merging import apply_etf_only_filter
+from merging import apply_fund_filter
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
 YahooMetricsConfig = yahoo_metrics.YahooMetricsConfig
@@ -209,9 +209,9 @@ def process_data(
     df: pd.DataFrame = load_data(data_path, exclude_dir=out_path)
     print(f"After load: {len(df)} rows")
 
-    print("Filtering to ETFs only (excluding stocks)...")
-    df = apply_etf_only_filter(df)
-    print(f"After ETF filter: {len(df)} rows")
+    print("Filtering to ETFs and mutual funds (excluding stocks)...")
+    df = apply_fund_filter(df)
+    print(f"After fund filter: {len(df)} rows")
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
     yahoo_cfg = YahooMetricsConfig(**thresholds.get("yahoo_metrics", {}))

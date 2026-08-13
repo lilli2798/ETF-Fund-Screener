@@ -243,6 +243,36 @@ def process_data(
     print("Building concept scores...")
     df = build_concept_scores(df, concept_weights=thresholds.get("concept_weights"))
 
+    print("Adding return rankings for all periods...")
+    from scoring import calculate_return_rankings
+    df = calculate_return_rankings(df)
+
+    print("Calculating index benchmark comparisons...")
+    from etf_screen_yahoo_by_date.index_benchmark import (
+        calculate_index_returns,
+        get_index_benchmark_comparison,
+        get_index_highest_lowest,
+        MORNINGSTAR_PERIODS
+    )
+    
+    # Get fund returns for comparison
+    return_columns = [col for col in df.columns if col.startswith("Total Return")]
+    fund_returns = df.set_index("Ticker")[return_columns]
+    
+    # Calculate index returns
+    index_returns = calculate_index_returns(MORNINGSTAR_PERIODS)
+    
+    # Get highest/lowest index returns
+    index_high_low = get_index_highest_lowest(index_returns)
+    
+    # Calculate fund vs index comparison
+    index_comparison = get_index_benchmark_comparison(fund_returns, index_returns)
+    
+    # Add comparison results to dataframe
+    df = pd.merge(df, index_comparison, left_on="Ticker", right_index=True, how="left")
+    
+    print(f"Index benchmark comparison added: {len(index_comparison.columns)} comparison metrics")
+
     print(f"Applying Profile {profile_name} eligibility filters...")
     df_eligible: pd.DataFrame = PROFILE_FILTERS[profile_name](df, thresholds)
 

@@ -204,6 +204,37 @@ def _require_weights(weights: Optional[Dict[str, float]], concept_name: str) -> 
 
 # --- 1. Performance & return ranks -------------------------------------
 
+def calculate_return_rankings(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add ranking columns for all return periods.
+    Ranks funds within each return period (higher return = better rank).
+    
+    Args:
+        df: DataFrame with return columns
+    
+    Returns:
+        DataFrame with added ranking columns
+    """
+    return_periods = [
+        "Total Return (1W)", "Total Return (1M)", "Total Return (2M)", "Total Return (QTD)",
+        "Total Return (3M)", "Total Return (6M)", "Total Return (9M)", "Total Return (YTD)",
+        "Total Return (1Y)", "Total Return (2Y)", "Total Return (3Y)",
+        "Total Return (4Y)", "Total Return (5Y)", "Total Return (6Y)",
+        "Total Return (7Y)", "Total Return (8Y)", "Total Return (9Y)",
+        "Total Return (10Y)", "Total Return (15Y)", "Total Return (20Y)"
+    ]
+    
+    result = df.copy()
+    
+    for period in return_periods:
+        if period in df.columns:
+            # Rank returns (higher return = better rank, so rank in descending order)
+            rank_col = period.replace("Total Return", "Return Rank")
+            result[rank_col] = df[period].rank(ascending=False, method='min')
+    
+    return result
+
+
 def calculate_performance_score(
     df: pd.DataFrame,
     category_col: str = DEFAULT_CATEGORY_COL,

@@ -37,17 +37,20 @@ NEEDED_COLS: List[str] = [
 
     # Performance metrics
     "Last Price", "Day Change (%)", "Day Change", "TTM Yield",
-    "Total Return (1M)", "Total Return (2M)", "Total Return (3M)",
-    "Total Return (6M)", "Total Return (9M)", "Total Return (YTD)",
+    "Total Return (1W)", "Total Return (1M)", "Total Return (2M)", "Total Return (QTD)",
+    "Total Return (3M)", "Total Return (6M)", "Total Return (9M)", "Total Return (YTD)",
     "Total Return (1Y)", "Total Return (2Y)", "Total Return (3Y)",
-    "Total Return (4Y)", "Total Return (5Y)", "Total Return (10Y)",
+    "Total Return (4Y)", "Total Return (5Y)", "Total Return (6Y)",
+    "Total Return (7Y)", "Total Return (8Y)", "Total Return (9Y)",
+    "Total Return (10Y)", "Total Return (15Y)", "Total Return (20Y)",
     "Total Return (Since Inception)",
-    "1M Return Rank in Category", "2M Return Rank in Category",
-    "3M Return Rank in Category", "6M Return Rank in Category",
+    "1W Return Rank in Category", "1M Return Rank in Category", "2M Return Rank in Category",
+    "QTD Return Rank in Category", "3M Return Rank in Category", "6M Return Rank in Category",
     "9M Return Rank in Category", "YTD Return Rank in Category",
-    "1Y Return Rank in Category", "2Y Return Rank in Category",
-    "3Y Return Rank in Category", "4Y Return Rank in Category",
-    "5Y Return Rank in Category", "10Y Return Rank in Category",
+    "1Y Return Rank in Category", "2Y Return Rank in Category", "3Y Return Rank in Category",
+    "4Y Return Rank in Category", "5Y Return Rank in Category", "6Y Return Rank in Category",
+    "7Y Return Rank in Category", "8Y Return Rank in Category", "9Y Return Rank in Category",
+    "10Y Return Rank in Category", "15Y Return Rank in Category", "20Y Return Rank in Category",
 
     # Risk metrics
     "Sharpe Ratio (1Y Monthly)", "Sharpe Ratio (3Y Monthly)",

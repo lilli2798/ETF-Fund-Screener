@@ -129,7 +129,8 @@ NEEDED_COLS: List[str] = [
 # NOTE: these keys map to scoring.py's per-CONCEPT scores (each already
 # 0-100 and category-relative), not to individual raw metrics anymore.
 # See profiles/profile_a.py::compute_profile_A_score() for the mapping:
-#   performance        -> Performance_Score
+#   long_term_return_performance -> Long_Term_Return_Performance_Score
+#   short_term_return_performance -> Short_Term_Return_Performance_Score
 #   risk_adjusted       -> Risk_Adjusted_Score
 #   volatility          -> Volatility_Score      (lower vol/drawdown is better -- inverted in scoring)
 #   tracking            -> Tracking_Score         (lower tracking error is better -- inverted in scoring)
@@ -138,14 +139,15 @@ NEEDED_COLS: List[str] = [
 #   costs               -> Costs_Score            (lower cost is better -- inverted in scoring)
 #   tax_income          -> Tax_Income_Score
 PROFILE_A_WEIGHTS = {
-    "performance": 0.25,
+    "long_term_return_performance": 0.25,
+    "short_term_return_performance": 0.10,
     "risk_adjusted": 0.20,
     "volatility": 0.15,
     "tracking": 0.05,
     "liquidity_size": 0.05,
     "quality_valuation": 0.10,
-    "costs": 0.15,
-    "tax_income": 0.05,
+    "costs": 0.10,
+    "tax_income": 0.00,
 }
 
 # Morningstar's recommended long-term investment criteria weights.
@@ -178,12 +180,29 @@ MORNINGSTAR_LONG_TERM_WEIGHTS = {
 # leaf values in the YAML (e.g. concept_weights.performance.return_3y)
 # and everything else here still applies via deep_merge_dicts().
 DEFAULT_CONCEPT_WEIGHTS = {
-    "performance": {
-        "return_10y": 0.00,     # 10-year returns (optional for long-term focus)
-        "return_5y": 0.35,
-        "return_3y": 0.40,
-        "return_1y": 0.10,
-        "rank_3y": 0.15,
+    "long_term_return_performance": {
+        "return_1y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_2y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_3y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_4y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_5y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_6y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_7y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_8y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_9y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_10y": 0.0833, # 1/12 ≈ 8.33%
+        "return_15y": 0.0833, # 1/12 ≈ 8.33%
+        "return_20y": 0.0835, # 1/12 ≈ 8.35% (adjusted to sum to 1.0)
+    },
+    "short_term_return_performance": {
+        "return_1w": 0.125,   # 1/8 = 12.5%
+        "return_1m": 0.125,   # 1/8 = 12.5%
+        "return_2m": 0.125,   # 1/8 = 12.5%
+        "return_qtd": 0.125,  # 1/8 = 12.5%
+        "return_3m": 0.125,   # 1/8 = 12.5%
+        "return_6m": 0.125,   # 1/8 = 12.5%
+        "return_9m": 0.125,   # 1/8 = 12.5%
+        "return_ytd": 0.125,  # 1/8 = 12.5%
     },
     "risk_adjusted": {
         "sharpe_3y": 0.1,

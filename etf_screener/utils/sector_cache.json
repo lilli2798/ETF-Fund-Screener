@@ -9987,6 +9987,10 @@
     "cached_date": "2026-07-29T04:59:17.812184",
     "sub_sector": "Oil, Gas & Consumable Fuels"
   },
+  "TQAIX": {
+    "cached_date": "2026-08-13T16:00:59.641008",
+    "sub_sector": "Broad Market Equity"
+  },
   "TQQQ": {
     "cached_date": "2026-07-29T04:59:17.884251",
     "sub_sector": "Broad Market Equity"
@@ -10733,6 +10737,10 @@
   },
   "VT": {
     "cached_date": "2026-07-31T11:31:56.745289",
+    "sub_sector": "Software & Services"
+  },
+  "VTCLX": {
+    "cached_date": "2026-08-13T16:02:06.435687",
     "sub_sector": "Software & Services"
   },
   "VTHR": {

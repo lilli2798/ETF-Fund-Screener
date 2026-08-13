@@ -57,6 +57,11 @@ thresholds:
   # Tender offer funds have limited redemption options - less liquid
   exclude_tender_offer_funds: false  # Exclude funds with active tender offers
 
+  # HISTORICAL BENCHMARK PERFORMANCE FILTER
+  # Require funds to have beaten benchmarks in at least X% of available years
+  require_benchmark_outperformance: false   # Disabled - too strict for most funds
+  # min_benchmark_beat_pct: 50.0            # Minimum % of years beating benchmarks (50% = half the time)
+
   # ============================================================================
   # SCORING WEIGHTS
   # ============================================================================
@@ -84,26 +89,27 @@ thresholds:
   # ============================================================================
 
   weights:
-    # How much historical returns matter (25% of total score)
-    performance: 0.35
+    # How much historical returns matter (split into long-term and short-term)
+    long_term_return_performance: 0.25 # Aggregates 1Y-20Y returns for consistent long-term performance
+    short_term_return_performance: 0.10 # Aggregates 1W-YTD returns for recent momentum
 
-    # How much risk-adjusted performance matters (20% of total score)
-    risk_adjusted: 0.15
+    # How much risk-adjusted performance matters
+    risk_adjusted: 0.20
 
-    # How much volatility/downside risk matters (15% of total score)
-    volatility: 0.10
+    # How much volatility/downside risk matters
+    volatility: 0.15
 
-    # How much tracking error matters (5% of total score)
+    # How much tracking error matters
     # Lower tracking error = fund follows its benchmark more closely
     tracking: 0.05
 
-    # How much fund size and trading volume matter (5% of total score)
+    # How much fund size and trading volume matter
     liquidity_size: 0.05
 
-    # How much portfolio quality and valuation matter (10% of total score)
+    # How much portfolio quality and valuation matter
     quality_valuation: 0.15
     costs: 0.10
-    tax_income: 0.05
+    tax_income: 0.00
 
   # ============================================================================
   # DETAILED WEIGHTS WITHIN EACH SCORING DIMENSION
@@ -145,13 +151,34 @@ thresholds:
   # ============================================================================
 
   concept_weights:
-    # PERFORMANCE: How different time periods are weighted
-    performance:
-      return_10y: 0.20     # 10-year returns (optional for long-term focus)
-      return_5y: 0.35      # 5-year returns (second most important)
-      return_3y: 0.20      # 3-year returns (most important)
-      return_1y: 0.10      # 1-year returns (less important for long-term)
-      rank_3y: 0.15        # 3-year category ranking (vs peers)
+    # LONG-TERM RETURN PERFORMANCE: Aggregates 1Y-20Y returns for consistent performance
+    # Equal weights all available periods by default (sums to 1.0)
+    long_term_return_performance:
+      return_1y: 0.20  # 1/12 ≈ 8.33%
+      return_2y: 0.15  # 1/12 ≈ 8.33%
+      return_3y: 0.085  # 1/12 ≈ 8.33%
+      return_4y: 0.075  # 1/12 ≈ 8.33%
+      return_5y: 0.065  # 1/12 ≈ 8.33%
+      return_6y: 0.05  # 1/12 ≈ 8.33%
+      return_7y: 0.05  # 1/12 ≈ 8.33%
+      return_8y: 0.05  # 1/12 ≈ 8.33%
+      return_9y: 0.055  # 1/12 ≈ 8.33%
+      return_10y: 0.06 # 1/12 ≈ 8.33%
+      return_15y: 0.075 # 1/12 ≈ 8.33%
+      return_20y: 0.08 # 1/12 ≈ 8.35% (adjusted to sum to 1.0)
+
+    # SHORT-TERM RETURN PERFORMANCE: Aggregates 1W-YTD returns for recent momentum
+    # Equal weights all available periods by default (sums to 1.0)
+    short_term_return_performance:
+      return_1w: 0.05   # 1/8 = 12.5%
+      return_1m: 0.15   # 1/8 = 12.5%
+      return_2m: 0.15   # 1/8 = 12.5%
+      return_qtd: 0.15  # 1/8 = 12.5%
+      return_3m: 0.15   # 1/8 = 12.5%
+      return_6m: 0.12   # 1/8 = 12.5%
+      return_9m: 0.1   # 1/8 = 12.5%
+      return_ytd: 0.05  # 1/8 = 12.5%
+      return_1y: 0.08  # 1/12 ≈ 8.33%
 
     # RISK-ADJUSTED: How different risk metrics are weighted
     risk_adjusted:

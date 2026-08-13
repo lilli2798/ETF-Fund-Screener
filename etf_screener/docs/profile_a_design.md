@@ -74,22 +74,23 @@ penalize inherently higher-risk categories.
 
 | # | Concept | Function | Default column weights | Direction |
 |---|---|---|---|---|
-| 1 | Performance & Return | `calculate_performance_score()` | return_3y 0.40, return_5y 0.35, return_1y 0.10, rank_3y 0.15 | higher = better |
-| 2 | Risk-Adjusted Return | `calculate_risk_adjusted_score()` | sharpe_3y 0.45, sharpe_1y 0.10, upside 0.25, downside 0.20 | higher = better (downside capture inverted) |
-| 3 | Volatility & Downside Risk | `calculate_volatility_score()` | stdev_3y 0.45, drawdown_3y 0.30, drawdown_5y 0.25 | lower = better (inverted) |
-| 4 | Tracking Quality | `calculate_tracking_score()` | tracking_error_3y 0.65, tracking_error_1y 0.35 | lower = better (inverted) |
-| 5 | Liquidity & Size | `calculate_liquidity_size_score()` | fund_size 0.60, trading_volume 0.40 | higher = better |
-| 6 | Quality & Valuation | `calculate_quality_valuation_score()` | growth_grade 0.35, financial_health 0.35, price_fair_value 0.30 | higher = better (price/fair value inverted) |
-| 7 | Costs & Fees | `calculate_costs_score()` | net_expense_ratio 0.75, management_fee 0.25 | lower = better (inverted) |
-| 8 | Tax & Income | `calculate_tax_income_score()` | tax_cost_ratio 0.55, sec_yield 0.45 | tax cost inverted, yield not |
+| 1 | Long-Term Return Performance | `calculate_long_term_return_performance_score()` | return_1y-20y all 1.0 (equal weight) | higher = better |
+| 2 | Short-Term Return Performance | `calculate_short_term_return_performance_score()` | return_1w-ytd all 1.0 (equal weight) | higher = better |
+| 3 | Risk-Adjusted Return | `calculate_risk_adjusted_score()` | sharpe_3y 0.45, sharpe_1y 0.10, upside 0.25, downside 0.20 | higher = better (downside capture inverted) |
+| 4 | Volatility & Downside Risk | `calculate_volatility_score()` | stdev_3y 0.45, drawdown_3y 0.30, drawdown_5y 0.25 | lower = better (inverted) |
+| 5 | Tracking Quality | `calculate_tracking_score()` | tracking_error_3y 0.65, tracking_error_1y 0.35 | lower = better (inverted) |
+| 6 | Liquidity & Size | `calculate_liquidity_size_score()` | fund_size 0.60, trading_volume 0.40 | higher = better |
+| 7 | Quality & Valuation | `calculate_quality_valuation_score()` | growth_grade 0.35, financial_health 0.35, price_fair_value 0.30 | higher = better (price/fair value inverted) |
+| 8 | Costs & Fees | `calculate_costs_score()` | net_expense_ratio 0.75, management_fee 0.25 | lower = better (inverted) |
+| 9 | Tax & Income | `calculate_tax_income_score()` | tax_cost_ratio 0.55, sec_yield 0.45 | tax cost inverted, yield not |
 
 **Not yet scored (left as raw/flag columns, per explicit decision):**
 
 | # | Concept | Function | Current behavior |
 |---|---|---|---|
-| 9 | Sector / Exposure | `build_sector_exposure_flags()` | placeholder, passthrough only |
-| 10 | Manager & Stewardship | `build_manager_stewardship_flags()` | adds `Flag_New_Manager` (tenure < 2Y) |
-| 11 | Structure & Flags | `build_structure_flags()` | adds `Flag_Leveraged_Fund`, `Flag_Interval_Fund`, `Flag_Fund_of_Funds`, `Flag_Tender_Offer` |
+| 10 | Sector / Exposure | `build_sector_exposure_flags()` | placeholder, passthrough only |
+| 11 | Manager & Stewardship | `build_manager_stewardship_flags()` | adds `Flag_New_Manager` (tenure < 2Y) |
+| 12 | Structure & Flags | `build_structure_flags()` | adds `Flag_Leveraged_Fund`, `Flag_Interval_Fund`, `Flag_Fund_of_Funds`, `Flag_Tender_Offer` |
 
 These three are intentionally NOT folded into the 0-100 composite score
 yet. Concepts 10 and 11 ARE consumed today, but only as **hard
@@ -153,14 +154,15 @@ re-type entire weight blocks each time.
 
 | Concept | Weight |
 |---|---|
-| Performance | 0.25 |
+| Long-Term Return Performance | 0.25 |
+| Short-Term Return Performance | 0.10 |
 | Risk-Adjusted | 0.20 |
 | Volatility | 0.15 |
-| Costs | 0.15 |
-| Quality/Valuation | 0.10 |
+| Quality/Valuation | 0.15 |
+| Costs | 0.10 |
 | Tracking | 0.05 |
 | Liquidity/Size | 0.05 |
-| Tax/Income | 0.05 |
+| Tax/Income | 0.00 |
 
 **Concept-level (`concept_weights`, each block sums to 1.0):** see
 Section 4 table above — currently set to each function's own built-in

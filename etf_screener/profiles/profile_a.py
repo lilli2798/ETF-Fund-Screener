@@ -6,7 +6,8 @@ key "A" on import -- main.py just needs `import profiles.profile_a` once
 and this profile becomes available via process_data(profile_name="A").
 
 Updated to consume the per-concept score columns produced by
-scoring.build_concept_scores() (Performance_Score, Risk_Adjusted_Score,
+scoring.build_concept_scores() (Long_Term_Return_Performance_Score,
+Short_Term_Return_Performance_Score, Risk_Adjusted_Score,
 Volatility_Score, Tracking_Score, Liquidity_Size_Score,
 Quality_Valuation_Score, Costs_Score, Tax_Income_Score) instead of the
 old flat Norm_* columns. Each of those concept scores is already
@@ -31,6 +32,12 @@ No other file needs to change.
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Add parent directory to path so imports work when running scripts directly
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 from typing import Dict, List
 
 import numpy as np
@@ -43,7 +50,8 @@ from scoring import register_profile_filter, register_profile_scorer
 # Concept columns Profile A may weight. Anything not in this map is ignored
 # by the composite (including qualitative text columns).
 CONCEPT_WEIGHT_KEYS: Dict[str, str] = {
-    "Performance_Score": "performance",
+    "Long_Term_Return_Performance_Score": "long_term_return_performance",
+    "Short_Term_Return_Performance_Score": "short_term_return_performance",
     "Risk_Adjusted_Score": "risk_adjusted",
     "Volatility_Score": "volatility",
     "Tracking_Score": "tracking",
@@ -138,6 +146,21 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
         flag = eligible["Flag_Tender_Offer"].fillna(False).astype(bool)
         eligible = eligible[~flag]
         print(f"  Profile A filter - exclude tender-offer funds: {before} -> {len(eligible)}")
+
+    # Historical benchmark performance filter
+    require_benchmark_outperformance = thresholds.get("require_benchmark_outperformance", False)
+    min_benchmark_beat_pct = thresholds.get("min_benchmark_beat_pct", 50.0)
+
+    if require_benchmark_outperformance and "Better %" in eligible.columns:
+        before = len(eligible)
+        better_pct = _as_float_series(eligible["Better %"])
+        # Require funds to beat benchmarks in at least X% of available years
+        # Allow funds with NaN benchmark data to pass through
+        eligible = eligible[better_pct.isna() | (better_pct >= float(min_benchmark_beat_pct))]
+        print(
+            f"  Profile A filter - benchmark outperformance >= {min_benchmark_beat_pct}% (or NaN): "
+            f"{before} -> {len(eligible)}"
+        )
 
     print(f"Profile A eligibility filter: {start_count} -> {len(eligible)} rows remain.")
     return eligible

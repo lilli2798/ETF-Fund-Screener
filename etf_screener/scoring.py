@@ -31,7 +31,7 @@ from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC
 PROFILE_FILTERS: Dict[str, Callable[[pd.DataFrame, dict], pd.DataFrame]] = {}
 PROFILE_SCORERS: Dict[str, Callable[[pd.DataFrame, int, dict], pd.DataFrame]] = {}
 
-DEFAULT_CATEGORY_COL: str = "Yahoo_SubSector"
+DEFAULT_CATEGORY_COL: str = "Morningstar Category"
 
 
 def register_profile_filter(name: str):
@@ -154,6 +154,15 @@ def _weighted_average(df: pd.DataFrame, weight_map: Dict[str, float]) -> pd.Seri
 # deliberate choice and not a missing/forgotten setting.
 REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "performance": ["return_3y", "return_5y", "return_1y", "rank_3y"],
+    "long_term_return_performance": [
+        "return_1y", "return_2y", "return_3y", "return_4y", "return_5y",
+        "return_6y", "return_7y", "return_8y", "return_9y", "return_10y",
+        "return_15y", "return_20y"
+    ],
+    "short_term_return_performance": [
+        "return_1w", "return_1m", "return_2m", "return_qtd",
+        "return_3m", "return_6m", "return_9m", "return_ytd"
+    ],
     "risk_adjusted": [
         "sharpe_3y", "sharpe_1y", "upside", "downside",
         "yahoo_sharpe_3y", "yahoo_sharpe_1y", "yahoo_zscore_3y", "yahoo_zscore_1y",
@@ -235,36 +244,96 @@ def calculate_return_rankings(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def calculate_performance_score(
+def calculate_long_term_return_performance_score(
     df: pd.DataFrame,
     category_col: str = DEFAULT_CATEGORY_COL,
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Absolute Total Return (10Y/5Y/3Y/1Y) normalized within category, blended
-    with Morningstar's own Return Rank in Category (already category-
-    relative, just needs flipping so higher = better).
+    Long-term return score that aggregates performance across all available
+    return periods (1Y through 20Y). Each period is normalized within category
+    and then averaged. This rewards consistent long-term performance across
+    multiple time horizons rather than just recent performance.
     """
-    weights = _require_weights(weights, "performance")
+    weights = _require_weights(weights, "long_term_return_performance")
+
+    # All available return periods from 1Y to 20Y
+    return_periods = [
+        "Total Return (1Y)", "Total Return (2Y)", "Total Return (3Y)",
+        "Total Return (4Y)", "Total Return (5Y)", "Total Return (6Y)",
+        "Total Return (7Y)", "Total Return (8Y)", "Total Return (9Y)",
+        "Total Return (10Y)", "Total Return (15Y)", "Total Return (20Y)"
+    ]
 
     out = pd.DataFrame(index=df.index)
-    out["Norm_Return_10Y"] = normalize_within_category(df, "Total Return (10Y)", category_col)
-    out["Norm_Return_5Y"] = normalize_within_category(df, "Total Return (5Y)", category_col)
-    out["Norm_Return_3Y"] = normalize_within_category(df, "Total Return (3Y)", category_col)
-    out["Norm_Return_1Y"] = normalize_within_category(df, "Total Return (1Y)", category_col)
 
-    if "3Y Return Rank in Category" in df.columns:
-        rank = pd.to_numeric(df["3Y Return Rank in Category"], errors="coerce")
-        out["Norm_Rank_3Y"] = (100.0 - rank).clip(lower=0, upper=100)
+    # Normalize each return period within category
+    for period in return_periods:
+        if period in df.columns:
+            norm_col = period.replace("Total Return", "Norm_Return")
+            out[norm_col] = normalize_within_category(df, period, category_col)
 
-    weight_map = {
-        "Norm_Return_10Y": weights.get("return_10y", 0.0),
-        "Norm_Return_5Y": weights.get("return_5y", 0.0),
-        "Norm_Return_3Y": weights.get("return_3y", 0.0),
-        "Norm_Return_1Y": weights.get("return_1y", 0.0),
-        "Norm_Rank_3Y": weights.get("rank_3y", 0.0),
-    }
-    return _weighted_average(out, weight_map)
+    # If weights are provided, use them; otherwise equal weight all available periods
+    if weights:
+        weight_map = {}
+        for period in return_periods:
+            norm_col = period.replace("Total Return", "Norm_Return")
+            if norm_col in out.columns:
+                # Map period to weight key (e.g., "return_1y", "return_5y", etc.)
+                weight_key = "return_" + period.replace("Total Return (", "").replace(")", "").lower()
+                weight_map[norm_col] = weights.get(weight_key, 0.0)
+        return _weighted_average(out, weight_map)
+    else:
+        # Equal weight all available normalized returns
+        available_cols = [col for col in out.columns if col.startswith("Norm_Return")]
+        if available_cols:
+            return out[available_cols].mean(axis=1)
+        return pd.Series([float("nan")] * len(df), index=df.index)
+
+
+def calculate_short_term_return_performance_score(
+    df: pd.DataFrame,
+    category_col: str = DEFAULT_CATEGORY_COL,
+    weights: Optional[Dict[str, float]] = None,
+) -> pd.Series:
+    """
+    Short-term return score that aggregates performance across short-term
+    return periods (1W through YTD). Each period is normalized within category
+    and then averaged. This rewards recent momentum and short-term performance.
+    """
+    weights = _require_weights(weights, "short_term_return_performance")
+
+    # Short-term return periods
+    return_periods = [
+        "Total Return (1W)", "Total Return (1M)", "Total Return (2M)",
+        "Total Return (QTD)", "Total Return (3M)", "Total Return (6M)",
+        "Total Return (9M)", "Total Return (YTD)"
+    ]
+
+    out = pd.DataFrame(index=df.index)
+
+    # Normalize each return period within category
+    for period in return_periods:
+        if period in df.columns:
+            norm_col = period.replace("Total Return", "Norm_Return")
+            out[norm_col] = normalize_within_category(df, period, category_col)
+
+    # If weights are provided, use them; otherwise equal weight all available periods
+    if weights:
+        weight_map = {}
+        for period in return_periods:
+            norm_col = period.replace("Total Return", "Norm_Return")
+            if norm_col in out.columns:
+                # Map period to weight key (e.g., "return_1w", "return_1m", etc.)
+                weight_key = "return_" + period.replace("Total Return (", "").replace(")", "").lower()
+                weight_map[norm_col] = weights.get(weight_key, 0.0)
+        return _weighted_average(out, weight_map)
+    else:
+        # Equal weight all available normalized returns
+        available_cols = [col for col in out.columns if col.startswith("Norm_Return")]
+        if available_cols:
+            return out[available_cols].mean(axis=1)
+        return pd.Series([float("nan")] * len(df), index=df.index)
 
 
 # --- 2. Risk-adjusted performance (Sharpe, upside/downside capture) ----
@@ -682,7 +751,8 @@ def build_concept_scores(
     the profile input YAML's `thresholds.concept_weights` block.
 
     Adds:
-      - Performance_Score
+      - Long_Term_Return_Performance_Score (aggregates 1Y-20Y returns)
+      - Short_Term_Return_Performance_Score (aggregates 1W-YTD returns)
       - Risk_Adjusted_Score
       - Volatility_Score
       - Tracking_Score
@@ -699,8 +769,11 @@ def build_concept_scores(
     out: pd.DataFrame = df.copy()
     cw = concept_weights or {}
 
-    out["Performance_Score"] = calculate_performance_score(
-        out, category_col, weights=cw.get("performance")
+    out["Long_Term_Return_Performance_Score"] = calculate_long_term_return_performance_score(
+        out, category_col, weights=cw.get("long_term_return_performance")
+    )
+    out["Short_Term_Return_Performance_Score"] = calculate_short_term_return_performance_score(
+        out, category_col, weights=cw.get("short_term_return_performance")
     )
     out["Risk_Adjusted_Score"] = calculate_risk_adjusted_score(
         out, category_col, weights=cw.get("risk_adjusted")

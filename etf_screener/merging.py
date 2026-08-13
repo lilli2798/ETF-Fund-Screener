@@ -1,5 +1,5 @@
 """
-Merging structural + performance data, and filtering to ETFs only.
+Merging structural + performance data, and filtering to ETFs and Mutual Funds.
 """
 
 from typing import List
@@ -48,16 +48,15 @@ def merge_datasets(df_struct: pd.DataFrame, df_perf: pd.DataFrame) -> pd.DataFra
 
 def apply_fund_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Keep only ETFs, excluding mutual funds and individual stocks.
+    Keep only ETFs and Mutual Funds, excluding individual stocks.
 
     Logic:
     - Stocks: Share Class Type is null → excluded
-    - Mutual funds: Share Class Type is not null but not "ETF" → excluded
-    - ETFs: Share Class Type == "ETF" → kept
+    - ETFs and Mutual Funds: Share Class Type is not null → kept
     """
     filtered: pd.DataFrame = df.copy()
     start_count: int = len(filtered)
-    print(f"Fund filter (ETFs only): start count = {start_count}")
+    print(f"Fund filter (ETFs + Mutual Funds): start count = {start_count}")
 
     has_share_class_col: bool = "Share Class Type" in filtered.columns
 
@@ -68,33 +67,31 @@ def apply_fund_filter(df: pd.DataFrame) -> pd.DataFrame:
         print(f"  Share Class Type column not found in data")
 
     if has_share_class_col:
-        share_class_upper = filtered["Share Class Type"].astype(str).str.strip().str.upper()
-        # Keep only rows where Share Class Type is not null (excludes stocks)
-        # AND equals "ETF" (excludes mutual funds)
-        is_etf: pd.Series = (filtered["Share Class Type"].notna()) & (share_class_upper == "ETF")
+        # Keep rows where Share Class Type is not null (excludes stocks)
+        # This includes both ETFs and Mutual Funds
+        is_fund: pd.Series = filtered["Share Class Type"].notna()
     else:
         # Fallback: if Share Class Type is missing, keep rows with fund-level data
         has_expense_col: bool = "Net Expense Ratio" in filtered.columns
         has_fund_size_col: bool = "Fund Size" in filtered.columns
         if has_expense_col and has_fund_size_col:
-            is_etf: pd.Series = (
+            is_fund: pd.Series = (
                 filtered["Net Expense Ratio"].notna() & filtered["Fund Size"].notna()
             )
         else:
             # If no reliable columns, keep everything (warn user)
-            print("  Warning: No reliable ETF filter columns found, keeping all rows")
-            is_etf = pd.Series(True, index=filtered.index)
+            print("  Warning: No reliable fund filter columns found, keeping all rows")
+            is_fund = pd.Series(True, index=filtered.index)
 
-    excluded: pd.DataFrame = filtered[~is_etf]
-    filtered = filtered[is_etf]
+    excluded: pd.DataFrame = filtered[~is_fund]
+    filtered = filtered[is_fund]
 
     excluded_count: int = start_count - len(filtered)
     if excluded_count > 0:
-        print(f"Fund filter: excluded {excluded_count} non-ETF row(s) (mutual funds + stocks).")
-        if "Ticker" in excluded.columns and "Share Class Type" in excluded.columns:
-            sample_excluded = excluded[["Ticker", "Share Class Type"]].dropna().head(10)
-            print(f"  Examples of excluded rows:")
-            print(f"  {sample_excluded.to_string(index=False)}")
+        print(f"Fund filter: excluded {excluded_count} non-fund (stock) row(s).")
+        if "Ticker" in excluded.columns:
+            sample_tickers = excluded["Ticker"].dropna().astype(str).head(10).tolist()
+            print(f"  Examples of excluded tickers: {sample_tickers}")
 
-    print(f"Fund filter: {start_count} -> {len(filtered)} ETF rows remain.")
+    print(f"Fund filter: {start_count} -> {len(filtered)} fund rows remain.")
     return filtered

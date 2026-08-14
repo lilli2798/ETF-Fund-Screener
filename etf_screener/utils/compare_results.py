@@ -33,7 +33,8 @@ from openpyxl.styles import Font
 # comparison. Matches the output of export.format_column_names_for_export().
 SCORE_AND_RANK_PREFIXES = (
     # Per-concept scores (0-100, category-relative)
-    "Performance Score",
+    "Long Term Return Performance Score",
+    "Short Term Return Performance Score",
     "Risk Adjusted Score",
     "Volatility Score",
     "Tracking Score",
@@ -47,6 +48,11 @@ SCORE_AND_RANK_PREFIXES = (
     "Profile A Selected Flag",
     "Profile A Rank Overall",
     "Profile A Selected Overall Flag",
+    # Additional comparison metrics
+    "Better Worst Diff",
+    "Better %",
+    "Worst %",
+    "Worst Three Month Return",
 )
 
 
@@ -58,7 +64,7 @@ def load_recorder(output_dir: str) -> dict:
 
 def build_file_ticker_map(output_dir: str, filename: str, recorder: dict, ticker_col: str = "Ticker") -> Dict[str, Any]:
     df = pd.read_excel(os.path.join(output_dir, filename))
-    relevant_cols = [c for c in df.columns if c.startswith(SCORE_AND_RANK_PREFIXES)]
+    relevant_cols = [c for c in df.columns if c in SCORE_AND_RANK_PREFIXES]
     tickers = {}
     for _, row in df.iterrows():
         tickers[row[ticker_col]] = {col: row[col] for col in relevant_cols}

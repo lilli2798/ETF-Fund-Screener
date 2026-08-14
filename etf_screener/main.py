@@ -66,6 +66,7 @@ from export import (
     write_used_weights_report,
     create_sheets_by_category,
 )
+from database import ETFScreenerDatabase
 
 
 # Import each profile module once so it self-registers into
@@ -339,16 +340,16 @@ def process_data(
         if category_col in df_export.columns:
             create_sheets_by_category(df_export, category_col, category_output_dir)
 
-    # Save results to SQLite database (disabled for now)
-    # print("Saving results to SQLite database...")
-    # db = ETFScreenerDatabase()
-    # run_id = db.save_results(
-    #     df=df_export,
-    #     profile_name=profile_name,
-    #     weights=thresholds
-    # )
-    # db.close()
-    # print(f"Results saved to database with run_id: {run_id}")
+    # Save results to SQLite database
+    print("Saving results to SQLite database...")
+    db = ETFScreenerDatabase()
+    run_id = db.save_results(
+        df=df_export,
+        profile_name=profile_name,
+        weights=thresholds
+    )
+    db.close()
+    print(f"Results saved to database with run_id: {run_id}")
 
     return df_ranked, final_out_path
 

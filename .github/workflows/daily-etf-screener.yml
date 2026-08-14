@@ -50,3 +50,10 @@ jobs:
         with:
           name: etf-screener-output
           path: output/etf_screener/*.xlsx
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-screener-database
+          path: data/etf_screener.db
+          retention-days: 30

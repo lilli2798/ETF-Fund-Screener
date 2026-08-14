@@ -17,7 +17,7 @@ Examples of queries you can make:
 """
 
 import pandas as pd
-from database import ETFScreenerDatabase
+from etf_screener.database import ETFScreenerDatabase
 
 
 def print_menu():

@@ -162,7 +162,7 @@ class ETFScreenerDatabase:
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """, (
             run_id,
-            run_timestamp,
+            str(run_timestamp),
             profile_name,
             json.dumps(weights_dict),
             json.dumps(concept_weights_dict),
@@ -189,7 +189,12 @@ class ETFScreenerDatabase:
                     if df_col in df.columns:
                         fund_data[db_col] = row[df_col]
                 
-                fund_data['last_updated'] = run_timestamp
+                fund_data['last_updated'] = str(run_timestamp)
+                
+                # Convert any Timestamp or datetime objects to strings
+                for key, value in fund_data.items():
+                    if pd.notna(value) and hasattr(value, 'strftime'):
+                        fund_data[key] = str(value)
                 
                 # Use INSERT OR REPLACE to update if ticker exists
                 cursor.execute("""

@@ -1135,6 +1135,10 @@
     "cached_date": "2026-07-28T23:11:55.569989",
     "sub_sector": "Banks"
   },
+  "BRCYX": {
+    "cached_date": "2026-08-14T01:48:04.095060",
+    "sub_sector": "Broad Market Equity"
+  },
   "BRF": {
     "cached_date": "2026-07-28T23:11:56.409190",
     "sub_sector": "Real Estate Management & Development"
@@ -1266,6 +1270,10 @@
   "BUG": {
     "cached_date": "2026-07-28T23:13:12.753667",
     "sub_sector": "Software & Services"
+  },
+  "BUIIX": {
+    "cached_date": "2026-08-14T01:48:05.030375",
+    "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "BUL": {
     "cached_date": "2026-07-28T23:13:13.158855",

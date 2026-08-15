@@ -211,8 +211,9 @@ thresholds:
     quality_valuation:
       growth_grade: 0.2         # Portfolio growth grade (A-F)
       financial_health: 0.2     # Portfolio financial health grade (A-F)
-      price_fair_value: 0.25     # Price vs Morningstar's fair value estimate
-      medalist: 0.2             # Morningstar Medalist rating (Gold/Silver/Bronze)
+      price_fair_value: 0.15     # Price vs Morningstar's fair value estimate
+      medalist: 0.15            # Morningstar Medalist rating (Gold/Silver/Bronze)
+      star_rating: 0.15         # Morningstar Rating for Funds (star rating 1-5)
       economic_moat_wide: 0.15   # Portfolio Economic Moat Coverage (Wide) - % of holdings with wide economic moat
 
     # COSTS: How different fee measures are weighted

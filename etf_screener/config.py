@@ -228,10 +228,11 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "trading_volume": 0.40,
     },
     "quality_valuation": {
-        "growth_grade": 0.25,
-        "financial_health": 0.25,
-        "price_fair_value": 0.20,
+        "growth_grade": 0.20,
+        "financial_health": 0.20,
+        "price_fair_value": 0.15,
         "medalist": 0.15,   # NEW — raise/lower as you like; use 0.0 to ignore
+        "star_rating": 0.15,  # NEW — Morningstar Rating for Funds (star rating)
         "economic_moat_wide": 0.15,  # NEW — Portfolio Economic Moat Coverage (Wide)
     },
     "costs": {
@@ -358,4 +359,15 @@ MEDALIST_TO_NUMERIC = {
     "BRONZE": 3,
     "NEUTRAL": 2,
     "NEGATIVE": 1,
+}
+
+# Morningstar Rating for Funds (star rating) -> ordered numeric.
+# normalize_within_category turns this into 0-100 within peer group.
+# Do NOT merge into MEDALIST_TO_NUMERIC (different scale/meaning).
+STAR_RATING_TO_NUMERIC = {
+    "5": 5,
+    "4": 4,
+    "3": 3,
+    "2": 2,
+    "1": 1,
 }

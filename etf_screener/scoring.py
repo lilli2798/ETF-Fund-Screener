@@ -19,7 +19,7 @@ Design notes (locked in from project discussion):
 from typing import Callable, Dict, List, Optional
 import pandas as pd
 
-from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC
+from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC, STAR_RATING_TO_NUMERIC
 
 
 # --- Profile registry -------------------------------------------------
@@ -68,6 +68,14 @@ def _medalist_to_numeric(value) -> Optional[float]:
         return None
     key = str(value).strip().upper()
     return MEDALIST_TO_NUMERIC.get(key)
+
+
+def _star_rating_to_numeric(value) -> Optional[float]:
+    """Map Morningstar Rating for Funds (star rating) to a numeric score via STAR_RATING_TO_NUMERIC."""
+    if pd.isna(value):
+        return None
+    key = str(value).strip()
+    return STAR_RATING_TO_NUMERIC.get(key)
 
 
 
@@ -170,7 +178,7 @@ REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "volatility": ["stdev_3y", "drawdown_3y", "drawdown_5y"],
     "tracking": ["tracking_error_3y", "tracking_error_1y"],
     "liquidity_size": ["fund_size", "trading_volume"],
-    "quality_valuation": ["growth_grade", "financial_health", "price_fair_value", "medalist" ],
+    "quality_valuation": ["growth_grade", "financial_health", "price_fair_value", "medalist", "star_rating" ],
     "costs": ["net_expense_ratio", "management_fee"],
     "tax_income": ["tax_cost_ratio", "sec_yield"],
 }
@@ -614,6 +622,25 @@ def calculate_quality_valuation_score(
             out, "Medalist_Numeric", category_col
         )
 
+    # NEW: Morningstar Rating for Funds (star rating) -> numeric -> category percentile
+    star_rating_col = None
+    for candidate in ("Morningstar Rating for Funds (Overall)", "Morningstar Rating for Funds", "Morningstar Rating"):
+        if candidate in df.columns:
+            star_rating_col = candidate
+            break
+
+    if star_rating_col is not None:
+        out["Star_Rating_Numeric"] = df[star_rating_col].apply(_star_rating_to_numeric)
+        out["Norm_Star_Rating"] = normalize_within_category(
+            out, "Star_Rating_Numeric", category_col
+        )
+    elif "Star_Rating_Numeric" in df.columns:
+        # already built by build_qualitative_review_columns
+        out["Star_Rating_Numeric"] = pd.to_numeric(df["Star_Rating_Numeric"], errors="coerce")
+        out["Norm_Star_Rating"] = normalize_within_category(
+            out, "Star_Rating_Numeric", category_col
+        )
+
     if "Price/Fair Value" in df.columns:
         out["Norm_Price_Fair_Value"] = normalize_within_category(
             df, "Price/Fair Value", category_col, invert=True
@@ -630,6 +657,7 @@ def calculate_quality_valuation_score(
         "Norm_Financial_Health": weights["financial_health"],
         "Norm_Price_Fair_Value": weights["price_fair_value"],
         "Norm_Medalist": weights["medalist"],  # NEW
+        "Norm_Star_Rating": weights["star_rating"],  # NEW
         "Norm_Economic_Moat_Wide": weights["economic_moat_wide"],  # NEW
     }
     return _weighted_average(out, weight_map)

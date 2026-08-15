@@ -59,15 +59,28 @@ class ETFScreenerDatabase:
                 inception_date TEXT,
                 primary_benchmark TEXT,
                 equity_style_box TEXT,
-                last_updated TIMESTAMP,
-                medalist_rating TEXT,
-                star_rating TEXT,
-                growth_grade TEXT,
-                financial_health_grade TEXT,
-                price_fair_value REAL,
-                economic_moat_wide REAL
+                last_updated TIMESTAMP
             )
         """)
+
+        # Add columns to funds table if they don't exist (for existing databases)
+        columns_to_add = [
+            'medalist_rating TEXT',
+            'star_rating TEXT',
+            'growth_grade TEXT',
+            'financial_health_grade TEXT',
+            'profitability_grade TEXT',
+            'price_fair_value TEXT',
+            'economic_moat_wide TEXT'
+        ]
+
+        for col_def in columns_to_add:
+            col_name = col_def.split()[0]
+            try:
+                cursor.execute(f"ALTER TABLE funds ADD COLUMN {col_def}")
+            except sqlite3.OperationalError:
+                # Column already exists, ignore error
+                pass
 
         # Fund scores table - composite scores per fund per run
         cursor.execute("""

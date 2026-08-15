@@ -153,7 +153,6 @@ picking is.
 |---|---|---|
 | `Net Expense Ratio` | Annual fund operating costs as a % of assets, AFTER any fee waivers. | \( \text{Net Expense Ratio} = \dfrac{\text{Total Annual Fund Operating Expenses (after waivers)}}{\text{Average Net Assets}} \) |
 | `Adjusted Expense Ratio` | Similar, but may exclude certain one-time or acquired-fund fees depending on Morningstar's methodology. | Reported directly; not separately derived in this pipeline. |
-| `Management Fee` | The portion of the expense ratio paid to the fund's investment adviser specifically. | Reported directly (component of Net Expense Ratio). |
 
 **Sector impact:** Minimal. Expense ratios are driven far more by
 whether a fund is passive/index vs. active, and by provider
@@ -198,12 +197,10 @@ fields into the source Excel exports first.
 
 | Column | Definition | Notes |
 |---|---|---|
-| `Longest Manager Tenure` | Years the longest-serving current manager has run the fund. | Used today only to compute `Flag_New_Manager` (True if < 2 years) -- informational, not currently a hard filter. |
-| `Fund Managers` / `Number of Fund Managers` | Names/count of current managers. | Loaded but not yet used in scoring or flags. |
+| `Fund Managers` | Names of current managers. | Loaded but not yet used in scoring or flags. |
 | `Management Style` | Whether the fund is managed by a single manager, team, or committee. | Loaded but not yet used. |
 
-**Sector impact:** Low direct link -- manager tenure and style are
-organizational facts about the fund, not composition-driven.
+**Sector impact:** Low direct link -- manager style is an organizational fact about the fund, not composition-driven.
 
 ---
 
@@ -218,6 +215,19 @@ organizational facts about the fund, not composition-driven.
 
 **Sector impact:** None directly -- these are structural/legal wrapper
 characteristics, independent of what the fund holds.
+
+---
+
+## 12. Load & Investment Requirements -- used as hard filters
+
+| Column | Definition | Notes |
+|---|---|---|
+| `Maximum Deferred Load` | The maximum deferred sales charge (backend load) as a percentage, charged when shares are sold. | Hard-filtered via `max_deferred_load` threshold. Funds with load > threshold are excluded. |
+| `Maximum Front Load` | The maximum front-end sales charge as a percentage, charged at the time of purchase. | Hard-filtered via `max_front_load` threshold. Funds with load > threshold are excluded. |
+| `Minimum Initial Investment` | The minimum dollar amount required to open an initial position in the fund. | Hard-filtered via `min_initial_investment` threshold. Funds requiring > threshold are excluded. |
+| `Redemption Fee` | A fee charged when shares are redeemed/sold, typically to discourage short-term trading. | Hard-filtered via `max_redemption_fee` threshold. Funds with fee > threshold are excluded. |
+
+**Sector impact:** None directly -- these are sales charge and minimum investment requirements set by the fund provider, independent of the fund's holdings or sector composition.
 
 ---
 

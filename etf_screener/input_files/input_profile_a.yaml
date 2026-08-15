@@ -57,6 +57,13 @@ thresholds:
   # Tender offer funds have limited redemption options - less liquid
   exclude_tender_offer_funds: false  # Exclude funds with active tender offers
 
+  # LOAD AND INVESTMENT REQUIREMENT FILTERS
+  # These filters screen out funds with high sales loads or high minimum investments
+  max_deferred_load: 0.0            # Maximum deferred load (0.0 = no load allowed, set higher to allow some load)
+  max_front_load: 0.0               # Maximum front load (0.0 = no load allowed, set higher to allow some load)
+  min_initial_investment: 50000    # Minimum initial investment in dollars (null = no minimum)
+  max_redemption_fee: 0.0          # Maximum redemption fee (0.0 = no fee allowed, set higher to allow some fee)
+
   # HISTORICAL BENCHMARK PERFORMANCE FILTER
   # Require funds to have beaten benchmarks in at least X% of available years
   require_benchmark_outperformance: false   # Disabled - too strict for most funds
@@ -218,12 +225,12 @@ thresholds:
 
     # COSTS: How different fee measures are weighted
     costs:
-      net_expense_ratio: 0.75    # Net expense ratio (after fee waivers) - most important
-      management_fee: 0.25       # Management fee portion
+      adjusted_expense_ratio: 1.0    # Adjusted expense ratio (comprehensive fee measure including all fees)
 
     # TAX & INCOME: How tax efficiency vs yield are weighted
     tax_income:
-      tax_cost_ratio: 0.55      # Tax cost ratio (how much taxes reduce returns)
+      tax_cost_ratio_1y: 0.30   # 1-year tax cost ratio (lower is better for tax efficiency)
+      tax_cost_ratio_2y: 0.25   # 2-year tax cost ratio (lower is better for tax efficiency)
       sec_yield: 0.45           # SEC 30-day yield (standardized dividend yield)
 
 

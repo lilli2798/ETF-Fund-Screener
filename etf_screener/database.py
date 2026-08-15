@@ -477,6 +477,185 @@ class ETFScreenerDatabase:
         df = pd.read_sql_query(query, self.conn, params=params)
         return df
 
+    def compare_metric_between_runs(
+        self,
+        metric: str,
+        old_run_id: str = None,
+        new_run_id: str = None,
+        limit: int = 20
+    ) -> pd.DataFrame:
+        """
+        Compare a specific metric between two runs to find funds with increasing values.
+
+        Args:
+            metric: Column name to compare (e.g., 'better_worst_diff', 'profile_score')
+            old_run_id: Optional specific old run ID (if None, uses second most recent)
+            new_run_id: Optional specific new run ID (if None, uses most recent)
+            limit: Maximum number of results
+
+        Returns:
+            DataFrame with funds showing metric increase
+        """
+        # If run IDs not provided, get the two most recent runs
+        if not old_run_id or not new_run_id:
+            cursor = self.conn.cursor()
+            cursor.execute("""
+                SELECT run_id FROM runs 
+                ORDER BY run_timestamp DESC 
+                LIMIT 2
+            """)
+            runs = cursor.fetchall()
+            if len(runs) < 2:
+                return pd.DataFrame()
+            if not new_run_id:
+                new_run_id = runs[0][0]
+            if not old_run_id:
+                old_run_id = runs[1][0]
+
+        # Determine which table to query based on metric
+        if metric in ['better_worst_diff', 'better_pct', 'worst_pct', 'worst_three_month_return']:
+            table = 'additional_metrics'
+        elif metric in ['long_term_return_performance_score', 'short_term_return_performance_score', 
+                       'risk_adjusted_score', 'volatility_score', 'tracking_score', 
+                       'liquidity_size_score', 'quality_valuation_score', 'costs_score', 'tax_income_score']:
+            table = 'concept_scores'
+        elif metric in ['profile_score', 'rank_in_category', 'rank_overall']:
+            table = 'fund_scores'
+        else:
+            return pd.DataFrame()
+
+        query = f"""
+            SELECT 
+                a.ticker,
+                a.{metric} AS old_value,
+                b.{metric} AS new_value,
+                b.{metric} - a.{metric} AS increase,
+                ra.run_timestamp AS old_run_date,
+                rb.run_timestamp AS new_run_date
+            FROM {table} a
+            JOIN {table} b ON a.ticker = b.ticker
+            JOIN runs ra ON a.run_id = ra.run_id
+            JOIN runs rb ON b.run_id = rb.run_id
+            WHERE a.run_id = ? AND b.run_id = ?
+              AND b.{metric} > a.{metric}
+            ORDER BY increase DESC
+            LIMIT ?
+        """
+
+        df = pd.read_sql_query(query, self.conn, params=(old_run_id, new_run_id, limit))
+        return df
+
+    def query_funds_by_concept_scores(
+        self,
+        profile_name: str = None,
+        ticker: str = None,
+        category: str = None,
+        min_long_term_score: float = None,
+        min_short_term_score: float = None,
+        min_risk_adjusted_score: float = None,
+        min_volatility_score: float = None,
+        min_tracking_score: float = None,
+        min_liquidity_score: float = None,
+        min_quality_score: float = None,
+        min_costs_score: float = None,
+        limit: int = 100
+    ) -> pd.DataFrame:
+        """
+        Query funds with concept score filters.
+
+        Args:
+            profile_name: Filter by profile name
+            ticker: Filter by ticker (partial match)
+            category: Filter by Morningstar category (partial match)
+            min_long_term_score: Minimum long term return performance score
+            min_short_term_score: Minimum short term return performance score
+            min_risk_adjusted_score: Minimum risk adjusted score
+            min_volatility_score: Minimum volatility score
+            min_tracking_score: Minimum tracking score
+            min_liquidity_score: Minimum liquidity size score
+            min_quality_score: Minimum quality valuation score
+            min_costs_score: Minimum costs score
+            limit: Maximum number of results
+
+        Returns:
+            DataFrame with matching fund results
+        """
+        query = """
+            SELECT 
+                fs.run_id,
+                r.run_timestamp,
+                r.profile_name,
+                f.ticker,
+                f.name,
+                f.morningstar_category,
+                fs.profile_score,
+                fs.rank_in_category,
+                cs.long_term_return_performance_score,
+                cs.short_term_return_performance_score,
+                cs.risk_adjusted_score,
+                cs.volatility_score,
+                cs.tracking_score,
+                cs.liquidity_size_score,
+                cs.quality_valuation_score,
+                cs.costs_score
+            FROM fund_scores fs
+            JOIN funds f ON fs.ticker = f.ticker
+            JOIN concept_scores cs ON fs.run_id = cs.run_id AND fs.ticker = cs.ticker
+            JOIN runs r ON fs.run_id = r.run_id
+            WHERE 1=1
+        """
+        params = []
+
+        if profile_name:
+            query += " AND r.profile_name = ?"
+            params.append(profile_name)
+
+        if ticker:
+            query += " AND f.ticker LIKE ?"
+            params.append(f"%{ticker}%")
+
+        if category:
+            query += " AND f.morningstar_category LIKE ?"
+            params.append(f"%{category}%")
+
+        if min_long_term_score is not None:
+            query += " AND cs.long_term_return_performance_score >= ?"
+            params.append(min_long_term_score)
+
+        if min_short_term_score is not None:
+            query += " AND cs.short_term_return_performance_score >= ?"
+            params.append(min_short_term_score)
+
+        if min_risk_adjusted_score is not None:
+            query += " AND cs.risk_adjusted_score >= ?"
+            params.append(min_risk_adjusted_score)
+
+        if min_volatility_score is not None:
+            query += " AND cs.volatility_score >= ?"
+            params.append(min_volatility_score)
+
+        if min_tracking_score is not None:
+            query += " AND cs.tracking_score >= ?"
+            params.append(min_tracking_score)
+
+        if min_liquidity_score is not None:
+            query += " AND cs.liquidity_size_score >= ?"
+            params.append(min_liquidity_score)
+
+        if min_quality_score is not None:
+            query += " AND cs.quality_valuation_score >= ?"
+            params.append(min_quality_score)
+
+        if min_costs_score is not None:
+            query += " AND cs.costs_score >= ?"
+            params.append(min_costs_score)
+
+        query += " ORDER BY fs.profile_score DESC LIMIT ?"
+        params.append(limit)
+
+        df = pd.read_sql_query(query, self.conn, params=params)
+        return df
+
     def get_latest_run_for_profile(self, profile_name: str) -> Optional[str]:
         """
         Get the most recent run ID for a profile.

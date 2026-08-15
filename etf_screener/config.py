@@ -69,7 +69,7 @@ NEEDED_COLS: List[str] = [
     "Portfolio Risk Score", "Beta (3Y Monthly)", "Alpha (3Y Monthly)",
 
     # Structural/fundamental fields
-    "Net Expense Ratio", "Adjusted Expense Ratio", "Management Fee",
+    "Net Expense Ratio", "Adjusted Expense Ratio",
     "Total Net Assets for Share Class", "Fund Size",
     "Premium/Discount", "Premium/Discount (1Y Avg)",
     "Portfolio Growth Grade", "Portfolio Financial Health Grade",
@@ -84,8 +84,7 @@ NEEDED_COLS: List[str] = [
     "Tracking Error (5Y Monthly)", "Tracking Error (10Y Monthly)",
 
     # Fund management and ratings
-    "Fund Managers", "Number of Fund Managers", "Longest Manager Tenure",
-    "Longest Tenured Manager", "Management Style",
+    "Fund Managers", "Management Style",
     "Medalist Rating (Overall)", "Medalist Rating (Parent)",
     "Medalist Rating (People)", "Medalist Rating (Process)",
     "Morningstar Rating for Funds (Overall)",
@@ -110,6 +109,10 @@ NEEDED_COLS: List[str] = [
     "Investment Status", "Strategic Beta Group",
     "Share Class Type", "Tender Offer", "Index Fund", "No Load Fund",
     "Enhanced Index Fund",
+
+    # Load and investment requirements
+    "Maximum Deferred Load", "Maximum Front Load", "Minimum Initial Investment",
+    "Redemption Fee",
 ]
 
 # Weights used by Profile A's composite score. Exposed here (rather than
@@ -227,11 +230,11 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "economic_moat_wide": 0.15,  # NEW — Portfolio Economic Moat Coverage (Wide)
     },
     "costs": {
-        "net_expense_ratio": 0.75,
-        "management_fee": 0.25,
+        "adjusted_expense_ratio": 1.0,
     },
     "tax_income": {
-        "tax_cost_ratio": 0.55,
+        "tax_cost_ratio_1y": 0.30,
+        "tax_cost_ratio_2y": 0.25,
         "sec_yield": 0.45,
     },
 }
@@ -277,8 +280,7 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
         "economic_moat_wide": 0.20,  # Not explicitly mentioned
     },
     "costs": {
-        "net_expense_ratio": 1.00,  # 100% on expense ratio per Morningstar's criteria
-        "management_fee": 0.00,  # Not used
+        "adjusted_expense_ratio": 1.00,  # 100% on adjusted expense ratio (comprehensive fee measure)
     },
     "tax_income": {
         "tax_cost_ratio": 0.00,  # Not used
@@ -319,6 +321,12 @@ DEFAULT_THRESHOLDS = {
     "exclude_leveraged_funds": True,
     "exclude_interval_funds": True,
     "exclude_tender_offer_funds": True,
+
+    # Load and investment requirement filters
+    "max_deferred_load": 0.0,  # Maximum deferred load (0.0 = no load allowed)
+    "max_front_load": 0.0,      # Maximum front load (0.0 = no load allowed)
+    "min_initial_investment": 50000,  # Minimum initial investment in dollars
+    "max_redemption_fee": 0.0,  # Maximum redemption fee (0.0 = no fee allowed)
 
     # Profile-level concept weights (how much each concept counts).
     "weights": PROFILE_A_WEIGHTS,

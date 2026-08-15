@@ -179,8 +179,8 @@ REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "tracking": ["tracking_error_3y", "tracking_error_1y"],
     "liquidity_size": ["fund_size", "trading_volume"],
     "quality_valuation": ["growth_grade", "financial_health", "price_fair_value", "medalist", "star_rating" ],
-    "costs": ["net_expense_ratio", "management_fee"],
-    "tax_income": ["tax_cost_ratio", "sec_yield"],
+    "costs": ["adjusted_expense_ratio"],
+    "tax_income": ["tax_cost_ratio_1y", "tax_cost_ratio_2y", "sec_yield"],
 }
 
 
@@ -671,22 +671,18 @@ def calculate_costs_score(
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Net Expense Ratio and Management Fee, inverted and normalized
-    within category (lower cost = higher score).
+    Adjusted Expense Ratio, inverted and normalized within category
+    (lower cost = higher score).
     """
     weights = _require_weights(weights, "costs")
 
     out = pd.DataFrame(index=df.index)
-    out["Norm_Expense_Ratio"] = normalize_within_category(
-        df, "Net Expense Ratio", category_col, invert=True
-    )
-    out["Norm_Management_Fee"] = normalize_within_category(
-        df, "Management Fee", category_col, invert=True
+    out["Norm_Adjusted_Expense_Ratio"] = normalize_within_category(
+        df, "Adjusted Expense Ratio", category_col, invert=True
     )
 
     weight_map = {
-        "Norm_Expense_Ratio": weights["net_expense_ratio"],
-        "Norm_Management_Fee": weights["management_fee"],
+        "Norm_Adjusted_Expense_Ratio": weights["adjusted_expense_ratio"],
     }
     return _weighted_average(out, weight_map)
 
@@ -699,19 +695,23 @@ def calculate_tax_income_score(
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Tax Cost Ratio (inverted, lower is better) and SEC 30-Day Yield
-    (higher is better), normalized within category.
+    Tax Cost Ratio (1Y and 2Y, inverted - lower is better for tax efficiency)
+    and SEC 30-Day Yield (higher is better), normalized within category.
     """
     weights = _require_weights(weights, "tax_income")
 
     out = pd.DataFrame(index=df.index)
-    out["Norm_Tax_Cost_Ratio"] = normalize_within_category(
+    out["Norm_Tax_Cost_Ratio_1Y"] = normalize_within_category(
+        df, "Tax Cost Ratio (1Y)", category_col, invert=True
+    )
+    out["Norm_Tax_Cost_Ratio_2Y"] = normalize_within_category(
         df, "Tax Cost Ratio (2Y)", category_col, invert=True
     )
     out["Norm_SEC_Yield"] = normalize_within_category(df, "SEC 30-Day Yield", category_col)
 
     weight_map = {
-        "Norm_Tax_Cost_Ratio": weights["tax_cost_ratio"],
+        "Norm_Tax_Cost_Ratio_1Y": weights["tax_cost_ratio_1y"],
+        "Norm_Tax_Cost_Ratio_2Y": weights["tax_cost_ratio_2y"],
         "Norm_SEC_Yield": weights["sec_yield"],
     }
     return _weighted_average(out, weight_map)
@@ -733,10 +733,7 @@ def build_sector_exposure_flags(df: pd.DataFrame) -> pd.DataFrame:
 def build_manager_stewardship_flags(df: pd.DataFrame) -> pd.DataFrame:
     """Placeholder: attach raw manager/stewardship fields as-is, unscored."""
     out = df.copy()
-    if "Longest Manager Tenure" in out.columns:
-        out["Flag_New_Manager"] = pd.to_numeric(
-            out["Longest Manager Tenure"], errors="coerce"
-        ) < 2
+    # Manager tenure and new manager flags removed - user will manually check for manager changes
     return out
 
 

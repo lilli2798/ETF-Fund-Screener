@@ -147,6 +147,57 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
         eligible = eligible[~flag]
         print(f"  Profile A filter - exclude tender-offer funds: {before} -> {len(eligible)}")
 
+    # Load and investment requirement filters
+    max_deferred_load = thresholds.get("max_deferred_load", 0.0)
+    max_front_load = thresholds.get("max_front_load", 0.0)
+    min_initial_investment = thresholds.get("min_initial_investment", 50000)
+
+    if max_deferred_load is not None and "Maximum Deferred Load" in eligible.columns:
+        before = len(eligible)
+        deferred_load = _as_float_series(eligible["Maximum Deferred Load"])
+        # Only filter out funds with non-null deferred load that exceeds threshold
+        # Allow funds with NaN deferred load to pass through
+        eligible = eligible[deferred_load.isna() | (deferred_load <= float(max_deferred_load))]
+        print(
+            f"  Profile A filter - deferred load <= {max_deferred_load}% (or NaN): "
+            f"{before} -> {len(eligible)}"
+        )
+
+    if max_front_load is not None and "Maximum Front Load" in eligible.columns:
+        before = len(eligible)
+        front_load = _as_float_series(eligible["Maximum Front Load"])
+        # Only filter out funds with non-null front load that exceeds threshold
+        # Allow funds with NaN front load to pass through
+        eligible = eligible[front_load.isna() | (front_load <= float(max_front_load))]
+        print(
+            f"  Profile A filter - front load <= {max_front_load}% (or NaN): "
+            f"{before} -> {len(eligible)}"
+        )
+
+    if min_initial_investment is not None and "Minimum Initial Investment" in eligible.columns:
+        before = len(eligible)
+        initial_inv = _as_float_series(eligible["Minimum Initial Investment"])
+        # Only filter out funds with non-null initial investment that exceeds threshold
+        # Allow funds with NaN initial investment to pass through
+        eligible = eligible[initial_inv.isna() | (initial_inv <= float(min_initial_investment))]
+        print(
+            f"  Profile A filter - initial investment <= ${min_initial_investment:,} (or NaN): "
+            f"{before} -> {len(eligible)}"
+        )
+
+    max_redemption_fee = thresholds.get("max_redemption_fee", 0.0)
+
+    if max_redemption_fee is not None and "Redemption Fee" in eligible.columns:
+        before = len(eligible)
+        redemption_fee = _as_float_series(eligible["Redemption Fee"])
+        # Only filter out funds with non-null redemption fee that exceeds threshold
+        # Allow funds with NaN redemption fee to pass through
+        eligible = eligible[redemption_fee.isna() | (redemption_fee <= float(max_redemption_fee))]
+        print(
+            f"  Profile A filter - redemption fee <= {max_redemption_fee}% (or NaN): "
+            f"{before} -> {len(eligible)}"
+        )
+
     # Historical benchmark performance filter
     require_benchmark_outperformance = thresholds.get("require_benchmark_outperformance", False)
     min_benchmark_beat_pct = thresholds.get("min_benchmark_beat_pct", 50.0)

@@ -110,15 +110,6 @@ NEEDED_COLS: List[str] = [
     "Investment Status", "Strategic Beta Group",
     "Share Class Type", "Tender Offer", "Index Fund", "No Load Fund",
     "Enhanced Index Fund",
-
-    # ESG columns (new in Morningstar format)
-    "Portfolio Corporate ESG Risk Score",
-    "Portfolio Environmental Risk Score",
-    "Portfolio Social Risk Score",
-    "Portfolio Governance Risk Score",
-    "Portfolio Carbon Risk Score",
-    "Portfolio ESG Risk Rating",
-    "Sustainable Investment",
 ]
 
 # Weights used by Profile A's composite score. Exposed here (rather than
@@ -190,18 +181,18 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "return_7y": 0.0833,  # 1/12 ≈ 8.33%
         "return_8y": 0.0833,  # 1/12 ≈ 8.33%
         "return_9y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_10y": 0.0833, # 1/12 ≈ 8.33%
-        "return_15y": 0.0833, # 1/12 ≈ 8.33%
-        "return_20y": 0.0835, # 1/12 ≈ 8.35% (adjusted to sum to 1.0)
+        "return_10y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_15y": 0.0833,  # 1/12 ≈ 8.33%
+        "return_20y": 0.0835,  # 1/12 ≈ 8.35% (adjusted to sum to 1.0)
     },
     "short_term_return_performance": {
-        "return_1w": 0.125,   # 1/8 = 12.5%
-        "return_1m": 0.125,   # 1/8 = 12.5%
-        "return_2m": 0.125,   # 1/8 = 12.5%
+        "return_1w": 0.125,  # 1/8 = 12.5%
+        "return_1m": 0.125,  # 1/8 = 12.5%
+        "return_2m": 0.125,  # 1/8 = 12.5%
         "return_qtd": 0.125,  # 1/8 = 12.5%
-        "return_3m": 0.125,   # 1/8 = 12.5%
-        "return_6m": 0.125,   # 1/8 = 12.5%
-        "return_9m": 0.125,   # 1/8 = 12.5%
+        "return_3m": 0.125,  # 1/8 = 12.5%
+        "return_6m": 0.125,  # 1/8 = 12.5%
+        "return_9m": 0.125,  # 1/8 = 12.5%
         "return_ytd": 0.125,  # 1/8 = 12.5%
     },
     "risk_adjusted": {
@@ -231,7 +222,7 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "growth_grade": 0.20,
         "financial_health": 0.20,
         "price_fair_value": 0.15,
-        "medalist": 0.15,   # NEW — raise/lower as you like; use 0.0 to ignore
+        "medalist": 0.15,  # NEW — raise/lower as you like; use 0.0 to ignore
         "star_rating": 0.15,  # NEW — Morningstar Rating for Funds (star rating)
         "economic_moat_wide": 0.15,  # NEW — Portfolio Economic Moat Coverage (Wide)
     },
@@ -251,22 +242,22 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
     "performance": {
         "return_5y": 0.56,  # 25% / 45% = 55.6% of performance weight
         "return_10y": 0.44,  # 20% / 45% = 44.4% of performance weight
-        "return_3y": 0.00,   # Not emphasized in Morningstar's criteria
-        "return_1y": 0.00,   # Not emphasized for long-term
-        "rank_3y": 0.00,     # Not used
+        "return_3y": 0.00,  # Not emphasized in Morningstar's criteria
+        "return_1y": 0.00,  # Not emphasized for long-term
+        "rank_3y": 0.00,  # Not used
     },
     "risk_adjusted": {
         "sharpe_3y": 1.00,  # 100% on 3Y Sharpe per Morningstar's criteria
-        "sharpe_1y": 0.00,   # Not used
-        "upside": 0.00,      # Not used
-        "downside": 0.00,    # Not used
+        "sharpe_1y": 0.00,  # Not used
+        "upside": 0.00,  # Not used
+        "downside": 0.00,  # Not used
         "yahoo_sharpe_3y": 0.00,  # Not used
         "yahoo_sharpe_1y": 0.00,  # Not used
         "yahoo_zscore_3y": 0.00,  # Not used
         "yahoo_zscore_1y": 0.00,  # Not used
     },
     "volatility": {
-        "stdev_3y": 0.00,   # Not used - drawdown is the key metric
+        "stdev_3y": 0.00,  # Not used - drawdown is the key metric
         "drawdown_3y": 0.50,  # 3Y drawdown (50% of volatility weight)
         "drawdown_5y": 0.50,  # 5Y drawdown (50% of volatility weight)
     },
@@ -275,23 +266,23 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
         "tracking_error_1y": 0.00,  # Not used
     },
     "liquidity_size": {
-        "fund_size": 0.00,    # Not used
+        "fund_size": 0.00,  # Not used
         "trading_volume": 0.00,  # Not used
     },
     "quality_valuation": {
-        "growth_grade": 0.30,      # Growth grade (40% of quality weight)
+        "growth_grade": 0.30,  # Growth grade (40% of quality weight)
         "financial_health": 0.20,  # Financial health (40% of quality weight)
         "price_fair_value": 0.15,  # Price vs fair value (20% of quality weight)
-        "medalist": 0.15,           # Not explicitly mentioned
+        "medalist": 0.15,  # Not explicitly mentioned
         "economic_moat_wide": 0.20,  # Not explicitly mentioned
     },
     "costs": {
         "net_expense_ratio": 1.00,  # 100% on expense ratio per Morningstar's criteria
-        "management_fee": 0.00,     # Not used
+        "management_fee": 0.00,  # Not used
     },
     "tax_income": {
         "tax_cost_ratio": 0.00,  # Not used
-        "sec_yield": 0.00,       # Not used
+        "sec_yield": 0.00,  # Not used
     },
 }
 

@@ -204,10 +204,10 @@ def clean_dtypes(df: pd.DataFrame) -> pd.DataFrame:
     text_like_cols = {
         "Ticker", "Name", "Morningstar Category", "Exchange", "Exchange Country",
         "Primary Benchmark", "Portfolio Risk Score", "Portfolio Growth Grade",
-        "Portfolio Financial Health Grade", "Economic Moat", "Capital Allocation",
-        "Fund Managers", "Longest Tenured Manager", "Management Style",
+        "Portfolio Financial Health Grade", "Portfolio Profitability Grade", "Economic Moat", "Capital Allocation",
+        "Fund Managers", "Management Style",
         "Medalist Rating (Overall)", "Trading Status", "Strategic Beta Group",
-        "Share Class Type", "Index Fund", "No Load Fund", "Leveraged Fund",
+        "Share Class Type", "Index Fund", "Leveraged Fund",
         "Interval Fund", "Fund of Funds", "Investment Status", "Tender Offer",
         "__source_file",
     }

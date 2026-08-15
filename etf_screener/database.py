@@ -49,7 +49,7 @@ class ETFScreenerDatabase:
             )
         """)
 
-        # Funds table - static fund information
+        # Funds table - static fund information with ratings
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS funds (
                 ticker TEXT PRIMARY KEY,
@@ -59,7 +59,13 @@ class ETFScreenerDatabase:
                 inception_date TEXT,
                 primary_benchmark TEXT,
                 equity_style_box TEXT,
-                last_updated TIMESTAMP
+                last_updated TIMESTAMP,
+                medalist_rating TEXT,
+                star_rating TEXT,
+                growth_grade TEXT,
+                financial_health_grade TEXT,
+                price_fair_value REAL,
+                economic_moat_wide REAL
             )
         """)
 
@@ -170,7 +176,7 @@ class ETFScreenerDatabase:
             len(df[df.get("Profile A Selected Flag", pd.Series([False] * len(df))) == True])
         ))
 
-        # Save/update funds table (static fund information)
+        # Save/update funds table (static fund information with ratings)
         fund_info_columns = {
             'ticker': 'Ticker',
             'name': 'Name',
@@ -178,7 +184,14 @@ class ETFScreenerDatabase:
             'asset_class': 'Asset Class',
             'inception_date': 'Inception Date',
             'primary_benchmark': 'Primary Benchmark',
-            'equity_style_box': 'Equity Style Box (Funds)'
+            'equity_style_box': 'Equity Style Box (Funds)',
+            'medalist_rating': 'Medalist Rating (Overall)',
+            'star_rating': 'Morningstar Rating for Funds (Overall)',
+            'growth_grade': 'Portfolio Growth Grade',
+            'financial_health_grade': 'Portfolio Financial Health Grade',
+            'profitability_grade': 'Portfolio Profitability Grade',
+            'price_fair_value': 'Price/Fair Value',
+            'economic_moat_wide': 'Portfolio Economic Moat Coverage (Wide)'
         }
 
         for _, row in df.iterrows():
@@ -199,8 +212,8 @@ class ETFScreenerDatabase:
                 # Use INSERT OR REPLACE to update if ticker exists
                 cursor.execute("""
                     INSERT OR REPLACE INTO funds 
-                    (ticker, name, morningstar_category, asset_class, inception_date, primary_benchmark, equity_style_box, last_updated)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (ticker, name, morningstar_category, asset_class, inception_date, primary_benchmark, equity_style_box, last_updated, medalist_rating, star_rating, growth_grade, financial_health_grade, price_fair_value, economic_moat_wide)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     fund_data.get('ticker'),
                     fund_data.get('name'),
@@ -209,7 +222,13 @@ class ETFScreenerDatabase:
                     fund_data.get('inception_date'),
                     fund_data.get('primary_benchmark'),
                     fund_data.get('equity_style_box'),
-                    fund_data.get('last_updated')
+                    fund_data.get('last_updated'),
+                    fund_data.get('medalist_rating'),
+                    fund_data.get('star_rating'),
+                    fund_data.get('growth_grade'),
+                    fund_data.get('financial_health_grade'),
+                    fund_data.get('price_fair_value'),
+                    fund_data.get('economic_moat_wide')
                 ))
 
         # Save to fund_scores table
@@ -655,6 +674,86 @@ class ETFScreenerDatabase:
 
         df = pd.read_sql_query(query, self.conn, params=params)
         return df
+
+    def update_fund_ratings(self, df: pd.DataFrame):
+        """
+        Update fund ratings in the funds table from a DataFrame.
+        Useful for monthly rating updates without running full screener.
+
+        Args:
+            df: DataFrame containing fund data with rating columns
+        """
+        import datetime
+        
+        cursor = self.conn.cursor()
+        update_timestamp = datetime.datetime.now()
+        
+        # Map DataFrame columns to database columns
+        rating_columns = {
+            'medalist_rating': 'Medalist Rating (Overall)',
+            'star_rating': 'Morningstar Rating for Funds (Overall)',
+            'growth_grade': 'Portfolio Growth Grade',
+            'financial_health_grade': 'Portfolio Financial Health Grade',
+            'profitability_grade': 'Portfolio Profitability Grade',
+            'price_fair_value': 'Price/Fair Value',
+            'economic_moat_wide': 'Portfolio Economic Moat Coverage (Wide)'
+        }
+        
+        updated_count = 0
+        
+        for _, row in df.iterrows():
+            ticker = row.get('Ticker')
+            if pd.notna(ticker):
+                # Build update data
+                update_data = {'last_updated': str(update_timestamp)}
+                for db_col, df_col in rating_columns.items():
+                    if df_col in df.columns:
+                        update_data[db_col] = row[df_col]
+                
+                # Convert datetime objects to strings
+                for key, value in update_data.items():
+                    if pd.notna(value) and hasattr(value, 'strftime'):
+                        update_data[key] = str(value)
+                
+                # Check if fund exists
+                cursor.execute("SELECT ticker FROM funds WHERE ticker = ?", (ticker,))
+                if cursor.fetchone():
+                    # Update existing fund
+                    set_clause = ", ".join([f"{col} = ?" for col in update_data.keys()])
+                    query = f"UPDATE funds SET {set_clause} WHERE ticker = ?"
+                    params = list(update_data.values()) + [ticker]
+                    cursor.execute(query, params)
+                    updated_count += 1
+                else:
+                    # Insert new fund
+                    # Get basic info if available
+                    basic_columns = {
+                        'ticker': 'Ticker',
+                        'name': 'Name',
+                        'morningstar_category': 'Morningstar Category',
+                        'asset_class': 'Asset Class',
+                        'inception_date': 'Inception Date',
+                        'primary_benchmark': 'Primary Benchmark',
+                        'equity_style_box': 'Equity Style Box (Funds)'
+                    }
+                    for db_col, df_col in basic_columns.items():
+                        if df_col in df.columns:
+                            update_data[db_col] = row[df_col]
+                    
+                    # Convert datetime objects to strings
+                    for key, value in update_data.items():
+                        if pd.notna(value) and hasattr(value, 'strftime'):
+                            update_data[key] = str(value)
+                    
+                    all_columns = list(update_data.keys())
+                    placeholders = ", ".join(["?"] * len(all_columns))
+                    columns_str = ", ".join(all_columns)
+                    query = f"INSERT INTO funds ({columns_str}) VALUES ({placeholders})"
+                    cursor.execute(query, list(update_data.values()))
+                    updated_count += 1
+        
+        self.conn.commit()
+        return updated_count
 
     def get_latest_run_for_profile(self, profile_name: str) -> Optional[str]:
         """

@@ -57,6 +57,11 @@ Stores relatively static fund information from Morningstar. Updated infrequently
 | inception_date | TEXT | Fund inception date |
 | primary_benchmark | TEXT | Primary benchmark index |
 | equity_style_box | TEXT | Equity style box classification |
+| growth_grade | TEXT | Portfolio growth grade (A-F) |
+| financial_health_grade | TEXT | Portfolio financial health grade (A-F) |
+| profitability_grade | TEXT | Portfolio profitability grade (A-F) |
+| price_fair_value | TEXT | Price vs Morningstar's fair value estimate |
+| economic_moat_wide | TEXT | Portfolio economic moat coverage (wide) |
 | last_updated | TIMESTAMP | When this fund information was last updated |
 
 ```sql
@@ -68,6 +73,11 @@ CREATE TABLE funds (
     inception_date TEXT,
     primary_benchmark TEXT,
     equity_style_box TEXT,
+    growth_grade TEXT,
+    financial_health_grade TEXT,
+    profitability_grade TEXT,
+    price_fair_value TEXT,
+    economic_moat_wide TEXT,
     last_updated TIMESTAMP
 );
 ```

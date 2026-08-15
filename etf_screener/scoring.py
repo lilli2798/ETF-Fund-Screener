@@ -178,9 +178,9 @@ REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "volatility": ["stdev_3y", "drawdown_3y", "drawdown_5y"],
     "tracking": ["tracking_error_3y", "tracking_error_1y"],
     "liquidity_size": ["fund_size", "trading_volume"],
-    "quality_valuation": ["growth_grade", "financial_health", "price_fair_value", "medalist", "star_rating" ],
+    "quality_valuation": ["growth_grade", "financial_health", "profitability_grade", "price_fair_value", "medalist", "star_rating" ],
     "costs": ["adjusted_expense_ratio"],
-    "tax_income": ["tax_cost_ratio_1y", "tax_cost_ratio_2y", "sec_yield"],
+    "tax_income": ["tax_cost_ratio_1y", "tax_cost_ratio_2y", "dividend_per_share_trailing", "dividend_per_share_forward", "dividend_per_share_1y_avg", "dividend_per_share_3y_avg", "sec_yield"],
 }
 
 
@@ -603,6 +603,14 @@ def calculate_quality_valuation_score(
             out, "Financial_Health_Grade_Numeric", category_col
         )
 
+    if "Portfolio Profitability Grade" in df.columns:
+        out["Profitability_Grade_Numeric"] = df["Portfolio Profitability Grade"].apply(
+            _grade_to_numeric
+        )
+        out["Norm_Profitability_Grade"] = normalize_within_category(
+            out, "Profitability_Grade_Numeric", category_col
+        )
+
     # NEW: Medalist Rating (Overall) -> numeric -> category percentile
     medalist_col = None
     for candidate in ("Medalist Rating (Overall)", "Medalist Rating", "Morningstar Medalist Rating"):
@@ -655,6 +663,7 @@ def calculate_quality_valuation_score(
     weight_map = {
         "Norm_Growth_Grade": weights["growth_grade"],
         "Norm_Financial_Health": weights["financial_health"],
+        "Norm_Profitability_Grade": weights["profitability_grade"],
         "Norm_Price_Fair_Value": weights["price_fair_value"],
         "Norm_Medalist": weights["medalist"],  # NEW
         "Norm_Star_Rating": weights["star_rating"],  # NEW
@@ -695,8 +704,9 @@ def calculate_tax_income_score(
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Tax Cost Ratio (1Y and 2Y, inverted - lower is better for tax efficiency)
-    and SEC 30-Day Yield (higher is better), normalized within category.
+    Tax Cost Ratio (1Y and 2Y, inverted - lower is better for tax efficiency),
+    Dividend per Share metrics (higher is better), and SEC 30-Day Yield
+    (higher is better), normalized within category.
     """
     weights = _require_weights(weights, "tax_income")
 
@@ -707,11 +717,27 @@ def calculate_tax_income_score(
     out["Norm_Tax_Cost_Ratio_2Y"] = normalize_within_category(
         df, "Tax Cost Ratio (2Y)", category_col, invert=True
     )
+    out["Norm_Dividend_Per_Share_Trailing"] = normalize_within_category(
+        df, "Dividend per Share (Trailing Annual)", category_col
+    )
+    out["Norm_Dividend_Per_Share_Forward"] = normalize_within_category(
+        df, "Dividend per Share (Forward Annual)", category_col
+    )
+    out["Norm_Dividend_Per_Share_1Y_Avg"] = normalize_within_category(
+        df, "Dividend per Share (1Y Avg)", category_col
+    )
+    out["Norm_Dividend_Per_Share_3Y_Avg"] = normalize_within_category(
+        df, "Dividend per Share (3Y Avg)", category_col
+    )
     out["Norm_SEC_Yield"] = normalize_within_category(df, "SEC 30-Day Yield", category_col)
 
     weight_map = {
         "Norm_Tax_Cost_Ratio_1Y": weights["tax_cost_ratio_1y"],
         "Norm_Tax_Cost_Ratio_2Y": weights["tax_cost_ratio_2y"],
+        "Norm_Dividend_Per_Share_Trailing": weights["dividend_per_share_trailing"],
+        "Norm_Dividend_Per_Share_Forward": weights["dividend_per_share_forward"],
+        "Norm_Dividend_Per_Share_1Y_Avg": weights["dividend_per_share_1y_avg"],
+        "Norm_Dividend_Per_Share_3Y_Avg": weights["dividend_per_share_3y_avg"],
         "Norm_SEC_Yield": weights["sec_yield"],
     }
     return _weighted_average(out, weight_map)

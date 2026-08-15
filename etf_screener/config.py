@@ -72,14 +72,14 @@ NEEDED_COLS: List[str] = [
     "Net Expense Ratio", "Adjusted Expense Ratio",
     "Total Net Assets for Share Class", "Fund Size",
     "Premium/Discount", "Premium/Discount (1Y Avg)",
-    "Portfolio Growth Grade", "Portfolio Financial Health Grade",
+    "Portfolio Growth Grade", "Portfolio Financial Health Grade", "Portfolio Profitability Grade",
     "Portfolio Economic Moat Coverage (Wide)",
     "Portfolio Economic Moat Coverage (Narrow)",
     "Portfolio Economic Moat Coverage (None)",
     "Portfolio Return on Invested Capital", "Portfolio Price/Earnings",
     "Portfolio Price/Book", "Portfolio Price/Sales",
     "Portfolio Price/Free Cash Flow", "Portfolio Price/Fair Value",
-    "ETF Fair Value", "Yield to Maturity", "Effective Duration",
+    "ETF Fair Value", "Yield to Maturity",
     "Tracking Error (1Y Monthly)", "Tracking Error (3Y Monthly)",
     "Tracking Error (5Y Monthly)", "Tracking Error (10Y Monthly)",
 
@@ -102,13 +102,13 @@ NEEDED_COLS: List[str] = [
     "Tax Cost Ratio (10Y)",
     "Potential Capital Gains Exposure", "SEC 30-Day Yield",
     "SEC 7-Day Yield", "Dividend per Share (Trailing Annual)",
-    "Dividend per Share (Forward Annual)", "TTM Yield",
+    "Dividend per Share (Forward Annual)", "Dividend per Share (1Y Avg)",
+    "Dividend per Share (3Y Avg)", "TTM Yield",
 
     # Fund flags
     "Leveraged Fund", "Interval Fund", "Fund of Funds",
     "Investment Status", "Strategic Beta Group",
-    "Share Class Type", "Tender Offer", "Index Fund", "No Load Fund",
-    "Enhanced Index Fund",
+    "Share Class Type", "Tender Offer", "Index Fund",
 
     # Load and investment requirements
     "Maximum Deferred Load", "Maximum Front Load", "Minimum Initial Investment",
@@ -233,9 +233,13 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "adjusted_expense_ratio": 1.0,
     },
     "tax_income": {
-        "tax_cost_ratio_1y": 0.30,
-        "tax_cost_ratio_2y": 0.25,
-        "sec_yield": 0.45,
+        "tax_cost_ratio_1y": 0.20,
+        "tax_cost_ratio_2y": 0.15,
+        "dividend_per_share_trailing": 0.10,
+        "dividend_per_share_forward": 0.10,
+        "dividend_per_share_1y_avg": 0.10,
+        "dividend_per_share_3y_avg": 0.10,
+        "sec_yield": 0.25,
     },
 }
 
@@ -273,8 +277,9 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
         "trading_volume": 0.00,  # Not used
     },
     "quality_valuation": {
-        "growth_grade": 0.30,  # Growth grade (40% of quality weight)
-        "financial_health": 0.20,  # Financial health (40% of quality weight)
+        "growth_grade": 0.25,  # Growth grade (40% of quality weight)
+        "financial_health": 0.15,  # Financial health (40% of quality weight)
+        "profitability_grade": 0.15,  # Profitability grade (A-F)
         "price_fair_value": 0.15,  # Price vs fair value (20% of quality weight)
         "medalist": 0.15,  # Not explicitly mentioned
         "economic_moat_wide": 0.20,  # Not explicitly mentioned

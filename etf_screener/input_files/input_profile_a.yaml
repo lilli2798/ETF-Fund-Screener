@@ -217,11 +217,12 @@ thresholds:
     # QUALITY & VALUATION: How different quality metrics are weighted
     quality_valuation:
       growth_grade: 0.2         # Portfolio growth grade (A-F)
-      financial_health: 0.2     # Portfolio financial health grade (A-F)
+      financial_health: 0.15     # Portfolio financial health grade (A-F)
+      profitability_grade: 0.15  # Portfolio profitability grade (A-F)
       price_fair_value: 0.15     # Price vs Morningstar's fair value estimate
       medalist: 0.15            # Morningstar Medalist rating (Gold/Silver/Bronze)
       star_rating: 0.15         # Morningstar Rating for Funds (star rating 1-5)
-      economic_moat_wide: 0.15   # Portfolio Economic Moat Coverage (Wide) - % of holdings with wide economic moat
+      economic_moat_wide: 0.05   # Portfolio Economic Moat Coverage (Wide) - % of holdings with wide economic moat
 
     # COSTS: How different fee measures are weighted
     costs:
@@ -229,8 +230,12 @@ thresholds:
 
     # TAX & INCOME: How tax efficiency vs yield are weighted
     tax_income:
-      tax_cost_ratio_1y: 0.30   # 1-year tax cost ratio (lower is better for tax efficiency)
-      tax_cost_ratio_2y: 0.25   # 2-year tax cost ratio (lower is better for tax efficiency)
-      sec_yield: 0.45           # SEC 30-day yield (standardized dividend yield)
+      tax_cost_ratio_1y: 0.20            # 1-year tax cost ratio (lower is better for tax efficiency)
+      tax_cost_ratio_2y: 0.15            # 2-year tax cost ratio (lower is better for tax efficiency)
+      dividend_per_share_trailing: 0.10 # Dividend per Share (Trailing Annual) - higher is better
+      dividend_per_share_forward: 0.10  # Dividend per Share (Forward Annual) - higher is better
+      dividend_per_share_1y_avg: 0.10   # Dividend per Share (1Y Avg) - higher is better
+      dividend_per_share_3y_avg: 0.10   # Dividend per Share (3Y Avg) - higher is better
+      sec_yield: 0.25                    # SEC 30-day yield (standardized dividend yield)
 
 

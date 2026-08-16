@@ -103,7 +103,7 @@ NEEDED_COLS: List[str] = [
     "Potential Capital Gains Exposure", "SEC 30-Day Yield",
     "SEC 7-Day Yield", "Dividend per Share (Trailing Annual)",
     "Dividend per Share (Forward Annual)", "Dividend per Share (1Y Avg)",
-    "Dividend per Share (3Y Avg)", "TTM Yield",
+    "Dividend per Share (3Y Avg)",
 
     # Fund flags
     "Leveraged Fund", "Interval Fund", "Fund of Funds",

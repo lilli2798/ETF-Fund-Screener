@@ -87,21 +87,31 @@ class ETFScreenerDatabase:
         # This table does NOT keep history - it's dropped and recreated on each run
         self._create_morningstar_table(cursor)
 
-    def _create_morningstar_table(self, cursor):
-        """Create or recreate the morningstar table with all source columns.
-        
+    def _create_morningstar_table(self, cursor, df: pd.DataFrame = None):
+        """Create or recreate the morningstar table with all columns from DataFrame.
+
         This table is dropped and recreated on each run to store the latest
-        Morningstar source data without keeping history.
+        complete dataset (raw data + all computed results) without keeping history.
+
+        Args:
+            cursor: SQLite cursor
+            df: DataFrame to use for column definitions. If None, uses NEEDED_COLS.
         """
         # Drop existing table if it exists
         cursor.execute("DROP TABLE IF EXISTS morningstar")
 
-        # Create table with all columns from NEEDED_COLS
+        # Determine columns to create
+        if df is not None:
+            columns = df.columns.tolist()
+        else:
+            columns = NEEDED_COLS
+
+        # Create table with all columns
         # Convert column names to SQL-safe identifiers (replace spaces with underscores)
         columns_sql = []
-        for col in NEEDED_COLS:
+        for col in columns:
             # Replace spaces and special characters with underscores for SQL column names
-            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
+            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_")
             # Use TEXT for all columns for simplicity - SQLite handles type conversion
             columns_sql.append(f'"{sql_col}" TEXT')
 
@@ -114,30 +124,29 @@ class ETFScreenerDatabase:
         """)
 
     def save_morningstar_data(self, df: pd.DataFrame) -> None:
-        """Save raw Morningstar data to the morningstar table.
+        """Save complete dataset (raw data + all computed results) to the morningstar table.
 
         This replaces all existing data in the morningstar table with the
-        provided DataFrame. The table is designed to hold only the latest
-        source data without history.
+        provided DataFrame. The table is designed to hold the latest
+        complete dataset without history.
 
         Args:
-            df: DataFrame containing raw Morningstar data with columns matching NEEDED_COLS
+            df: DataFrame containing the complete dataset with all columns
         """
         cursor = self.conn.cursor()
 
-        # Clear existing data
-        cursor.execute("DELETE FROM morningstar")
+        # Recreate table with current DataFrame columns
+        self._create_morningstar_table(cursor, df)
 
         # Prepare column mapping from DataFrame to SQL column names
         column_mapping = {}
-        for col in NEEDED_COLS:
-            if col in df.columns:
-                # Convert column name to SQL-safe identifier
-                sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_")
-                column_mapping[col] = sql_col
+        for col in df.columns:
+            # Convert column name to SQL-safe identifier
+            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_")
+            column_mapping[col] = sql_col
 
         if not column_mapping:
-            print("Warning: No matching columns found for morningstar table")
+            print("Warning: No columns found in DataFrame for morningstar table")
             return
 
         # Build INSERT statement

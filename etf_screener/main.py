@@ -210,6 +210,12 @@ def process_data(
     df: pd.DataFrame = load_data(data_path, exclude_dir=out_path)
     print(f"After load: {len(df)} rows")
 
+    # Save raw Morningstar data to database (replaces existing data)
+    print("Saving raw Morningstar data to database...")
+    db = ETFScreenerDatabase()
+    db.save_morningstar_data(df)
+    db.close()
+
     print("Filtering to ETFs and mutual funds (excluding stocks)...")
     df = apply_fund_filter(df)
     print(f"After fund filter: {len(df)} rows")

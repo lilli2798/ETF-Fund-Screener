@@ -148,7 +148,25 @@ CREATE TABLE concept_scores (
 );
 ```
 
-### 5. additional_metrics
+### 5. morningstar
+
+Stores raw Morningstar source data. This table does NOT keep history - it's dropped and recreated on each run to store only the latest source data.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| (All columns from NEEDED_COLS) | TEXT | All Morningstar columns with SQL-safe names (spaces replaced with underscores) |
+
+```sql
+CREATE TABLE morningstar (
+    -- Dynamic columns based on NEEDED_COLS from config.py
+    -- Column names are SQL-safe (spaces replaced with underscores)
+    -- All columns are TEXT type for simplicity
+);
+```
+
+**Note:** This table is recreated on each run via `DROP TABLE IF EXISTS morningstar` followed by `CREATE TABLE`. It stores the latest raw Morningstar data without historical tracking.
+
+### 6. additional_metrics
 
 Stores historical additional metrics for each fund per run.
 

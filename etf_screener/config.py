@@ -36,7 +36,7 @@ NEEDED_COLS: List[str] = [
     "Broad Category Group",
 
     # Performance metrics
-    "Last Price", "Day Change (%)", "Day Change", "TTM Yield",
+    "TTM Yield",
     "Total Return (1W)", "Total Return (1M)", "Total Return (2M)", "Total Return (QTD)",
     "Total Return (3M)", "Total Return (6M)", "Total Return (9M)", "Total Return (YTD)",
     "Total Return (1Y)", "Total Return (2Y)", "Total Return (3Y)",

@@ -25,16 +25,31 @@ def print_menu():
     print("\n" + "="*60)
     print("ETF Screener Results Query Tool")
     print("="*60)
-    print("1. List recent runs")
-    print("2. List recent runs for a specific profile")
-    print("3. Get full results for a specific run")
-    print("4. Query funds by filters (ticker, score, category)")
-    print("5. Query funds by concept scores")
-    print("6. Compare metrics between runs (historical analysis)")
-    print("7. Get latest results for a profile")
-    print("8. Export query results to Excel")
+    print("1. List all database tables")
+    print("2. List recent runs")
+    print("3. List recent runs for a specific profile")
+    print("4. Get full results for a specific run")
+    print("5. Query funds by filters (ticker, score, category)")
+    print("6. Query funds by concept scores")
+    print("7. Compare metrics between runs (historical analysis)")
+    print("8. Get latest results for a profile")
+    print("9. Export query results to Excel")
     print("0. Exit")
     print("="*60)
+
+
+def list_all_tables(db: ETFScreenerDatabase):
+    """List all tables in the database."""
+    print("\n--- Database Tables ---")
+    tables = db.list_tables()
+    
+    if not tables:
+        print("No tables found in database.")
+        return
+    
+    print(f"Found {len(tables)} tables:")
+    for table in tables:
+        print(f"  - {table}")
 
 
 def list_recent_runs(db: ETFScreenerDatabase):
@@ -351,43 +366,45 @@ def main():
     
     while True:
         print_menu()
-        choice = input("Enter your choice (0-8): ").strip()
+        choice = input("Enter your choice (0-9): ").strip()
         
         if choice == '0':
             print("Exiting...")
             break
         elif choice == '1':
-            list_recent_runs(db)
+            list_all_tables(db)
         elif choice == '2':
-            list_runs_for_profile(db)
+            list_recent_runs(db)
         elif choice == '3':
-            get_results_for_run(db)
+            list_runs_for_profile(db)
         elif choice == '4':
+            get_results_for_run(db)
+        elif choice == '5':
             df = query_funds_by_filters(db)
             if df is not None and not df.empty:
                 export = input("\nExport results to Excel? (y/n): ").strip().lower()
                 if export == 'y':
                     export_to_excel(df)
-        elif choice == '5':
+        elif choice == '6':
             df = query_funds_by_concept_scores(db)
             if df is not None and not df.empty:
                 export = input("\nExport results to Excel? (y/n): ").strip().lower()
                 if export == 'y':
                     export_to_excel(df)
-        elif choice == '6':
+        elif choice == '7':
             df = compare_metrics_between_runs(db)
             if df is not None and not df.empty:
                 export = input("\nExport results to Excel? (y/n): ").strip().lower()
                 if export == 'y':
                     export_to_excel(df)
-        elif choice == '7':
+        elif choice == '8':
             df = get_latest_for_profile(db)
             if df is not None and not df.empty:
                 export = input("\nExport results to Excel? (y/n): ").strip().lower()
                 if export == 'y':
                     export_to_excel(df)
-        elif choice == '8':
-            print("Please run a query first (options 4, 5, 6, or 7).")
+        elif choice == '9':
+            print("Please run a query first (options 5, 6, 7, or 8).")
         else:
             print("Invalid choice. Please try again.")
     

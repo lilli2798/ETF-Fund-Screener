@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 from typing import Optional, List, Dict, Any
-from config import NEEDED_COLS
+from .config import NEEDED_COLS
 
 
 class ETFScreenerDatabase:
@@ -86,6 +86,64 @@ class ETFScreenerDatabase:
         # Morningstar raw data table - stores all source data (recreated each run)
         # This table does NOT keep history - it's dropped and recreated on each run
         self._create_morningstar_table(cursor)
+
+        # Fund scores table - composite scores per fund per run
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS fund_scores (
+                run_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                profile_score REAL,
+                rank_in_category INTEGER,
+                rank_overall INTEGER,
+                selected_flag_category BOOLEAN,
+                selected_flag_overall BOOLEAN,
+                PRIMARY KEY(run_id, ticker),
+                FOREIGN KEY (run_id) REFERENCES runs(run_id),
+                FOREIGN KEY (ticker) REFERENCES funds(ticker)
+            )
+        """)
+
+        # Concept scores table - concept scores per fund per run
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS concept_scores (
+                run_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                long_term_return_performance_score REAL,
+                short_term_return_performance_score REAL,
+                risk_adjusted_score REAL,
+                volatility_score REAL,
+                tracking_score REAL,
+                liquidity_size_score REAL,
+                quality_valuation_score REAL,
+                costs_score REAL,
+                tax_income_score REAL,
+                PRIMARY KEY(run_id, ticker),
+                FOREIGN KEY (run_id) REFERENCES runs(run_id),
+                FOREIGN KEY (ticker) REFERENCES funds(ticker)
+            )
+        """)
+
+        # Additional metrics table - additional metrics per fund per run
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS additional_metrics (
+                run_id TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                better_worst_diff REAL,
+                better_pct REAL,
+                worst_pct REAL,
+                worst_three_month_return REAL,
+                PRIMARY KEY(run_id, ticker),
+                FOREIGN KEY (run_id) REFERENCES runs(run_id),
+                FOREIGN KEY (ticker) REFERENCES funds(ticker)
+            )
+        """)
+
+        # Create indexes for common queries
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_runs_timestamp ON runs(run_timestamp)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_runs_profile ON runs(profile_name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_scores_ticker ON fund_scores(ticker)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_concept_scores_ticker ON concept_scores(ticker)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_additional_metrics_ticker ON additional_metrics(ticker)")
 
     def _create_morningstar_table(self, cursor, df: pd.DataFrame = None):
         """Create or recreate the morningstar table with all columns from DataFrame.
@@ -181,65 +239,17 @@ class ETFScreenerDatabase:
         self.conn.commit()
         print(f"Saved {inserted_count} rows to morningstar table")
 
-        # Fund scores table - composite scores per fund per run
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS fund_scores (
-                run_id TEXT NOT NULL,
-                ticker TEXT NOT NULL,
-                profile_score REAL,
-                rank_in_category INTEGER,
-                rank_overall INTEGER,
-                selected_flag_category BOOLEAN,
-                selected_flag_overall BOOLEAN,
-                PRIMARY KEY(run_id, ticker),
-                FOREIGN KEY (run_id) REFERENCES runs(run_id),
-                FOREIGN KEY (ticker) REFERENCES funds(ticker)
-            )
-        """)
+    def list_tables(self) -> List[str]:
+        """
+        List all tables in the database.
 
-        # Concept scores table - concept scores per fund per run
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS concept_scores (
-                run_id TEXT NOT NULL,
-                ticker TEXT NOT NULL,
-                long_term_return_performance_score REAL,
-                short_term_return_performance_score REAL,
-                risk_adjusted_score REAL,
-                volatility_score REAL,
-                tracking_score REAL,
-                liquidity_size_score REAL,
-                quality_valuation_score REAL,
-                costs_score REAL,
-                tax_income_score REAL,
-                PRIMARY KEY(run_id, ticker),
-                FOREIGN KEY (run_id) REFERENCES runs(run_id),
-                FOREIGN KEY (ticker) REFERENCES funds(ticker)
-            )
-        """)
-
-        # Additional metrics table - additional metrics per fund per run
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS additional_metrics (
-                run_id TEXT NOT NULL,
-                ticker TEXT NOT NULL,
-                better_worst_diff REAL,
-                better_pct REAL,
-                worst_pct REAL,
-                worst_three_month_return REAL,
-                PRIMARY KEY(run_id, ticker),
-                FOREIGN KEY (run_id) REFERENCES runs(run_id),
-                FOREIGN KEY (ticker) REFERENCES funds(ticker)
-            )
-        """)
-
-        # Create indexes for common queries
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_runs_timestamp ON runs(run_timestamp)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_runs_profile ON runs(profile_name)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_scores_ticker ON fund_scores(ticker)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_concept_scores_ticker ON concept_scores(ticker)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_additional_metrics_ticker ON additional_metrics(ticker)")
-
-        self.conn.commit()
+        Returns:
+            List of table names
+        """
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        tables = [row[0] for row in cursor.fetchall()]
+        return tables
 
     def save_results(
         self,

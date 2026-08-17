@@ -17,7 +17,7 @@
 profile: A
 
 # INPUT FILES: Point this to your Morningstar Excel export directory
-data_path: data/   # Contains all Morningstar data files (performance + structural combined)
+data_path: ../data/   # Contains all Morningstar data files (performance + structural combined)
 
 # OUTPUT: Where to save the results Excel file
 out_path: ../output/etf_screener

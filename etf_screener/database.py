@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 from typing import Optional, List, Dict, Any
-from .config import NEEDED_COLS
+from config import NEEDED_COLS
 
 
 class ETFScreenerDatabase:

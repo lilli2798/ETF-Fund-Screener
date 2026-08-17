@@ -21,6 +21,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Cache data files
+        uses: actions/cache@v4
+        with:
+          path: data/
+          key: etf-data-${{ runner.os }}-${{ hashFiles('data/**') }}
+          restore-keys: |
+            etf-data-${{ runner.os }}-
+
+      - name: Check for data files
+        run: |
+          if [ ! -d "../data" ] || [ -z "$(ls -A ../data/*.xlsx 2>/dev/null)" ]; then
+            echo "Warning: No data files found in ../data/"
+            echo "Please upload Morningstar Excel files to the data/ directory"
+            echo "You can do this by:"
+            echo "  1. Running the workflow manually with data files present"
+            echo "  2. Or committing data files to the repository"
+            exit 1
+          fi
+
       - name: Run screener pipeline
         working-directory: etf_screener
         run: python run_ci.py

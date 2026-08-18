@@ -25,6 +25,7 @@ from config import DEFAULT_CONFIG
 import yfinance as yf
 import random
 import time
+from database import YearlyReturnsDatabase
 
 
 # =========================================================================
@@ -479,9 +480,11 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     
     if not cached_df.empty:
         print(f"Existing cache has {len(cached_df)} tickers")
-        # Filter out tickers already in cache
-        tickers_to_add = [t for t in tickers if t not in cached_df.index]
-        print(f"Adding {len(tickers_to_add)} new tickers, preserving {len(cached_df)} existing tickers")
+        # Get tickers from cache and remove duplicates from input
+        cached_tickers = set(cached_df.index.tolist())
+        input_tickers = set(tickers)
+        tickers_to_add = list(input_tickers - cached_tickers)
+        print(f"Found {len(tickers_to_add)} new tickers to download (not in cache)")
     else:
         print("No existing cache found, building from scratch...")
         tickers_to_add = tickers
@@ -621,13 +624,24 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     
     if not new_df.empty:
         if not cached_df.empty:
-            final_merged = pd.concat([cached_df, new_df]).groupby(level=0).last()
+            # Append new data to existing cache - new data is added, existing data is preserved
+            final_merged = pd.concat([cached_df, new_df])
         else:
             final_merged = new_df
         
         save_yearly_history_csv(cache_path, final_merged)
         print(f"Processing complete. Successfully processed {len(yearly_data)} tickers")
         print(f"Total tickers in cache: {len(final_merged)}")
+        
+        # Also save to SQLite database
+        db_config = config.get("caching", {})
+        db_path = db_config.get("yearly_returns_db_path", "sources/etf_yearly_returns.db")
+        try:
+            with YearlyReturnsDatabase(db_path) as db:
+                db.save_yearly_returns(final_merged)
+                print(f"Data also saved to SQLite database: {db_path}")
+        except Exception as e:
+            print(f"Warning: Failed to save to SQLite database: {e}")
     else:
         print("No valid data to save.")
     

@@ -4,17 +4,19 @@ from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 from openpyxl.utils import get_column_letter
+from database import YearlyReturnsDatabase
 
 INDEXES = ["^IXIC", "^DJI", "^GSPC"]
 
 
-def analyze_yearly_returns(csv_file_path, output_file_path=None):
+def analyze_yearly_returns(csv_file_path, output_file_path=None, db_path=None):
     """
     Analyze yearly ETF returns against index benchmarks.
     
     Args:
         csv_file_path: Path to etf_yearly_history.csv
         output_file_path: Path to save the output Excel file (optional, defaults to csv_path with _analysis suffix and timestamp)
+        db_path: Path to SQLite database file (optional, defaults to sources/etf_yearly_returns.db)
     """
     # Generate default output path if not provided
     if output_file_path is None:
@@ -122,6 +124,17 @@ def analyze_yearly_returns(csv_file_path, output_file_path=None):
     # Save to Excel with formatting
     save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
     
+    # Save to SQLite database
+    if db_path is None:
+        db_path = csv_file_path.replace('.csv', '.db').replace('etf_yearly_history', 'etf_yearly_returns')
+    
+    try:
+        with YearlyReturnsDatabase(db_path) as db:
+            db.save_analysis_results(result_df)
+            print(f"Analysis results also saved to SQLite database: {db_path}")
+    except Exception as e:
+        print(f"Warning: Failed to save analysis results to SQLite database: {e}")
+    
     return result_df
 
 
@@ -195,9 +208,15 @@ def save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_f
 
 
 if __name__ == "__main__":
-    csv_path = "/Users/lihongfeng/Library/CloudStorage/OneDrive-YaleUniversity/Projects/ETF-Fund-Screener/etf_screen_yahoo_by_date/sources/etf_yearly_history.csv"
+    from config import DEFAULT_CONFIG
     
-    result = analyze_yearly_returns(csv_path)
+    csv_path = "/Users/lihongfeng/Library/CloudStorage/OneDrive-YaleUniversity/Projects/ETF-Fund-Screener/etf_screen_yahoo_by_date/yearly_executions/sources/etf_yearly_history.csv"
+    
+    # Get database path from config
+    cache_config = DEFAULT_CONFIG.get("caching", {})
+    db_path = cache_config.get("yearly_returns_db_path", None)
+    
+    result = analyze_yearly_returns(csv_path, db_path=db_path)
     print("Analysis complete!")
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     print(f"Results saved to {csv_path.replace('.csv', f'_analysis_{timestamp}.xlsx')}")

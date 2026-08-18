@@ -22,15 +22,16 @@ DEFAULT_CACHING = {
     "enable_cache": True,                # Enable/disable caching
     "cache_path": "cache/yahoo_price_cache.json",  # Path to cache file
     "cache_max_age_days": 1,             # Cache validity period in days
-    "yearly_returns_cache_path": "sources/etf_yearly_history.csv",  # Path for yearly returns cache (CSV format)
+    "yearly_returns_cache_path": "sources/etf_yearly_history.csv",  # Path for yearly returns cache (CSV format) - relative to yearly_executions/
+    "yearly_returns_db_path": "../../data/etf_screener.db",  # Path to main etf_screener SQLite database - relative to yearly_executions/
     "yearly_returns_max_age_days": 30,   # Yearly returns cache validity
     "history_start_date": "2006-01-01",  # Always start history from this date
 }
 
 # Default input/output paths
 DEFAULT_PATHS = {
-    "sources_dir": "sources",              # Directory for tickers.txt and cache files
-    "tickers_file": "sources/tickers.txt", # Path to tickers.txt file
+    "sources_dir": "sources",              # Directory for tickers.txt and cache files (local to yearly_executions/)
+    "tickers_file": "sources/tickers.txt", # Path to tickers.txt file (local to yearly_executions/)
     "default_input_dir": "../etf_screener/data/structural-data",  # Default directory to look for input files
     "default_output_dir": "../output/yahoo_screen",       # Default directory for output files
     "screener_output_dir": "../output/etf_screener",  # ETF screener output directory for date extraction

@@ -9,7 +9,10 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 from typing import Optional, List, Dict, Any
-from config import NEEDED_COLS
+try:
+    from config import NEEDED_COLS
+except ImportError:
+    from etf_screener.config import NEEDED_COLS
 
 
 class ETFScreenerDatabase:
@@ -169,7 +172,10 @@ class ETFScreenerDatabase:
         columns_sql = []
         for col in columns:
             # Replace spaces and special characters with underscores for SQL column names
-            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_")
+            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_").replace("%", "_")
+            # Add prefix if column name starts with a number (SQL identifiers can't start with numbers)
+            if sql_col and sql_col[0].isdigit():
+                sql_col = f"col_{sql_col}"
             # Use TEXT for all columns for simplicity - SQLite handles type conversion
             columns_sql.append(f'"{sql_col}" TEXT')
 
@@ -200,7 +206,10 @@ class ETFScreenerDatabase:
         column_mapping = {}
         for col in df.columns:
             # Convert column name to SQL-safe identifier
-            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_")
+            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_").replace("%", "_")
+            # Add prefix if column name starts with a number (SQL identifiers can't start with numbers)
+            if sql_col and sql_col[0].isdigit():
+                sql_col = f"col_{sql_col}"
             column_mapping[col] = sql_col
 
         if not column_mapping:

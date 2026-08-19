@@ -34,6 +34,8 @@ def print_menu():
     print("7. Compare metrics between runs (historical analysis)")
     print("8. Get latest results for a profile")
     print("9. Export query results to Excel")
+    print("10. Drop a table")
+    print("11. Check columns in a table")
     print("0. Exit")
     print("="*60)
 
@@ -360,13 +362,134 @@ def export_to_excel(df: pd.DataFrame):
     print(f"\nResults exported to: {filename}")
 
 
+def drop_table(db: ETFScreenerDatabase):
+    """Drop a table from the database with confirmation."""
+    print("\n--- Drop Table ---")
+    
+    # First, list all tables
+    tables = db.list_tables()
+    
+    if not tables:
+        print("No tables found in database.")
+        return
+    
+    print(f"Found {len(tables)} tables:")
+    for i, table in enumerate(tables, 1):
+        print(f"  {i}. {table}")
+    
+    # Get table name to drop
+    table_input = input("\nEnter table name or number to drop (or 'cancel' to abort): ").strip()
+    
+    if table_input.lower() == 'cancel':
+        print("Operation cancelled.")
+        return
+    
+    # Handle numeric input
+    if table_input.isdigit():
+        idx = int(table_input) - 1
+        if 0 <= idx < len(tables):
+            table_name = tables[idx]
+        else:
+            print("Invalid number selection.")
+            return
+    else:
+        table_name = table_input
+    
+    # Validate table exists
+    if table_name not in tables:
+        print(f"Table '{table_name}' not found in database.")
+        return
+    
+    # Safety confirmation
+    print(f"\n⚠️  WARNING: You are about to drop table '{table_name}'")
+    print("This action cannot be undone!")
+    confirmation = input(f"Type 'DROP {table_name}' to confirm: ").strip()
+    
+    if confirmation == f"DROP {table_name}":
+        try:
+            cursor = db.conn.cursor()
+            cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
+            db.conn.commit()
+            print(f"✓ Table '{table_name}' has been dropped successfully.")
+        except Exception as e:
+            print(f"✗ Error dropping table: {e}")
+    else:
+        print("Operation cancelled - confirmation did not match.")
+
+
+def check_columns(db: ETFScreenerDatabase):
+    """Check and display columns in a specific table."""
+    print("\n--- Check Columns in Table ---")
+    
+    # First, list all tables
+    tables = db.list_tables()
+    
+    if not tables:
+        print("No tables found in database.")
+        return
+    
+    print(f"Found {len(tables)} tables:")
+    for i, table in enumerate(tables, 1):
+        print(f"  {i}. {table}")
+    
+    # Get table name to check
+    table_input = input("\nEnter table name or number to check columns (or 'cancel' to abort): ").strip()
+    
+    if table_input.lower() == 'cancel':
+        print("Operation cancelled.")
+        return
+    
+    # Handle numeric input
+    if table_input.isdigit():
+        idx = int(table_input) - 1
+        if 0 <= idx < len(tables):
+            table_name = tables[idx]
+        else:
+            print("Invalid number selection.")
+            return
+    else:
+        table_name = table_input
+    
+    # Validate table exists
+    if table_name not in tables:
+        print(f"Table '{table_name}' not found in database.")
+        return
+    
+    # Get column information
+    try:
+        cursor = db.conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = cursor.fetchall()
+        
+        if not columns:
+            print(f"No columns found in table '{table_name}'.")
+            return
+        
+        print(f"\n--- Columns in table '{table_name}' ---")
+        print(f"{'Column Name':<30} {'Type':<15} {'Not Null':<10} {'Default':<15} {'Primary Key':<12}")
+        print("-" * 82)
+        
+        for col in columns:
+            col_id, col_name, col_type, not_null, default_val, pk = col
+            not_null_str = "YES" if not_null else "NO"
+            pk_str = "YES" if pk else "NO"
+            default_str = str(default_val) if default_val else ""
+            
+            print(f"{col_name:<30} {col_type:<15} {not_null_str:<10} {default_str:<15} {pk_str:<12}")
+        
+        print(f"\nTotal columns: {len(columns)}")
+        
+    except Exception as e:
+        print(f"✗ Error retrieving columns: {e}")
+
+
 def main():
     """Main interactive loop."""
     db = ETFScreenerDatabase()
     
     while True:
         print_menu()
-        choice = input("Enter your choice (0-9): ").strip()
+        choice = input("Enter your choice (0-11): ").strip()
         
         if choice == '0':
             print("Exiting...")
@@ -405,6 +528,10 @@ def main():
                     export_to_excel(df)
         elif choice == '9':
             print("Please run a query first (options 5, 6, 7, or 8).")
+        elif choice == '10':
+            drop_table(db)
+        elif choice == '11':
+            check_columns(db)
         else:
             print("Invalid choice. Please try again.")
     

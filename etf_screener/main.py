@@ -248,32 +248,6 @@ def process_data(
     from scoring import calculate_return_rankings
     df = calculate_return_rankings(df)
 
-    print("Calculating index benchmark comparisons...")
-    from etf_screen_yahoo_by_date.index_benchmark import (
-        calculate_index_returns,
-        get_index_benchmark_comparison,
-        get_index_highest_lowest,
-        MORNINGSTAR_PERIODS
-    )
-    
-    # Get fund returns for comparison
-    return_columns = [col for col in df.columns if col.startswith("Total Return")]
-    fund_returns = df.set_index("Ticker")[return_columns]
-    
-    # Calculate index returns
-    index_returns = calculate_index_returns(MORNINGSTAR_PERIODS)
-    
-    # Get highest/lowest index returns
-    index_high_low = get_index_highest_lowest(index_returns)
-    
-    # Calculate fund vs index comparison
-    index_comparison = get_index_benchmark_comparison(fund_returns, index_returns)
-    
-    # Add comparison results to dataframe
-    df = pd.merge(df, index_comparison, left_on="Ticker", right_index=True, how="left")
-    
-    print(f"Index benchmark comparison added: {len(index_comparison.columns)} comparison metrics")
-
     print(f"Applying Profile {profile_name} eligibility filters...")
     df_eligible: pd.DataFrame = PROFILE_FILTERS[profile_name](df, thresholds)
 
@@ -305,8 +279,13 @@ def process_data(
     final_out_path: str = build_timestamped_output_path(out_path, prefix=f"results_profile_{profile_name}")
     print(f"Output will be saved to: {final_out_path}")
 
+    # Generate sheet name with current date in monthdayyear-overview format
+    from datetime import datetime
+    current_date = datetime.now()
+    sheet_name = f"{current_date.strftime('%m%d%Y')}-overview"
+
     print("Saving results...")
-    write_excel_with_retry(df_export, final_out_path)
+    write_excel_with_retry(df_export, final_out_path, sheet_name=sheet_name)
 
     print("Formatting header row...")
     apply_header_formatting(final_out_path)

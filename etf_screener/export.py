@@ -101,6 +101,7 @@ def write_excel_with_retry(
     path: str,
     max_retries: int = 3,
     retry_delay_seconds: float = 2.0,
+    sheet_name: str = None,
 ) -> None:
     """
     Write `df` to `path` as an Excel file, retrying if the file is
@@ -122,7 +123,7 @@ def write_excel_with_retry(
     last_error: Optional[Exception] = None
     for attempt in range(1, max_retries + 1):
         try:
-            df.to_excel(path, index=False)
+            df.to_excel(path, index=False, sheet_name=sheet_name)
             print(f"  Wrote {len(df)} row(s), {len(df.columns)} column(s) to: {path}")
             return
         except PermissionError as e:
@@ -142,7 +143,7 @@ def write_excel_with_retry(
         f"(file likely locked). Writing to fallback path instead: {fallback_path}"
     )
     try:
-        df.to_excel(fallback_path, index=False)
+        df.to_excel(fallback_path, index=False, sheet_name=sheet_name)
         print(f"  Wrote {len(df)} row(s), {len(df.columns)} column(s) to: {fallback_path}")
     except Exception:
         print(f"  Error: fallback write to '{fallback_path}' also failed. Raising original error.")

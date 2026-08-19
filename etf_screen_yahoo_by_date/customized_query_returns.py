@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import pandas as pd
+from datetime import datetime
 from file_print import update_result_book_with_create_new_with_style
 from colorama import Fore
 
@@ -34,13 +35,14 @@ def processing_yahoo_week_return(df, filtered_df, result_file, sheet_sub_name):
     total_today_return_data = calculate_up_to_today_return_weekly_rate(filtered_df).dropna()
     total_better_than_best = calculate_better_than_best(total_today_return_data).dropna()
     total_return_data = pd.concat([df, total_today_return_data, total_better_than_best], axis=1)
-    total_sheet_name = "Total-" + sheet_sub_name + "-overview"
+    current_date = datetime.now()
+    total_sheet_name = "Total-" + sheet_sub_name + "-" + current_date.strftime('%m%d%Y')
     update_result_book_with_create_new_with_style(total_return_data, result_file, total_sheet_name)
 
     ly_return_data = calculate_weekly_rate_change(filtered_df)
     ly_better_than_best = calculate_better_than_best(ly_return_data)
     ly_high_low_data = pd.concat([df, ly_return_data, ly_better_than_best], axis=1)
-    ly_sheet_name = sheet_sub_name + "-overview"
+    ly_sheet_name = sheet_sub_name + "-" + current_date.strftime('%m%d%Y')
     update_result_book_with_create_new_with_style(ly_high_low_data, result_file, ly_sheet_name)
 
 
@@ -50,13 +52,14 @@ def processing_yahoo_month_return(df, filtered_df, result_file, sheet_sub_name):
     total_today_return_data = calculate_up_to_today_return_monthly_rate(filtered_df).dropna()
     total_better_than_best = calculate_better_than_best(total_today_return_data).dropna()
     total_return_data = pd.concat([df, total_today_return_data, total_better_than_best], axis=1)
-    total_sheet_name = "Total-" + sheet_sub_name + "-overview"
+    current_date = datetime.now()
+    total_sheet_name = "Total-" + sheet_sub_name + "-" + current_date.strftime('%m%d%Y')
     update_result_book_with_create_new_with_style(total_return_data, result_file, total_sheet_name)
 
     ly_return_data = calculate_monthly_rate_change(filtered_df)
     ly_better_than_best = calculate_better_than_best(ly_return_data)
     ly_high_low_data = pd.concat([df, ly_return_data, ly_better_than_best], axis=1)
-    ly_sheet_name = sheet_sub_name + "-overview"
+    ly_sheet_name = sheet_sub_name + "-" + current_date.strftime('%m%d%Y')
     update_result_book_with_create_new_with_style(ly_high_low_data, result_file, ly_sheet_name)
 
 
@@ -66,13 +69,14 @@ def processing_yahoo_year_return(df, yahoo_df, result_file, choice):
     total_today_return_data = calculate_up_to_today_return_yearly_rate(yahoo_df).dropna()
     total_better_than_best = calculate_better_than_best(total_today_return_data).dropna()
     total_return_data = pd.concat([df, total_today_return_data, total_better_than_best], axis=1)
-    total_sheet_name = "Total-" + choice + "-overview"
+    current_date = datetime.now()
+    total_sheet_name = "Total-" + choice + "-" + current_date.strftime('%m%d%Y')
     update_result_book_with_create_new_with_style(total_return_data, result_file, total_sheet_name)
 
     ly_return_data = calculate_yearly_rate_change(yahoo_df)
     ly_better_than_best = calculate_better_than_best(ly_return_data)
     ly_high_low_data = pd.concat([df, ly_return_data, ly_better_than_best], axis=1)
-    ly_sheet_name = choice + "-overview"
+    ly_sheet_name = choice + "-" + current_date.strftime('%m%d%Y')
     update_result_book_with_create_new_with_style(ly_high_low_data, result_file, ly_sheet_name)
 
 

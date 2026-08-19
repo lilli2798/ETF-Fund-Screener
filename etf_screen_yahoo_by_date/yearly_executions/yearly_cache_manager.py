@@ -25,7 +25,6 @@ from config import DEFAULT_CONFIG
 import yfinance as yf
 import random
 import time
-from database import YearlyReturnsDatabase
 
 
 # =========================================================================
@@ -632,16 +631,6 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         save_yearly_history_csv(cache_path, final_merged)
         print(f"Processing complete. Successfully processed {len(yearly_data)} tickers")
         print(f"Total tickers in cache: {len(final_merged)}")
-        
-        # Also save to SQLite database
-        db_config = config.get("caching", {})
-        db_path = db_config.get("yearly_returns_db_path", "sources/etf_yearly_returns.db")
-        try:
-            with YearlyReturnsDatabase(db_path) as db:
-                db.save_yearly_returns(final_merged)
-                print(f"Data also saved to SQLite database: {db_path}")
-        except Exception as e:
-            print(f"Warning: Failed to save to SQLite database: {e}")
     else:
         print("No valid data to save.")
     

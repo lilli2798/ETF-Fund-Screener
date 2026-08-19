@@ -1,10 +1,7 @@
 import pandas as pd
-import numpy as np
 from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
-from openpyxl.utils import get_column_letter
-from database import YearlyReturnsDatabase
 
 INDEXES = ["^IXIC", "^DJI", "^GSPC"]
 
@@ -123,17 +120,6 @@ def analyze_yearly_returns(csv_file_path, output_file_path=None, db_path=None):
     
     # Save to Excel with formatting
     save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
-    
-    # Save to SQLite database
-    if db_path is None:
-        db_path = csv_file_path.replace('.csv', '.db').replace('etf_yearly_history', 'etf_yearly_returns')
-    
-    try:
-        with YearlyReturnsDatabase(db_path) as db:
-            db.save_analysis_results(result_df)
-            print(f"Analysis results also saved to SQLite database: {db_path}")
-    except Exception as e:
-        print(f"Warning: Failed to save analysis results to SQLite database: {e}")
     
     return result_df
 

@@ -4,15 +4,38 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ee693f8f-df18-4107-aac7-64e643373734" name="Changes" comment="update script to test running the alert on github">
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+    <list default="true" id="ee693f8f-df18-4107-aac7-64e643373734" name="Changes" comment="update logic to list tables and delete the tables">
+      <change afterPath="$PROJECT_DIR$/data/etf_screener.db" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/etf_screener/utils/fetch_yahoo_sector_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/customized_query_returns.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screen_yahoo_by_date/customized_query_returns.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/sources/etf_yearly_history.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/sources/missing_data.csv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/sources/tickers.txt" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/sources/tickers.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/analyze_yearly_returns.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/analyze_yearly_returns.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/database.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/sources/etf_yearly_history_analysis_20260818_091850.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/yearly_cache_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/yearly_cache_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/d-all (1).xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/d-all (2).xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/d-all.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/eric-new (1).xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/eric-new (2).xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/eric-new.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/l-all (1).xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/l-all (2).xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/data/l-all.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/output/results_profile_A_2026-07-29_06-01-01-etrade-etfs.xlsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/output/results_profile_A_2026-07-29_06-01-01_used_weights.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/etf_screener/output/run_recorder.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/query_results.py" beforeDir="false" afterPath="$PROJECT_DIR$/query_results.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="407" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -22,6 +45,7 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="GitHubPullRequestSearchHistory">{
@@ -33,31 +57,38 @@
   <component name="GithubPullRequestsUISettings">{
   &quot;selectedUrlAndAccountId&quot;: {
     &quot;url&quot;: &quot;https://github.com/lilli2798/ETF-Fund-Screener.git&quot;,
-    &quot;accountId&quot;: &quot;b0e578a2-072b-4536-82d8-76ad87e5b3be&quot;
+    &quot;accountId&quot;: &quot;bf1aa894-81c8-4b44-b089-42cbd1dfd8c3&quot;
   }
 }</component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/.venv/lib/python3.14/site-packages/pandas/core/frame.py" root0="SKIP_INSPECTION" />
+  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0000574238731128" />
-      <entry key="MS500" value="1.3089730590189197" />
-      <entry key="S2" value="4.152871038666319" />
-      <entry key="S5" value="7.885401846492498" />
-      <entry key="S10" value="10.65165293495038" />
-      <entry key="S30" value="13.921513413580788" />
-      <entry key="S60" value="15.239785401412199" />
-      <entry key="M2" value="16.05809476955062" />
-      <entry key="M5" value="17.01392443611365" />
-      <entry key="M10" value="18.37056867183716" />
-      <entry key="M15" value="19.3220940683191" />
-      <entry key="M30" value="20.771950768135483" />
-      <entry key="H1" value="21.7717416963893" />
-      <entry key="H2" value="23.175023820097202" />
-      <entry key="H4" value="32.71237865404862" />
-      <entry key="D1" value="122.93063476917223" />
-      <entry key="W1" value="223.89714952933434" />
+      <entry key="MS100" value="1.2002688833383597" />
+      <entry key="MS500" value="1.829373795651454" />
+      <entry key="S2" value="3.7857721783010634" />
+      <entry key="S5" value="7.8646830288199405" />
+      <entry key="S10" value="12.995282381966534" />
+      <entry key="S30" value="24.85817711403833" />
+      <entry key="S60" value="35.72936904187375" />
+      <entry key="M2" value="48.558772884605375" />
+      <entry key="M5" value="63.247243979579586" />
+      <entry key="M10" value="70.32692461494388" />
+      <entry key="M15" value="73.02172383611578" />
+      <entry key="M30" value="75.90743276147008" />
+      <entry key="H1" value="77.44275258758132" />
+      <entry key="H2" value="80.64855031958902" />
+      <entry key="H4" value="109.13202128619254" />
+      <entry key="D1" value="371.53774867638276" />
+      <entry key="W1" value="790.6017752861205" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -69,33 +100,33 @@
       <entry key="S60" value="0.0" />
       <entry key="M2" value="0.0" />
       <entry key="M5" value="0.0" />
-      <entry key="M10" value="2.309636608613989E-206" />
-      <entry key="M15" value="8.110154041038187E-138" />
-      <entry key="M30" value="2.847833218613433E-69" />
-      <entry key="H1" value="5.336509363444823E-35" />
-      <entry key="H2" value="7.30514158893913E-18" />
-      <entry key="H4" value="2.7028025434609857E-9" />
-      <entry key="D1" value="0.037322356178115884" />
-      <entry key="W1" value="0.6251663287520399" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="1.4446E-320" />
+      <entry key="M30" value="1.2017824321037273E-160" />
+      <entry key="H1" value="1.0962583783505252E-80" />
+      <entry key="H2" value="1.0470235806086313E-40" />
+      <entry key="H4" value="1.023241701949572E-20" />
+      <entry key="D1" value="4.659396887468105E-4" />
+      <entry key="W1" value="0.3342312866063053" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9727105872164657" />
-      <entry key="MS500" value="1.2925943149019141" />
-      <entry key="S2" value="4.128616594439997" />
-      <entry key="S5" value="7.870137892117029" />
-      <entry key="S10" value="10.64258289138507" />
-      <entry key="S30" value="13.918050638593819" />
-      <entry key="S60" value="15.237980339322581" />
-      <entry key="M2" value="16.05716768561824" />
-      <entry key="M5" value="17.013474238283937" />
-      <entry key="M10" value="18.37023702957444" />
-      <entry key="M15" value="19.32181914733397" />
-      <entry key="M30" value="20.771771338399454" />
-      <entry key="H1" value="21.77163739882898" />
-      <entry key="H2" value="23.17496533192848" />
-      <entry key="H4" value="32.71233076740863" />
-      <entry key="D1" value="122.96786460501167" />
-      <entry key="W1" value="224.52227727359875" />
+      <entry key="MS100" value="1.1769320199732995" />
+      <entry key="MS500" value="1.8228788943096732" />
+      <entry key="S2" value="3.7824986003707415" />
+      <entry key="S5" value="7.86190419930425" />
+      <entry key="S10" value="12.992951645434939" />
+      <entry key="S30" value="24.85664338889481" />
+      <entry key="S60" value="35.72824276706688" />
+      <entry key="M2" value="48.55799923968632" />
+      <entry key="M5" value="63.246839265501826" />
+      <entry key="M10" value="70.32669945443548" />
+      <entry key="M15" value="73.02156795578892" />
+      <entry key="M30" value="75.90735173371266" />
+      <entry key="H1" value="77.4427112481141" />
+      <entry key="H2" value="80.64852839247342" />
+      <entry key="H4" value="109.13200408499877" />
+      <entry key="D1" value="371.5381996297669" />
+      <entry key="W1" value="790.9359819395015" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -115,16 +146,28 @@
     &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;Python.a-merge-etrade-tabs-etf-fund.executor&quot;: &quot;Run&quot;,
+    &quot;Python.analyze_yearly_returns.executor&quot;: &quot;Run&quot;,
     &quot;Python.b-merge-etrade-etf-stock-analysis-etf (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.calculate_total_return_with_reinvesmtments.executor&quot;: &quot;Run&quot;,
+    &quot;Python.compare_results.executor&quot;: &quot;Run&quot;,
+    &quot;Python.customized_query_returns.executor&quot;: &quot;Run&quot;,
+    &quot;Python.database.executor&quot;: &quot;Run&quot;,
     &quot;Python.fetch_yahoo_sector_data.executor&quot;: &quot;Run&quot;,
     &quot;Python.get_yahoo_dta (1).executor&quot;: &quot;Run&quot;,
     &quot;Python.get_yahoo_dta.executor&quot;: &quot;Run&quot;,
+    &quot;Python.import_excel.executor&quot;: &quot;Run&quot;,
     &quot;Python.main (1).executor&quot;: &quot;Run&quot;,
     &quot;Python.main.executor&quot;: &quot;Run&quot;,
     &quot;Python.merging.executor&quot;: &quot;Run&quot;,
+    &quot;Python.query_results.executor&quot;: &quot;Run&quot;,
     &quot;Python.rotation.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run_ci.executor&quot;: &quot;Run&quot;,
     &quot;Python.select-top-etrade-etf.executor&quot;: &quot;Run&quot;,
     &quot;Python.serch-profile-a.executor&quot;: &quot;Run&quot;,
+    &quot;Python.user_defined_by_date_yahoo_analize.executor&quot;: &quot;Run&quot;,
+    &quot;Python.yahoo_get_top_return.executor&quot;: &quot;Run&quot;,
+    &quot;Python.yearly_cache_manager.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
@@ -134,13 +177,16 @@
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/private/tmp/ETF-Fund-Screener&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/lihongfeng/Library/CloudStorage/OneDrive-YaleUniversity/Projects/ETF-Fund-Screener/output&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;org.jetbrains.plugins.github.ui.GithubSettingsConfigurable&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;aDefault&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.LLMThirdPartyAiProvidersConfigurable&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
 }</component>
@@ -154,19 +200,21 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/output" />
+      <recent name="$PROJECT_DIR$/etf_screen_yahoo_by_date/sources" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/morningstar-search/etf_screener/utils" />
       <recent name="$PROJECT_DIR$/etf_screener/utils" />
-      <recent name="$PROJECT_DIR$/morningstar-search" />
-      <recent name="$PROJECT_DIR$/morningstar-search/etf_screener" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/output/etrade/funds" />
+      <recent name="$PROJECT_DIR$/output/etrade/etfs" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/morningstar-search/etf_screener" />
       <recent name="C:\Users\jelfx\OneDrive\Projects\PythonProjects\util" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.main (1)">
+  <component name="RunManager" selected="Python.a-merge-etrade-tabs-etf-fund">
     <configuration name="a-merge-etrade-tabs-etf-fund" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
@@ -181,6 +229,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/eTrade/a-merge-etrade-tabs-etf-fund.py" />
       <option name="PARAMETERS" value="" />
@@ -191,7 +240,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="get_yahoo_dta (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="analyze_yearly_returns" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -200,13 +249,14 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener/utils" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/analyze_yearly_returns.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -215,7 +265,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="get_yahoo_dta" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="import_excel" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -224,13 +274,14 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener/utils" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/import_excel.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -239,31 +290,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="get_yahoo_dta" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="PythonProjects" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener/utils" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="DEBUG_JUST_MY_CODE" value="true" />
-      <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/utils/get_yahoo_dta.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
-    <configuration name="main (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="query_results" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -272,13 +299,14 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screener" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screener/main.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/query_results.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -287,7 +315,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="yearly_cache_manager" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="ETF-Fund-Screener" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -296,13 +324,14 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/morningstar-search/etf_screener" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="DEBUG_JUST_MY_CODE" value="false" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="RUN_TOOL" value="" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/morningstar-search/etf_screener/main.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/yearly_cache_manager.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -311,20 +340,28 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python.a-merge-etrade-tabs-etf-fund" />
+      <item itemvalue="Python.import_excel" />
+      <item itemvalue="Python.analyze_yearly_returns" />
+      <item itemvalue="Python.yearly_cache_manager" />
+      <item itemvalue="Python.query_results" />
+    </list>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.main (1)" />
-        <item itemvalue="Python.get_yahoo_dta" />
-        <item itemvalue="Python.get_yahoo_dta (1)" />
         <item itemvalue="Python.a-merge-etrade-tabs-etf-fund" />
-        <item itemvalue="Python.main" />
+        <item itemvalue="Python.query_results" />
+        <item itemvalue="Python.import_excel" />
+        <item itemvalue="Python.analyze_yearly_returns" />
+        <item itemvalue="Python.yearly_cache_manager" />
       </list>
     </recent_temporary>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-245168a56dbd-c2ffad84badb-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.25134.203" />
+        <option value="bundled-js-predefined-d6986cc7102b-4abd2a77f808-JavaScript-PY-262.9437.214" />
+        <option value="bundled-python-sdk-821f704e66d9-5bd6d13a2a75-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-262.9437.214" />
       </set>
     </attachedChunks>
   </component>
@@ -339,6 +376,16 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1781905918233</updated>
+      <workItem from="1786378006546" duration="35789000" />
+      <workItem from="1786650400688" duration="38554000" />
+      <workItem from="1786808680436" duration="143000" />
+      <workItem from="1786808870902" duration="16515000" />
+      <workItem from="1786888516402" duration="26866000" />
+      <workItem from="1787066942751" duration="87000" />
+      <workItem from="1787067036578" duration="3826000" />
+      <workItem from="1787072972307" duration="431000" />
+      <workItem from="1787073412078" duration="270000" />
+      <workItem from="1787073692329" duration="21756000" />
     </task>
     <task id="LOCAL-00001" summary="init check in project,">
       <option name="closed" value="true" />
@@ -396,7 +443,183 @@
       <option name="project" value="LOCAL" />
       <updated>1784396531983</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="add economic_moat_wide score and add new tracking data sheet">
+      <option name="closed" value="true" />
+      <created>1786548241091</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1786548241091</updated>
+    </task>
+    <task id="LOCAL-00009" summary="update logic from only work for etf, now work for mutual funds as well">
+      <option name="closed" value="true" />
+      <created>1786651490404</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1786651490404</updated>
+    </task>
+    <task id="LOCAL-00010" summary="upodate the result to a sqlite, update includes the scheam design and necessary implemention, update weight for long term return as well">
+      <option name="closed" value="true" />
+      <created>1786714561621</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1786714561621</updated>
+    </task>
+    <task id="LOCAL-00011" summary="fix the run time error Error binding parameter 5: type 'Timestamp' is not supported">
+      <option name="closed" value="true" />
+      <created>1786725461444</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1786725461444</updated>
+    </task>
+    <task id="LOCAL-00012" summary="add morningstar rating to the eveulation">
+      <option name="closed" value="true" />
+      <created>1786802278878</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1786802278878</updated>
+    </task>
+    <task id="LOCAL-00013" summary="add morningstar rating to the eveulation">
+      <option name="closed" value="true" />
+      <created>1786802350481</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1786802350481</updated>
+    </task>
+    <task id="LOCAL-00014" summary="remove ESG from config to keep it clean since we don't eveluate them">
+      <option name="closed" value="true" />
+      <created>1786807832597</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1786807832597</updated>
+    </task>
+    <task id="LOCAL-00015" summary="Fixed the data_path in the YAML file from data/ to ../data/ since the CI workflow runs from the etf_screener directory but the data folder is at the project root. Try running the CI job again.">
+      <option name="closed" value="true" />
+      <created>1786925709027</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1786925709027</updated>
+    </task>
+    <task id="LOCAL-00016" summary="Fixed the data_path in the YAML file from data/ to ../data/ since the CI workflow runs from the etf_screener directory but the data folder is at the project root. Try running the CI job again.">
+      <option name="closed" value="true" />
+      <created>1786925828988</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1786925828988</updated>
+    </task>
+    <task id="LOCAL-00017" summary="Fixed the data_path in the YAML file from data/ to ../data/ since the CI workflow runs from the etf_screener directory but the data folder is at the project root. Try running the CI job again.">
+      <option name="closed" value="true" />
+      <created>1786925994176</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1786925994176</updated>
+    </task>
+    <task id="LOCAL-00018" summary="Fixed the data_path in the YAML file from data/ to ../data/ since the CI workflow runs from the etf_screener directory but the data folder is at the project root. Try running the CI job again.">
+      <option name="closed" value="true" />
+      <created>1786926192675</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1786926192675</updated>
+    </task>
+    <task id="LOCAL-00019" summary="Fixed the data_path in the YAML file from data/ to ../data/ since the CI workflow runs from the etf_screener directory but the data folder is at the project root. Try running the CI job again.">
+      <option name="closed" value="true" />
+      <created>1786926279392</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1786926279392</updated>
+    </task>
+    <task id="LOCAL-00020" summary="update the logic so easier to upload to morningstar">
+      <option name="closed" value="true" />
+      <created>1787001357976</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1787001357976</updated>
+    </task>
+    <task id="LOCAL-00021" summary="update the logic so the data will be store in the DB, also updated the file location since we changed the source dir">
+      <option name="closed" value="true" />
+      <created>1787068691517</created>
+      <option name="number" value="00021" />
+      <option name="presentableId" value="LOCAL-00021" />
+      <option name="project" value="LOCAL" />
+      <updated>1787068691517</updated>
+    </task>
+    <task id="LOCAL-00022" summary="update the logic so the data will be store in the DB, also updated the file location since we changed the source dir">
+      <option name="closed" value="true" />
+      <created>1787068743712</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1787068743712</updated>
+    </task>
+    <task id="LOCAL-00023" summary="add omre tickers to the list">
+      <option name="closed" value="true" />
+      <created>1787072387941</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1787072387941</updated>
+    </task>
+    <task id="LOCAL-00024" summary="add a logic to change sheet name to monthdayyear-overview for the result file">
+      <option name="closed" value="true" />
+      <created>1787145081039</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1787145081039</updated>
+    </task>
+    <task id="LOCAL-00025" summary="add a logic to change sheet name to monthdayyear-overview for the result file">
+      <option name="closed" value="true" />
+      <created>1787145128957</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1787145128957</updated>
+    </task>
+    <task id="LOCAL-00026" summary="remove create morningstar table from the code since i will create table manually when I need it">
+      <option name="closed" value="true" />
+      <created>1787147879763</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1787147879763</updated>
+    </task>
+    <task id="LOCAL-00027" summary="manually creat tables based on the spreadsheet">
+      <option name="closed" value="true" />
+      <created>1787147974924</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1787147974924</updated>
+    </task>
+    <task id="LOCAL-00028" summary="update the data location">
+      <option name="closed" value="true" />
+      <created>1787148001141</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1787148001141</updated>
+    </task>
+    <task id="LOCAL-00029" summary="update logic to list tables and delete the tables">
+      <option name="closed" value="true" />
+      <created>1787148037943</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1787148037943</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -430,6 +653,89 @@
     <MESSAGE value="add file so the github will run and send me alert daily" />
     <MESSAGE value="        working-directory: etf_screener/utils&#10;remove yahoo dir and update to the correct" />
     <MESSAGE value="update script to test running the alert on github" />
-    <option name="LAST_COMMIT_MESSAGE" value="update script to test running the alert on github" />
+    <MESSAGE value="add economic_moat_wide score and add new tracking data sheet" />
+    <MESSAGE value="update logic from only work for etf, now work for mutual funds as well" />
+    <MESSAGE value="upodate the result to a sqlite, update includes the scheam design and necessary implemention, update weight for long term return as well" />
+    <MESSAGE value="fix the run time error Error binding parameter 5: type 'Timestamp' is not supported" />
+    <MESSAGE value="add morningstar rating to the eveulation" />
+    <MESSAGE value="remove ESG from config to keep it clean since we don't eveluate them" />
+    <MESSAGE value="Fixed the data_path in the YAML file from data/ to ../data/ since the CI workflow runs from the etf_screener directory but the data folder is at the project root. Try running the CI job again." />
+    <MESSAGE value="update the logic so easier to upload to morningstar" />
+    <MESSAGE value="update the logic so the data will be store in the DB, also updated the file location since we changed the source dir" />
+    <MESSAGE value="add omre tickers to the list" />
+    <MESSAGE value="add a logic to change sheet name to monthdayyear-overview for the result file" />
+    <MESSAGE value="remove create morningstar table from the code since i will create table manually when I need it" />
+    <MESSAGE value="manually creat tables based on the spreadsheet" />
+    <MESSAGE value="update the data location" />
+    <MESSAGE value="update logic to list tables and delete the tables" />
+    <option name="LAST_COMMIT_MESSAGE" value="update logic to list tables and delete the tables" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screener/input_file.py</url>
+          <line>17</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screener/input_file.py</url>
+          <line>101</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screener/main.py</url>
+          <line>181</line>
+          <option name="timeStamp" value="4" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screener/input_file.py</url>
+          <line>19</line>
+          <option name="timeStamp" value="5" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screener/utils/compare_results.py</url>
+          <line>73</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screener/update_fund_ratings.py</url>
+          <line>7</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screen_yahoo_by_date/user_defined_by_date_yahoo_analize.py</url>
+          <line>32</line>
+          <option name="timeStamp" value="8" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions/yearly_cache_manager.py</url>
+          <line>463</line>
+          <option name="timeStamp" value="9" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$analyze_yearly_returns.coverage" NAME="analyze_yearly_returns Coverage Results" MODIFIED="1787095465530" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$download_analize_yahoo_data.coverage" NAME="download_analize_yahoo_data Coverage Results" MODIFIED="1785343508852" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$customized_query.coverage" NAME="customized_query Coverage Results" MODIFIED="1785814645035" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$main__1_.coverage" NAME="main (1) Coverage Results" MODIFIED="1786299181774" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screener" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$database.coverage" NAME="database Coverage Results" MODIFIED="1786724944002" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screener" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$query_results.coverage" NAME="query_results Coverage Results" MODIFIED="1787143756683" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$a_merge_etrade_tabs_etf_fund.coverage" NAME="a-merge-etrade-tabs-etf-fund Coverage Results" MODIFIED="1787144541990" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/eTrade" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$yahoo_get_top_return.coverage" NAME="yahoo_get_top_return Coverage Results" MODIFIED="1787047693489" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$build_yearly_cache.coverage" NAME="build_yearly_cache Coverage Results" MODIFIED="1785351328849" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$calculate_total_return_with_reinvesmtments.coverage" NAME="calculate_total_return_with_reinvesmtments Coverage Results" MODIFIED="1786586671778" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$b_download_analize_yahoo_data.coverage" NAME="b_download_analize_yahoo_data Coverage Results" MODIFIED="1786039424149" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/MorningstartAdvisor/morningstartAdvisor" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$customized_query_returns.coverage" NAME="customized_query_returns Coverage Results" MODIFIED="1787054137438" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$import_excel.coverage" NAME="import_excel Coverage Results" MODIFIED="1787096506312" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$compare_results.coverage" NAME="compare_results Coverage Results" MODIFIED="1786710737343" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screener/utils" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$ticker_batcher.coverage" NAME="ticker_batcher Coverage Results" MODIFIED="1785809909207" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/MorningstartAdvisor/morningstartAdvisor" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$user_defined_by_date_yahoo_analize.coverage" NAME="user_defined_by_date_yahoo_analize Coverage Results" MODIFIED="1787047592717" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$yearly_cache_manager.coverage" NAME="yearly_cache_manager Coverage Results" MODIFIED="1787055654120" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screen_yahoo_by_date/yearly_executions" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$download_morningstar_automation.coverage" NAME="download_morningstar_automation Coverage Results" MODIFIED="1785809779855" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/MorningstartAdvisor/morningstartAdvisor" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$run_ci.coverage" NAME="run_ci Coverage Results" MODIFIED="1787025178691" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf_screener" />
+    <SUITE FILE_PATH="coverage/ETF_Fund_Screener$create_etf_analysis.coverage" NAME="create_etf_analysis Coverage Results" MODIFIED="1785437200890" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/etf-prediction" />
   </component>
 </project>

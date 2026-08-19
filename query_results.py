@@ -14,10 +14,12 @@ Examples of queries you can make:
     - Filter by score range
     - Filter by category
     - Get latest results for a profile
+    - Import Excel file to database table
 """
 
 import pandas as pd
 from etf_screener.database import ETFScreenerDatabase
+from pathlib import Path
 
 
 def print_menu():
@@ -36,6 +38,7 @@ def print_menu():
     print("9. Export query results to Excel")
     print("10. Drop a table")
     print("11. Check columns in a table")
+    print("12. Import Excel file to database table")
     print("0. Exit")
     print("="*60)
 
@@ -483,13 +486,181 @@ def check_columns(db: ETFScreenerDatabase):
         print(f"✗ Error retrieving columns: {e}")
 
 
+def import_excel_to_table(db: ETFScreenerDatabase):
+    """Import an Excel file to a database table."""
+    print("\n--- Import Excel to Database Table ---")
+    
+    # Get Excel file path
+    excel_path = input("Enter Excel file path (or 'cancel' to abort): ").strip()
+    
+    if excel_path.lower() == 'cancel':
+        print("Operation cancelled.")
+        return
+    
+    if not Path(excel_path).exists():
+        print(f"✗ File not found: {excel_path}")
+        return
+    
+    # Get sheet name
+    try:
+        xls = pd.ExcelFile(excel_path)
+        print(f"\nAvailable sheets in {excel_path}:")
+        for i, sheet in enumerate(xls.sheet_names, 1):
+            print(f"  {i}. {sheet}")
+        
+        sheet_input = input("\nEnter sheet name or number (or 'cancel' to abort): ").strip()
+        
+        if sheet_input.lower() == 'cancel':
+            print("Operation cancelled.")
+            return
+        
+        # Handle numeric input
+        if sheet_input.isdigit():
+            idx = int(sheet_input) - 1
+            if 0 <= idx < len(xls.sheet_names):
+                sheet_name = xls.sheet_names[idx]
+            else:
+                print("Invalid number selection.")
+                return
+        else:
+            sheet_name = sheet_input
+        
+        if sheet_name not in xls.sheet_names:
+            print(f"✗ Sheet '{sheet_name}' not found in Excel file.")
+            return
+        
+    except Exception as e:
+        print(f"✗ Error reading Excel file: {e}")
+        return
+    
+    # Use sheet name as default table name (sanitized for SQL)
+    default_table_name = sheet_name.replace(" ", "_").replace("-", "_").replace("/", "_").replace("(", "").replace(")", "").replace("%", "_")
+    if default_table_name and default_table_name[0].isdigit():
+        default_table_name = f"tbl_{default_table_name}"
+    
+    # Get table name (default to sheet name)
+    table_name = input(f"Enter table name [default: {default_table_name}] (or 'cancel' to abort): ").strip()
+    
+    if table_name.lower() == 'cancel':
+        print("Operation cancelled.")
+        return
+    
+    if not table_name:
+        table_name = default_table_name
+    
+    # Validate table name (SQL-safe)
+    table_name = table_name.replace(" ", "_").replace("-", "_").replace("/", "_")
+    if table_name and table_name[0].isdigit():
+        table_name = f"tbl_{table_name}"
+    
+    # Confirm if table exists
+    cursor = db.conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
+    table_exists = cursor.fetchone() is not None
+    
+    if table_exists:
+        print(f"\n⚠️  Table '{table_name}' already exists in database.")
+        overwrite = input("Do you want to drop and recreate it? (yes/no): ").strip().lower()
+        if overwrite != 'yes':
+            print("Operation cancelled.")
+            return
+        
+        try:
+            cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
+            db.conn.commit()
+            print(f"✓ Dropped existing table '{table_name}'")
+        except Exception as e:
+            print(f"✗ Error dropping table: {e}")
+            return
+    
+    # Read Excel data
+    try:
+        print(f"\nReading sheet '{sheet_name}' from Excel file...")
+        df = pd.read_excel(excel_path, sheet_name=sheet_name)
+        
+        if df.empty:
+            print("✗ Excel sheet is empty.")
+            return
+        
+        print(f"✓ Read {len(df)} rows and {len(df.columns)} columns")
+        
+    except Exception as e:
+        print(f"✗ Error reading Excel data: {e}")
+        return
+    
+    # Convert column names to SQL-safe identifiers
+    column_mapping = {}
+    columns_sql = []
+    
+    for col in df.columns:
+        sql_col = str(col).replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_").replace("%", "_")
+        if sql_col and sql_col[0].isdigit():
+            sql_col = f"col_{sql_col}"
+        column_mapping[str(col)] = sql_col
+        columns_sql.append(f'"{sql_col}" TEXT')
+    
+    columns_def = ",\n            ".join(columns_sql)
+    
+    # Create table
+    try:
+        create_sql = f"""
+            CREATE TABLE {table_name} (
+                {columns_def}
+            )
+        """
+        cursor.execute(create_sql)
+        db.conn.commit()
+        print(f"✓ Created table '{table_name}' with {len(columns_sql)} columns")
+        
+    except Exception as e:
+        print(f"✗ Error creating table: {e}")
+        return
+    
+    # Insert data
+    try:
+        sql_cols = list(column_mapping.values())
+        placeholders = ", ".join(["?"] * len(sql_cols))
+        insert_sql = f"""
+            INSERT INTO {table_name} ({", ".join(sql_cols)})
+            VALUES ({placeholders})
+        """
+        
+        inserted_count = 0
+        for _, row in df.iterrows():
+            values = []
+            for df_col in column_mapping.keys():
+                value = row.get(df_col)
+                # Convert NaN to None for SQL NULL
+                if pd.isna(value):
+                    values.append(None)
+                # Convert datetime/timestamp to string
+                elif hasattr(value, 'strftime'):
+                    values.append(str(value))
+                else:
+                    values.append(value)
+            
+            try:
+                cursor.execute(insert_sql, values)
+                inserted_count += 1
+            except Exception as e:
+                print(f"  Warning: Failed to insert row: {e}")
+        
+        db.conn.commit()
+        print(f"✓ Inserted {inserted_count} rows into table '{table_name}'")
+        print(f"\n✓ Successfully imported Excel data to table '{table_name}'")
+        
+    except Exception as e:
+        print(f"✗ Error inserting data: {e}")
+        return
+
+
 def main():
     """Main interactive loop."""
     db = ETFScreenerDatabase()
     
     while True:
         print_menu()
-        choice = input("Enter your choice (0-11): ").strip()
+        choice = input("Enter your choice (0-12): ").strip()
         
         if choice == '0':
             print("Exiting...")
@@ -532,6 +703,8 @@ def main():
             drop_table(db)
         elif choice == '11':
             check_columns(db)
+        elif choice == '12':
+            import_excel_to_table(db)
         else:
             print("Invalid choice. Please try again.")
     

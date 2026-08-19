@@ -148,25 +148,7 @@ CREATE TABLE concept_scores (
 );
 ```
 
-### 5. morningstar
-
-Stores raw Morningstar source data. This table does NOT keep history - it's dropped and recreated on each run to store only the latest source data.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| (All columns from NEEDED_COLS) | TEXT | All Morningstar columns with SQL-safe names (spaces replaced with underscores) |
-
-```sql
-CREATE TABLE morningstar (
-    -- Dynamic columns based on NEEDED_COLS from config.py
-    -- Column names are SQL-safe (spaces replaced with underscores)
-    -- All columns are TEXT type for simplicity
-);
-```
-
-**Note:** This table is recreated on each run via `DROP TABLE IF EXISTS morningstar` followed by `CREATE TABLE`. It stores the latest raw Morningstar data without historical tracking.
-
-### 6. additional_metrics
+### 5. additional_metrics
 
 Stores historical additional metrics for each fund per run.
 
@@ -193,109 +175,6 @@ CREATE TABLE additional_metrics (
 );
 ```
 
-### 7. yearly_returns
-
-Stores yearly historical returns for ETF tickers from Yahoo Finance in normalized format. This table enables long-term performance analysis and cross-table queries with fund scores.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| ticker | TEXT (PK) | ETF ticker symbol |
-| year | INTEGER (PK) | Calendar year |
-| return_value | REAL | Yearly return value (decimal) |
-
-```sql
-CREATE TABLE yearly_returns (
-    ticker TEXT NOT NULL,
-    year INTEGER NOT NULL,
-    return_value REAL,
-    UNIQUE(ticker, year),
-    PRIMARY KEY (ticker, year)
-);
-```
-
-**Note:** This table is managed by the `etf_screen_yahoo_by_date/yearly_executions/database.py` module and is updated when running the yearly cache manager.
-
-### 8. analysis_results
-
-Stores calculated analysis metrics for yearly returns performance against index benchmarks.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| ticker | TEXT (PK) | ETF ticker symbol |
-| total_columns | INTEGER | Total number of years with data |
-| no_null_columns | INTEGER | Number of years with valid return data |
-| better | INTEGER | Count of years where return beat max index |
-| worst | INTEGER | Count of years where return was below min index |
-| better_pct | REAL | Percentage of years beating max index |
-| worst_pct | REAL | Percentage of years below min index |
-| better_worst_diff | INTEGER | Difference between better and worst counts |
-
-```sql
-CREATE TABLE analysis_results (
-    ticker TEXT PRIMARY KEY,
-    total_columns INTEGER,
-    no_null_columns INTEGER,
-    better INTEGER,
-    worst INTEGER,
-    better_pct REAL,
-    worst_pct REAL,
-    better_worst_diff INTEGER
-);
-```
-
-### 9. yearly_ranks
-
-Stores yearly performance rankings for each ticker relative to all other tickers.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| ticker | TEXT (PK) | ETF ticker symbol |
-| year | INTEGER (PK) | Calendar year |
-| rank | INTEGER | Performance rank (1 = best, higher = worse) |
-
-```sql
-CREATE TABLE yearly_ranks (
-    ticker TEXT NOT NULL,
-    year INTEGER NOT NULL,
-    rank INTEGER,
-    UNIQUE(ticker, year),
-    PRIMARY KEY (ticker, year)
-);
-```
-
-### 10. percentile_counts
-
-Stores counts of how many times each ticker fell into specific percentile performance buckets.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| ticker | TEXT (PK) | ETF ticker symbol |
-| percentile_10 | INTEGER | Count of years in top 10% |
-| percentile_20 | INTEGER | Count of years in 10-20% |
-| percentile_30 | INTEGER | Count of years in 20-30% |
-| percentile_40 | INTEGER | Count of years in 30-40% |
-| percentile_50 | INTEGER | Count of years in 40-50% |
-| percentile_60 | INTEGER | Count of years in 50-60% |
-| percentile_70 | INTEGER | Count of years in 60-70% |
-| percentile_80 | INTEGER | Count of years in 70-80% |
-| percentile_90 | INTEGER | Count of years in 80-90% |
-| percentile_worse_10 | INTEGER | Count of years in bottom 10% |
-
-```sql
-CREATE TABLE percentile_counts (
-    ticker TEXT PRIMARY KEY,
-    percentile_10 INTEGER DEFAULT 0,
-    percentile_20 INTEGER DEFAULT 0,
-    percentile_30 INTEGER DEFAULT 0,
-    percentile_40 INTEGER DEFAULT 0,
-    percentile_50 INTEGER DEFAULT 0,
-    percentile_60 INTEGER DEFAULT 0,
-    percentile_70 INTEGER DEFAULT 0,
-    percentile_80 INTEGER DEFAULT 0,
-    percentile_90 INTEGER DEFAULT 0,
-    percentile_worse_10 INTEGER DEFAULT 0
-);
-```
 
 ## Indexes
 
@@ -307,9 +186,6 @@ CREATE INDEX idx_runs_profile ON runs(profile_name);
 CREATE INDEX idx_fund_scores_ticker ON fund_scores(ticker);
 CREATE INDEX idx_concept_scores_ticker ON concept_scores(ticker);
 CREATE INDEX idx_additional_metrics_ticker ON additional_metrics(ticker);
-CREATE INDEX idx_yearly_returns_ticker ON yearly_returns(ticker);
-CREATE INDEX idx_yearly_returns_year ON yearly_returns(year);
-CREATE INDEX idx_yearly_ranks_ticker ON yearly_ranks(ticker);
 ```
 
 ## Example Queries
@@ -372,62 +248,6 @@ ORDER BY improvement DESC
 LIMIT 10;
 ```
 
-### Join yearly returns with fund scores
-```sql
-SELECT 
-    f.ticker,
-    f.name,
-    fs.profile_score,
-    yr.year,
-    yr.return_value
-FROM yearly_returns yr
-JOIN funds f ON yr.ticker = f.ticker
-JOIN fund_scores fs ON yr.ticker = fs.ticker
-JOIN runs r ON fs.run_id = r.run_id
-WHERE yr.year = 2023
-  AND r.run_timestamp = (SELECT MAX(run_timestamp) FROM runs)
-ORDER BY yr.return_value DESC
-LIMIT 10;
-```
-
-### Get funds with high scores and consistent yearly returns
-```sql
-SELECT 
-    f.ticker,
-    f.name,
-    ar.better_pct,
-    ar.worst_pct,
-    fs.profile_score
-FROM analysis_results ar
-JOIN funds f ON ar.ticker = f.ticker
-JOIN fund_scores fs ON ar.ticker = fs.ticker
-JOIN runs r ON fs.run_id = r.run_id
-WHERE ar.better_pct > 50
-  AND ar.worst_pct < 20
-  AND r.run_timestamp = (SELECT MAX(run_timestamp) FROM runs)
-ORDER BY fs.profile_score DESC
-LIMIT 20;
-```
-
-### Compare yearly performance with fund rankings
-```sql
-SELECT 
-    f.ticker,
-    f.name,
-    yr.year,
-    yr.return_value,
-    yrk.rank,
-    fs.profile_score
-FROM yearly_returns yr
-JOIN yearly_ranks yrk ON yr.ticker = yrk.ticker AND yr.year = yrk.year
-JOIN funds f ON yr.ticker = f.ticker
-JOIN fund_scores fs ON yr.ticker = fs.ticker
-JOIN runs r ON fs.run_id = r.run_id
-WHERE yr.year = 2023
-  AND yrk.rank <= 100
-  AND r.run_timestamp = (SELECT MAX(run_timestamp) FROM runs)
-ORDER BY yrk.rank ASC;
-```
 
 ## Terminal Usage
 

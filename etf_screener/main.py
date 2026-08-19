@@ -328,10 +328,6 @@ def process_data(
         weights=thresholds
     )
 
-    # Save complete dataset (raw data + all computed results) to morningstar table
-    print("Saving complete dataset to morningstar table...")
-    db.save_morningstar_data(df_export)
-
     db.close()
     print(f"Results saved to database with run_id: {run_id}")
 

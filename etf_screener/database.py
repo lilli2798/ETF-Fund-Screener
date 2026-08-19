@@ -9,10 +9,6 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 from typing import Optional, List, Dict, Any
-try:
-    from config import NEEDED_COLS
-except ImportError:
-    from etf_screener.config import NEEDED_COLS
 
 
 class ETFScreenerDatabase:
@@ -86,10 +82,6 @@ class ETFScreenerDatabase:
                 # Column already exists, ignore error
                 pass
 
-        # Morningstar raw data table - stores all source data (recreated each run)
-        # This table does NOT keep history - it's dropped and recreated on each run
-        self._create_morningstar_table(cursor)
-
         # Fund scores table - composite scores per fund per run
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS fund_scores (
@@ -147,106 +139,6 @@ class ETFScreenerDatabase:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_fund_scores_ticker ON fund_scores(ticker)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_concept_scores_ticker ON concept_scores(ticker)")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_additional_metrics_ticker ON additional_metrics(ticker)")
-
-    def _create_morningstar_table(self, cursor, df: pd.DataFrame = None):
-        """Create or recreate the morningstar table with all columns from DataFrame.
-
-        This table is dropped and recreated on each run to store the latest
-        complete dataset (raw data + all computed results) without keeping history.
-
-        Args:
-            cursor: SQLite cursor
-            df: DataFrame to use for column definitions. If None, uses NEEDED_COLS.
-        """
-        # Drop existing table if it exists
-        cursor.execute("DROP TABLE IF EXISTS morningstar")
-
-        # Determine columns to create
-        if df is not None:
-            columns = df.columns.tolist()
-        else:
-            columns = NEEDED_COLS
-
-        # Create table with all columns
-        # Convert column names to SQL-safe identifiers (replace spaces with underscores)
-        columns_sql = []
-        for col in columns:
-            # Replace spaces and special characters with underscores for SQL column names
-            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_").replace("%", "_")
-            # Add prefix if column name starts with a number (SQL identifiers can't start with numbers)
-            if sql_col and sql_col[0].isdigit():
-                sql_col = f"col_{sql_col}"
-            # Use TEXT for all columns for simplicity - SQLite handles type conversion
-            columns_sql.append(f'"{sql_col}" TEXT')
-
-        columns_def = ",\n            ".join(columns_sql)
-
-        cursor.execute(f"""
-            CREATE TABLE morningstar (
-                {columns_def}
-            )
-        """)
-
-    def save_morningstar_data(self, df: pd.DataFrame) -> None:
-        """Save complete dataset (raw data + all computed results) to the morningstar table.
-
-        This replaces all existing data in the morningstar table with the
-        provided DataFrame. The table is designed to hold the latest
-        complete dataset without history.
-
-        Args:
-            df: DataFrame containing the complete dataset with all columns
-        """
-        cursor = self.conn.cursor()
-
-        # Recreate table with current DataFrame columns
-        self._create_morningstar_table(cursor, df)
-
-        # Prepare column mapping from DataFrame to SQL column names
-        column_mapping = {}
-        for col in df.columns:
-            # Convert column name to SQL-safe identifier
-            sql_col = col.replace(" ", "_").replace("(", "").replace(")", "").replace("/", "_").replace("-", "_").replace("%", "_")
-            # Add prefix if column name starts with a number (SQL identifiers can't start with numbers)
-            if sql_col and sql_col[0].isdigit():
-                sql_col = f"col_{sql_col}"
-            column_mapping[col] = sql_col
-
-        if not column_mapping:
-            print("Warning: No columns found in DataFrame for morningstar table")
-            return
-
-        # Build INSERT statement
-        sql_cols = list(column_mapping.values())
-        placeholders = ", ".join(["?"] * len(sql_cols))
-        insert_sql = f"""
-            INSERT INTO morningstar ({", ".join(sql_cols)})
-            VALUES ({placeholders})
-        """
-
-        # Insert data
-        inserted_count = 0
-        for _, row in df.iterrows():
-            values = []
-            for df_col in column_mapping.keys():
-                value = row.get(df_col)
-                # Convert NaN to None for SQL NULL
-                if pd.isna(value):
-                    values.append(None)
-                # Convert datetime/timestamp to string
-                elif hasattr(value, 'strftime'):
-                    values.append(str(value))
-                else:
-                    values.append(value)
-
-            try:
-                cursor.execute(insert_sql, values)
-                inserted_count += 1
-            except Exception as e:
-                print(f"Warning: Failed to insert row for ticker {row.get('Ticker', 'unknown')}: {e}")
-
-        self.conn.commit()
-        print(f"Saved {inserted_count} rows to morningstar table")
 
     def list_tables(self) -> List[str]:
         """

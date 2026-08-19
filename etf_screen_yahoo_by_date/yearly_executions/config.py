@@ -23,7 +23,6 @@ DEFAULT_CACHING = {
     "cache_path": "cache/yahoo_price_cache.json",  # Path to cache file
     "cache_max_age_days": 1,             # Cache validity period in days
     "yearly_returns_cache_path": "sources/etf_yearly_history.csv",  # Path for yearly returns cache (CSV format) - relative to yearly_executions/
-    "yearly_returns_db_path": "../../data/etf_screener.db",  # Path to main etf_screener SQLite database - relative to yearly_executions/
     "yearly_returns_max_age_days": 30,   # Yearly returns cache validity
     "history_start_date": "2006-01-01",  # Always start history from this date
 }

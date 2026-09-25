@@ -5,12 +5,13 @@ This script is designed to run monthly to update rating information
 without running the full screener pipeline.
 """
 
-import pandas as pd
-from pathlib import Path
-from database import ETFScreenerDatabase
-from data_loading import load_morningstar_data
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+from data_loading import load_data
+from database import ETFScreenerDatabase
+
 
 def main():
     """Main function to update fund ratings."""
@@ -37,7 +38,7 @@ def main():
         print(f"Processing {file_path.name}...")
         try:
             # Load data from this file
-            df = load_morningstar_data(str(file_path))
+            df = load_data(str(file_path))
             
             # Update ratings in database
             updated = db.update_fund_ratings(df)

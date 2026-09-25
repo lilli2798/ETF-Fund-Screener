@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
+
 import pandas as pd
 import yfinance as yf
 
 from file_print import update_result_book_with_create_new_with_style
+
 # Get the current date
 current_date = datetime.now()
 

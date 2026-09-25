@@ -1,0 +1,33 @@
+name: Monthly Fund Rating Update
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # First day of each month at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  update_ratings:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update fund ratings
+        working-directory: etf_screener
+        run: python update_fund_ratings.py
+
+      - name: Upload database artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: etf-screener-database
+          path: data/etf_screener.db
+          retention-days: 90

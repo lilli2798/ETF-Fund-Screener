@@ -1,8 +1,10 @@
-import pandas as pd
-import sqlite3
-import re
 import os
+import re
+import sqlite3
 import sys
+
+import pandas as pd
+
 
 def sanitize_name(name):
     """Sanitize sheet name to be a valid SQLite table name."""

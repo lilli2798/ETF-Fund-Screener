@@ -3,6 +3,7 @@ Merging structural + performance data, and filtering to ETFs and Mutual Funds.
 """
 
 from typing import List
+
 import pandas as pd
 
 

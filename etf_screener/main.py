@@ -37,23 +37,24 @@ TECHNICAL NOTE:
   in the output for reference but are not part of the numerical score.
 """
 
+import os
 from typing import List, Tuple
+
 import pandas as pd
 import yaml
-import os
 
 from config import (
     DEFAULT_TOP_N_PER_CATEGORY,
     DEFAULT_DATA_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
-    DEFAULT_YAHOO_METRICS,
 )
-from input_file import load_profile_input, ProfileInput
 from data_loading import load_data
+from input_file import load_profile_input, ProfileInput
 from merging import apply_fund_filter
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
+
 YahooMetricsConfig = yahoo_metrics.YahooMetricsConfig
 get_yahoo_metrics_for_tickers = yahoo_metrics.get_yahoo_metrics_for_tickers
 
@@ -317,7 +318,7 @@ def process_data(
     
     for category_col in category_columns:
         if category_col in df_export.columns:
-            create_sheets_by_category(df_export, category_col, category_output_dir)
+            create_sheets_by_category(df_export, category_col, category_output_dir, sheet_name=sheet_name)
 
     # Save results to SQLite database
     print("Saving results to SQLite database...")

@@ -1,12 +1,12 @@
-import yfinance as yf
 import os
-import re
 import sys
-import pandas as pd
 from datetime import datetime
-from file_print import update_result_book_with_create_new_with_style
+
+import pandas as pd
+import yfinance as yf
 from colorama import Fore
 
+from file_print import update_result_book_with_create_new_with_style
 from yahoo_get_top_return \
     import (calculate_up_to_today_return_yearly_rate, \
             calculate_yearly_rate_change, calculate_up_to_today_return_monthly_rate,

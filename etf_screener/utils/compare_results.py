@@ -19,13 +19,14 @@ Updated after the scoring.py refactor:
     now captured here too.
 """
 
-import pandas as pd
-import yaml
-import os
 import argparse
+import os
 from datetime import datetime
 from itertools import combinations
 from typing import Dict, Any, List
+
+import pandas as pd
+import yaml
 from openpyxl import load_workbook
 from openpyxl.styles import Font
 

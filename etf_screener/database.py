@@ -7,8 +7,9 @@ Stores historical screener results in a SQLite database for easy querying and fi
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-import pandas as pd
 from typing import Optional, List, Dict, Any
+
+import pandas as pd
 
 
 class ETFScreenerDatabase:

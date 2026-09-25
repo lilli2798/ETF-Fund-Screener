@@ -24,17 +24,14 @@ Output:
 - Chunked CSV files (filename_ticker_1.csv, filename_ticker_2.csv, etc.) with empty header and Quantity column
 """
 
-from pathlib import Path
-from zipfile import BadZipFile
-from datetime import datetime, timedelta
-import pandas as pd
-import glob
-import os
-import yfinance as yf
 import threading
+from datetime import datetime, timedelta
+from pathlib import Path
 from queue import Queue
-import time
+from zipfile import BadZipFile
 
+import pandas as pd
+import yfinance as yf
 
 FLOAT_COLUMNS = {
     "3-Year Alpha",

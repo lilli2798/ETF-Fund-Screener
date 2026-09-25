@@ -17,9 +17,11 @@ Examples of queries you can make:
     - Import Excel file to database table
 """
 
-import pandas as pd
-from etf_screener.database import ETFScreenerDatabase
 from pathlib import Path
+
+import pandas as pd
+
+from etf_screener.database import ETFScreenerDatabase
 
 
 def print_menu():

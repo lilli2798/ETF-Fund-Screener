@@ -16,15 +16,16 @@ Usage:
     build_yearly_history_cache(config)
 """
 
-import pandas as pd
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Tuple
-
-from config import DEFAULT_CONFIG
-import yfinance as yf
 import random
 import time
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Tuple
+
+import pandas as pd
+import yfinance as yf
+
+from config import DEFAULT_CONFIG
 
 
 # =========================================================================

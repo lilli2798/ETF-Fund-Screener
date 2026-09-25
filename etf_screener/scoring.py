@@ -17,10 +17,10 @@ Design notes (locked in from project discussion):
 """
 
 from typing import Callable, Dict, List, Optional
+
 import pandas as pd
 
 from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC, STAR_RATING_TO_NUMERIC
-
 
 # --- Profile registry -------------------------------------------------
 # Each profile module (e.g. profiles/profile_a.py) registers its own

@@ -4,7 +4,6 @@ Configuration for Yahoo Finance historical data downloader.
 This module contains default settings for the user_defined_by_date_yahoo_analize script,
 including rate limiting, caching, and input/output paths.
 """
-from pathlib import Path
 
 # Default benchmark indexes for comparison
 DEFAULT_INDEXES = ["^IXIC", "^DJI", "^GSPC"]

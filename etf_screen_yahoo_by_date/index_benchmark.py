@@ -9,6 +9,7 @@ Matches Morningstar return periods: 1W, 1M, 2M, QTD, 3M, 6M, 9M, YTD, 1Y-20Y
 """
 
 from datetime import datetime, timedelta
+
 import pandas as pd
 import yfinance as yf
 

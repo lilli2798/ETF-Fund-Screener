@@ -1,11 +1,11 @@
-import operator as ops
 import ast
-import pandas as pd
-from utils.message_styles import BOLD, END, RED, BLUE
-from utils.user_input_utils import input_with_default
+import operator as ops
 
+import pandas as pd
 from utils.file_print import update_result_book_with_create_new
 from utils.load_data import get_df_by_dir
+from utils.message_styles import BOLD, END, RED, BLUE
+from utils.user_input_utils import input_with_default
 
 # # Define supported operators
 ops = {

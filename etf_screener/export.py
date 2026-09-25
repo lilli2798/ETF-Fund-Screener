@@ -4,17 +4,18 @@ names, applying header styling (bold + wrap), and building timestamped
 output paths.
 """
 
+import os
+import re
 import time
+from pathlib import Path
+from typing import Any, Dict
 from typing import List, Optional
+
 import pandas as pd
+import yaml
 from openpyxl import load_workbook
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
-import yaml
-import os
-import re
-from pathlib import Path
-from typing import Any, Dict
 
 
 def append_to_recorder(output_dir: str, output_filename: str, thresholds: Dict[str, Any]) -> str:
@@ -99,9 +100,9 @@ def build_timestamped_output_path(out_path: str, prefix: str = "results") -> str
 def write_excel_with_retry(
     df: pd.DataFrame,
     path: str,
+    sheet_name: str = None,
     max_retries: int = 3,
     retry_delay_seconds: float = 2.0,
-    sheet_name: str = None,
 ) -> None:
     """
     Write `df` to `path` as an Excel file, retrying if the file is
@@ -123,7 +124,21 @@ def write_excel_with_retry(
     last_error: Optional[Exception] = None
     for attempt in range(1, max_retries + 1):
         try:
-            df.to_excel(path, index=False, sheet_name=sheet_name)
+            # Use ExcelWriter with openpyxl to ensure sheet visibility
+            from openpyxl import Workbook
+            from openpyxl.writer.excel import save_workbook
+            
+            if sheet_name is None:
+                sheet_name = "Sheet1"
+            
+            # Write using ExcelWriter for better control
+            with pd.ExcelWriter(path, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name=sheet_name)
+                # Ensure the sheet is visible
+                if hasattr(writer.book, 'worksheets'):
+                    for sheet in writer.book.worksheets:
+                        sheet.sheet_state = 'visible'
+            
             print(f"  Wrote {len(df)} row(s), {len(df.columns)} column(s) to: {path}")
             return
         except PermissionError as e:
@@ -143,7 +158,11 @@ def write_excel_with_retry(
         f"(file likely locked). Writing to fallback path instead: {fallback_path}"
     )
     try:
-        df.to_excel(fallback_path, index=False, sheet_name=sheet_name)
+        with pd.ExcelWriter(fallback_path, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name=sheet_name)
+            if hasattr(writer.book, 'worksheets'):
+                for sheet in writer.book.worksheets:
+                    sheet.sheet_state = 'visible'
         print(f"  Wrote {len(df)} row(s), {len(df.columns)} column(s) to: {fallback_path}")
     except Exception:
         print(f"  Error: fallback write to '{fallback_path}' also failed. Raising original error.")
@@ -238,6 +257,14 @@ def apply_header_formatting(
     # Zoom level for the worksheet view.
     ws.sheet_view.zoomScale = zoom_percent
 
+    # Ensure at least one sheet is visible before saving (fixes openpyxl IndexError)
+    for sheet in wb.worksheets:
+        if sheet.sheet_state != 'hidden':
+            break
+    else:
+        # All sheets are hidden, make the active one visible
+        ws.sheet_state = 'visible'
+
     try:
         wb.save(path)
         print(
@@ -253,6 +280,7 @@ def create_sheets_by_category(
     category_column: str,
     output_dir: str,
     base_filename: str = None,
+    sheet_name: str = None,
 ) -> List[str]:
     """
     Create separate Excel files for each unique value in the specified category column.
@@ -265,6 +293,7 @@ def create_sheets_by_category(
         category_column: Column name to split by (e.g., 'Asset Class', 'Morningstar Category')
         output_dir: Directory where the category files will be saved
         base_filename: Optional base name for output files (if None, uses category name only)
+        sheet_name: Optional sheet name for the Excel files (if None, uses default "Sheet1")
     
     Returns:
         List of paths to the created files
@@ -293,8 +322,8 @@ def create_sheets_by_category(
         filename = f"{category_clean}.xlsx"
         output_path = os.path.join(output_dir, filename)
         
-        # Write the file
-        write_excel_with_retry(category_df, output_path)
+        # Write the file with provided sheet name
+        write_excel_with_retry(category_df, output_path, sheet_name=sheet_name)
         apply_header_formatting(output_path)
         
         created_files.append(output_path)

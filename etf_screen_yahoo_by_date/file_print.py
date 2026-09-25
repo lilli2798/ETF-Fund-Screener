@@ -1,7 +1,8 @@
 import os
-import re
-import pandas as pd
+
 import openpyxl as pxl
+import pandas as pd
+
 
 def out_put_dir(new_file):
     try:
@@ -31,7 +32,7 @@ def update_result_book_with_create_new_with_style(fund_data, result_file, my_she
 
 
 def _apply_styles_to_sheet(result_file, sheet_name, fund_data):
-    from openpyxl.styles import Font, PatternFill, Alignment
+    from openpyxl.styles import Font, Alignment
     wb = pxl.load_workbook(result_file)
     ws = wb[sheet_name]
 

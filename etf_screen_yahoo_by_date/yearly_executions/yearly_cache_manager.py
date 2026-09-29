@@ -25,7 +25,7 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import yfinance as yf
 
-from config import DEFAULT_CONFIG
+from .config import DEFAULT_CONFIG
 
 
 # =========================================================================
@@ -126,9 +126,9 @@ def download_adj_close(tickers, start, end, config: Dict = None):
     jitter = rate_config["jitter"]
     max_retries = rate_config["max_retries"]
     
-    # For cache manager, don't automatically add indexes
-    # Only download the requested tickers
-    all_symbols = tickers
+    # Include benchmark indexes if specified in config (for user_defined_by_date_yahoo_analize.py)
+    indexes = config.get("indexes", []) if config else []
+    all_symbols = list(dict.fromkeys(tickers + indexes))
     
     print(f"Downloading data for {len(all_symbols)} symbols...")
     

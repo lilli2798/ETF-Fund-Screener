@@ -228,7 +228,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "AEPFX": {
-    "cached_date": "2026-08-09T21:27:39.665783",
+    "cached_date": "2026-09-25T03:30:20.769485",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "AEPGX": {
@@ -340,7 +340,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "AGG": {
-    "cached_date": "2026-08-09T01:36:45.383125",
+    "cached_date": "2026-09-25T03:30:21.135903",
     "sub_sector": "Broad Market Equity"
   },
   "AGGRX": {
@@ -500,7 +500,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "AIRR": {
-    "cached_date": "2026-08-19T01:07:51.667585",
+    "cached_date": "2026-09-25T03:30:22.163238",
     "sub_sector": "Broad Market Equity"
   },
   "AIS": {
@@ -716,7 +716,7 @@
     "sub_sector": "Healthcare Providers & Services"
   },
   "AMFFX": {
-    "cached_date": "2026-08-09T21:27:40.786858",
+    "cached_date": "2026-09-25T03:30:23.108990",
     "sub_sector": "Software & Services"
   },
   "AMGAX": {
@@ -1252,7 +1252,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "ARTY": {
-    "cached_date": "2026-07-28T23:06:48.853432",
+    "cached_date": "2026-09-25T03:30:23.665850",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "ARTYX": {
@@ -1628,7 +1628,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "AVUV": {
-    "cached_date": "2026-08-19T01:07:52.557239",
+    "cached_date": "2026-09-25T03:30:24.645890",
     "sub_sector": "Broad Market Equity"
   },
   "AVXC": {
@@ -1964,7 +1964,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "BBP": {
-    "cached_date": "2026-08-19T01:07:53.392810",
+    "cached_date": "2026-09-25T03:30:25.634377",
     "sub_sector": "Biotechnology"
   },
   "BBRE": {
@@ -2712,7 +2712,7 @@
     "sub_sector": "Machinery & Electrical Equipment"
   },
   "BOTZ": {
-    "cached_date": "2026-07-28T23:11:53.188278",
+    "cached_date": "2026-09-25T03:30:26.529982",
     "sub_sector": "Machinery & Electrical Equipment"
   },
   "BOUT": {
@@ -2776,7 +2776,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "BRCYX": {
-    "cached_date": "2026-08-14T01:48:04.095060",
+    "cached_date": "2026-09-25T03:30:26.963709",
     "sub_sector": "Broad Market Equity"
   },
   "BREFX": {
@@ -3080,8 +3080,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "BUIIX": {
-    "cached_date": "2026-08-14T01:48:05.030375",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:30:27.695634",
+    "sub_sector": "Broad Market Equity"
   },
   "BUITX": {
     "cached_date": "2026-08-18T00:32:00.292734",
@@ -3616,7 +3616,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "CGDV": {
-    "cached_date": "2026-08-19T01:07:54.349313",
+    "cached_date": "2026-09-25T03:30:28.141964",
     "sub_sector": "Software & Services"
   },
   "CGGE": {
@@ -3628,12 +3628,12 @@
     "sub_sector": "Software & Services"
   },
   "CGGO": {
-    "cached_date": "2026-07-28T23:14:31.459056",
+    "cached_date": "2026-09-25T03:30:28.202564",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "CGGR": {
-    "cached_date": "2026-07-28T23:14:31.527356",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:30:28.453894",
+    "sub_sector": "Software & Services"
   },
   "CGIC": {
     "cached_date": "2026-07-28T23:14:31.597585",
@@ -4268,7 +4268,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "CSDIX": {
-    "cached_date": "2026-08-09T21:27:42.056109",
+    "cached_date": "2026-09-25T03:30:29.440586",
     "sub_sector": "Equity REITs"
   },
   "CSEIX": {
@@ -4660,7 +4660,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "DBJP": {
-    "cached_date": "2026-08-19T01:07:55.205292",
+    "cached_date": "2026-09-25T03:30:30.409706",
     "sub_sector": "Banks"
   },
   "DBLFX": {
@@ -4900,7 +4900,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "DFEN": {
-    "cached_date": "2026-08-19T01:07:56.016255",
+    "cached_date": "2026-09-25T03:30:30.841240",
     "sub_sector": "Aerospace & Defense"
   },
   "DFEV": {
@@ -5136,7 +5136,7 @@
     "sub_sector": "Equity REITs"
   },
   "DIVB": {
-    "cached_date": "2026-08-19T01:07:56.876961",
+    "cached_date": "2026-09-25T03:30:31.847204",
     "sub_sector": "IT Services & Consulting"
   },
   "DIVD": {
@@ -5688,7 +5688,7 @@
     "sub_sector": "Banks"
   },
   "DXQLX": {
-    "cached_date": "2026-08-09T14:18:34.142708",
+    "cached_date": "2026-09-25T03:30:32.263263",
     "sub_sector": "Broad Market Equity"
   },
   "DXRLX": {
@@ -6812,7 +6812,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "EUAD": {
-    "cached_date": "2026-08-19T01:07:57.811424",
+    "cached_date": "2026-09-25T03:30:33.254060",
     "sub_sector": "Aerospace & Defense"
   },
   "EUDG": {
@@ -7128,7 +7128,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "FAD": {
-    "cached_date": "2026-08-19T01:07:58.636902",
+    "cached_date": "2026-09-25T03:30:34.296379",
     "sub_sector": "Financial Services"
   },
   "FADIX": {
@@ -7176,7 +7176,7 @@
     "sub_sector": "Software & Services"
   },
   "FAHCX": {
-    "cached_date": "2026-08-09T21:27:43.176257",
+    "cached_date": "2026-09-25T03:30:34.985188",
     "sub_sector": "Broad Market Equity"
   },
   "FAHDX": {
@@ -7356,7 +7356,7 @@
     "sub_sector": "Oil, Gas & Consumable Fuels"
   },
   "FBGRX": {
-    "cached_date": "2026-08-09T14:18:34.210954",
+    "cached_date": "2026-09-25T03:30:35.488382",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FBIOX": {
@@ -7456,7 +7456,7 @@
     "sub_sector": "Aerospace & Defense"
   },
   "FCNTX": {
-    "cached_date": "2026-08-09T14:18:34.675299",
+    "cached_date": "2026-09-25T03:30:35.551425",
     "sub_sector": "Software & Services"
   },
   "FCOM": {
@@ -7696,7 +7696,7 @@
     "sub_sector": "Aerospace & Defense"
   },
   "FDTX": {
-    "cached_date": "2026-08-19T01:08:00.133075",
+    "cached_date": "2026-09-25T03:30:36.155028",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FDTZX": {
@@ -7716,7 +7716,7 @@
     "sub_sector": "Technology Hardware, Storage & Peripherals"
   },
   "FDVV": {
-    "cached_date": "2026-08-19T01:08:00.388721",
+    "cached_date": "2026-09-25T03:30:36.235809",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FDYZX": {
@@ -7784,8 +7784,8 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FELC": {
-    "cached_date": "2026-08-19T01:08:00.748258",
-    "sub_sector": "Software & Services"
+    "cached_date": "2026-09-25T03:30:36.291066",
+    "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FELG": {
     "cached_date": "2026-07-28T23:28:29.013972",
@@ -8164,7 +8164,7 @@
     "sub_sector": "Software & Services"
   },
   "FGRTX": {
-    "cached_date": "2026-08-09T14:18:35.332374",
+    "cached_date": "2026-09-25T03:30:36.510442",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FGSAX": {
@@ -8324,7 +8324,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "FIIIX": {
-    "cached_date": "2026-08-09T21:27:44.026716",
+    "cached_date": "2026-09-25T03:30:36.957826",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FIMVX": {
@@ -8332,7 +8332,7 @@
     "sub_sector": "Oil, Gas & Consumable Fuels"
   },
   "FINSX": {
-    "cached_date": "2026-08-09T21:27:44.916338",
+    "cached_date": "2026-09-25T03:30:37.020593",
     "sub_sector": "Software & Services"
   },
   "FINT": {
@@ -8540,7 +8540,7 @@
     "sub_sector": "Broadline Retail & E-Commerce"
   },
   "FLCSX": {
-    "cached_date": "2026-08-09T14:18:35.599949",
+    "cached_date": "2026-09-25T03:30:37.085055",
     "sub_sector": "Aerospace & Defense"
   },
   "FLCV": {
@@ -8756,7 +8756,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "FMILX": {
-    "cached_date": "2026-08-09T14:18:35.667983",
+    "cached_date": "2026-09-25T03:30:37.142131",
     "sub_sector": "Software & Services"
   },
   "FMIMX": {
@@ -8828,7 +8828,7 @@
     "sub_sector": "Banks"
   },
   "FNCMX": {
-    "cached_date": "2026-08-09T14:18:35.740123",
+    "cached_date": "2026-09-25T03:30:37.197589",
     "sub_sector": "Software & Services"
   },
   "FNDA": {
@@ -8904,7 +8904,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FOCPX": {
-    "cached_date": "2026-08-09T14:18:36.014631",
+    "cached_date": "2026-09-25T03:30:37.287288",
     "sub_sector": "Software & Services"
   },
   "FOPAX": {
@@ -9200,7 +9200,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "FSDAX": {
-    "cached_date": "2026-08-09T14:18:36.766919",
+    "cached_date": "2026-09-25T03:30:37.708416",
     "sub_sector": "Aerospace & Defense"
   },
   "FSDIX": {
@@ -9216,7 +9216,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FSELX": {
-    "cached_date": "2026-08-09T14:18:37.207980",
+    "cached_date": "2026-09-25T03:30:37.970442",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FSENX": {
@@ -9252,7 +9252,7 @@
     "sub_sector": "Software & Services"
   },
   "FSKAX": {
-    "cached_date": "2026-08-09T14:18:37.272006",
+    "cached_date": "2026-09-25T03:30:38.038429",
     "sub_sector": "Software & Services"
   },
   "FSLBX": {
@@ -9304,7 +9304,7 @@
     "sub_sector": "Insurance"
   },
   "FSPGX": {
-    "cached_date": "2026-08-09T14:18:37.338181",
+    "cached_date": "2026-09-25T03:30:38.100888",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FSPHX": {
@@ -9316,7 +9316,7 @@
     "sub_sector": "Pharmaceuticals"
   },
   "FSPTX": {
-    "cached_date": "2026-08-09T14:18:37.795108",
+    "cached_date": "2026-09-25T03:30:38.348757",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FSRAX": {
@@ -9384,7 +9384,7 @@
     "sub_sector": "Banks"
   },
   "FSUTX": {
-    "cached_date": "2026-08-09T21:27:46.170921",
+    "cached_date": "2026-09-25T03:30:39.370273",
     "sub_sector": "Electric, Gas, and Water Utilities"
   },
   "FSVLX": {
@@ -9476,7 +9476,7 @@
     "sub_sector": "Biotechnology"
   },
   "FTEC": {
-    "cached_date": "2026-08-19T01:08:00.860753",
+    "cached_date": "2026-09-25T03:30:39.427766",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FTFEX": {
@@ -9560,8 +9560,8 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FTQGX": {
-    "cached_date": "2026-08-09T14:18:38.467872",
-    "sub_sector": "Software & Services"
+    "cached_date": "2026-09-25T03:30:39.487294",
+    "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FTQI": {
     "cached_date": "2026-07-28T23:31:59.983253",
@@ -9724,7 +9724,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "FXAIX": {
-    "cached_date": "2026-08-09T14:18:38.534556",
+    "cached_date": "2026-09-25T03:30:39.546492",
     "sub_sector": "Software & Services"
   },
   "FXD": {
@@ -9772,8 +9772,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "FYC": {
-    "cached_date": "2026-08-19T01:08:01.709770",
-    "sub_sector": "Broad Market Equity"
+    "cached_date": "2026-09-25T03:30:40.520391",
+    "sub_sector": "Software & Services"
   },
   "FYEE": {
     "cached_date": "2026-07-28T23:33:08.969181",
@@ -12016,7 +12016,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "ICF": {
-    "cached_date": "2026-07-28T23:37:58.022887",
+    "cached_date": "2026-09-25T03:30:40.993447",
     "sub_sector": "Equity REITs"
   },
   "ICHKX": {
@@ -12060,7 +12060,7 @@
     "sub_sector": "Aerospace & Defense"
   },
   "IDEV": {
-    "cached_date": "2026-07-28T23:37:59.789590",
+    "cached_date": "2026-09-25T03:30:41.804057",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "IDGT": {
@@ -12328,8 +12328,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "IJK": {
-    "cached_date": "2026-07-28T23:39:08.475383",
-    "sub_sector": "Broad Market Equity"
+    "cached_date": "2026-09-25T03:31:55.799461",
+    "sub_sector": "Software & Services"
   },
   "IJR": {
     "cached_date": "2026-07-28T23:39:08.542475",
@@ -12576,7 +12576,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "IOO": {
-    "cached_date": "2026-08-19T01:09:08.595848",
+    "cached_date": "2026-09-25T03:31:55.896246",
     "sub_sector": "Software & Services"
   },
   "IOPP": {
@@ -12600,7 +12600,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "IPBJX": {
-    "cached_date": "2026-08-09T21:27:46.682150",
+    "cached_date": "2026-09-25T03:31:56.391480",
     "sub_sector": "Broad Market Equity"
   },
   "IPBNX": {
@@ -12644,7 +12644,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "IQLT": {
-    "cached_date": "2026-07-28T23:40:22.943279",
+    "cached_date": "2026-09-25T03:31:56.897163",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "IQM": {
@@ -12752,7 +12752,7 @@
     "sub_sector": "Financial Services"
   },
   "ITA": {
-    "cached_date": "2026-07-28T23:41:32.143671",
+    "cached_date": "2026-09-25T03:31:57.483889",
     "sub_sector": "Aerospace & Defense"
   },
   "ITAN": {
@@ -12828,7 +12828,7 @@
     "sub_sector": "Software & Services"
   },
   "IUSB": {
-    "cached_date": "2026-08-09T21:27:46.945236",
+    "cached_date": "2026-09-25T03:31:57.801384",
     "sub_sector": "Broad Market Equity"
   },
   "IUSG": {
@@ -12948,8 +12948,8 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "IWIRX": {
-    "cached_date": "2026-08-09T21:27:47.928668",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:31:58.552200",
+    "sub_sector": "Software & Services"
   },
   "IWL": {
     "cached_date": "2026-07-28T23:42:38.495161",
@@ -13020,7 +13020,7 @@
     "sub_sector": "Pharmaceuticals"
   },
   "IXN": {
-    "cached_date": "2026-08-19T01:09:08.859449",
+    "cached_date": "2026-09-25T03:31:58.660184",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "IXP": {
@@ -13948,7 +13948,7 @@
     "sub_sector": "Financial Services"
   },
   "JVMIX": {
-    "cached_date": "2026-08-09T21:27:49.121607",
+    "cached_date": "2026-09-25T03:31:59.589121",
     "sub_sector": "Financial Services"
   },
   "JVTIX": {
@@ -14220,8 +14220,8 @@
     "sub_sector": "Software & Services"
   },
   "KOMP": {
-    "cached_date": "2026-07-28T23:46:02.391041",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:32:00.609233",
+    "sub_sector": "Biotechnology"
   },
   "KONG": {
     "cached_date": "2026-07-28T23:46:02.605179",
@@ -15224,7 +15224,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "MAMTX": {
-    "cached_date": "2026-08-09T21:27:49.396380",
+    "cached_date": "2026-09-25T03:32:00.912719",
     "sub_sector": "Broad Market Equity"
   },
   "MANKX": {
@@ -15588,7 +15588,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "MEIIX": {
-    "cached_date": "2026-08-09T21:27:49.933464",
+    "cached_date": "2026-09-25T03:32:01.460250",
     "sub_sector": "Broadline Retail & E-Commerce"
   },
   "MELAX": {
@@ -16288,7 +16288,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "MQGIX": {
-    "cached_date": "2026-08-09T21:27:50.644705",
+    "cached_date": "2026-09-25T03:32:02.031293",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "MQIFX": {
@@ -17064,7 +17064,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "NFFFX": {
-    "cached_date": "2026-08-09T21:27:50.942726",
+    "cached_date": "2026-09-25T03:32:02.603393",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "NFIAX": {
@@ -17808,8 +17808,8 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "OEGAX": {
-    "cached_date": "2026-08-09T21:27:51.846263",
-    "sub_sector": "Broad Market Equity"
+    "cached_date": "2026-09-25T03:32:03.673451",
+    "sub_sector": "Software & Services"
   },
   "OEMAX": {
     "cached_date": "2026-08-18T02:18:25.129478",
@@ -18060,7 +18060,7 @@
     "sub_sector": "Software & Services"
   },
   "OSIYX": {
-    "cached_date": "2026-08-09T21:27:52.108104",
+    "cached_date": "2026-09-25T03:32:03.784128",
     "sub_sector": "Broad Market Equity"
   },
   "OSMAX": {
@@ -18172,8 +18172,8 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "PAGRX": {
-    "cached_date": "2026-08-09T21:27:52.951026",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:32:04.200315",
+    "sub_sector": "Software & Services"
   },
   "PALAX": {
     "cached_date": "2026-08-18T02:20:51.197509",
@@ -18224,8 +18224,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "PAVE": {
-    "cached_date": "2026-08-19T01:09:09.610073",
-    "sub_sector": "Air Freight & Logistics / Transportation"
+    "cached_date": "2026-09-25T03:32:05.461522",
+    "sub_sector": "Machinery & Electrical Equipment"
   },
   "PAWZ": {
     "cached_date": "2026-07-29T00:43:40.909735",
@@ -19204,7 +19204,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "POMIX": {
-    "cached_date": "2026-08-09T14:18:38.847203",
+    "cached_date": "2026-09-25T03:32:05.555283",
     "sub_sector": "Software & Services"
   },
   "PORIX": {
@@ -19328,7 +19328,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "PRCOX": {
-    "cached_date": "2026-08-09T14:18:38.914485",
+    "cached_date": "2026-09-25T03:32:05.989513",
     "sub_sector": "Software & Services"
   },
   "PRCS": {
@@ -19340,11 +19340,11 @@
     "sub_sector": "Broad Market Equity"
   },
   "PRDGX": {
-    "cached_date": "2026-08-09T14:18:39.396469",
+    "cached_date": "2026-09-25T03:32:06.401629",
     "sub_sector": "Technology Hardware, Storage & Peripherals"
   },
   "PRDMX": {
-    "cached_date": "2026-08-09T14:18:40.204062",
+    "cached_date": "2026-09-25T03:32:06.906349",
     "sub_sector": "Software & Services"
   },
   "PRDSX": {
@@ -19356,7 +19356,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "PREIX": {
-    "cached_date": "2026-08-09T14:18:40.277929",
+    "cached_date": "2026-09-25T03:32:07.000264",
     "sub_sector": "Software & Services"
   },
   "PRESX": {
@@ -19384,7 +19384,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "PRGTX": {
-    "cached_date": "2026-08-09T14:18:41.197821",
+    "cached_date": "2026-09-25T03:32:07.098091",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "PRHAX": {
@@ -19408,7 +19408,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "PRISX": {
-    "cached_date": "2026-08-09T14:18:41.824129",
+    "cached_date": "2026-09-25T03:32:07.980777",
     "sub_sector": "Banks"
   },
   "PRITX": {
@@ -19444,7 +19444,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "PRMTX": {
-    "cached_date": "2026-08-09T14:18:42.305913",
+    "cached_date": "2026-09-25T03:32:08.563972",
     "sub_sector": "Software & Services"
   },
   "PRN": {
@@ -19784,7 +19784,7 @@
     "sub_sector": "Electric, Gas, and Water Utilities"
   },
   "PULS": {
-    "cached_date": "2026-08-09T21:29:01.644801",
+    "cached_date": "2026-09-25T03:32:08.874039",
     "sub_sector": "Broad Market Equity"
   },
   "PURAX": {
@@ -20064,7 +20064,7 @@
     "sub_sector": "Software & Services"
   },
   "QDSNX": {
-    "cached_date": "2026-08-09T14:18:44.084750",
+    "cached_date": "2026-09-25T03:32:10.161245",
     "sub_sector": "Broad Market Equity"
   },
   "QDSRX": {
@@ -20224,7 +20224,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "QQQ": {
-    "cached_date": "2026-08-19T01:09:09.777029",
+    "cached_date": "2026-09-25T03:32:10.259405",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "QQQA": {
@@ -20252,7 +20252,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "QQQM": {
-    "cached_date": "2026-08-19T01:09:09.831562",
+    "cached_date": "2026-09-25T03:32:10.359087",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "QQQP": {
@@ -20552,7 +20552,7 @@
     "sub_sector": "Equity REITs"
   },
   "REIZX": {
-    "cached_date": "2026-08-09T21:29:02.872511",
+    "cached_date": "2026-09-25T03:32:11.603251",
     "sub_sector": "Broad Market Equity"
   },
   "REM": {
@@ -20740,7 +20740,7 @@
     "sub_sector": "Software & Services"
   },
   "RMQHX": {
-    "cached_date": "2026-08-09T14:18:44.224233",
+    "cached_date": "2026-09-25T03:32:11.736182",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "RND": {
@@ -20816,7 +20816,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "ROKT": {
-    "cached_date": "2026-08-19T01:09:10.490715",
+    "cached_date": "2026-09-25T03:32:12.517156",
     "sub_sector": "Aerospace & Defense"
   },
   "ROM": {
@@ -21388,7 +21388,7 @@
     "sub_sector": "Pharmaceuticals"
   },
   "RYOCX": {
-    "cached_date": "2026-08-09T14:18:44.300648",
+    "cached_date": "2026-09-25T03:32:12.612371",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "RYOFX": {
@@ -21832,7 +21832,7 @@
     "sub_sector": "Pharmaceuticals"
   },
   "SCHM": {
-    "cached_date": "2026-07-29T03:14:31.070523",
+    "cached_date": "2026-09-25T03:32:13.692709",
     "sub_sector": "Technology Hardware, Storage & Peripherals"
   },
   "SCHV": {
@@ -22500,8 +22500,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "SLYV": {
-    "cached_date": "2026-07-29T03:32:43.617737",
-    "sub_sector": "Healthcare Providers & Services"
+    "cached_date": "2026-09-25T03:32:14.642748",
+    "sub_sector": "Software & Services"
   },
   "SMAPX": {
     "cached_date": "2026-08-18T02:53:37.804164",
@@ -22568,7 +22568,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "SMH": {
-    "cached_date": "2026-08-19T01:09:10.744479",
+    "cached_date": "2026-09-25T03:32:14.743471",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "SMHX": {
@@ -22832,8 +22832,8 @@
     "sub_sector": "Software & Services"
   },
   "SPDW": {
-    "cached_date": "2026-07-29T03:33:56.740553",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:32:15.315499",
+    "sub_sector": "Broad Market Equity"
   },
   "SPECX": {
     "cached_date": "2026-08-18T02:55:58.165486",
@@ -22848,7 +22848,7 @@
     "sub_sector": "Software & Services"
   },
   "SPEM": {
-    "cached_date": "2026-07-29T03:33:56.800450",
+    "cached_date": "2026-09-25T03:32:16.087046",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "SPEU": {
@@ -22908,7 +22908,7 @@
     "sub_sector": "Electric, Gas, and Water Utilities"
   },
   "SPMB": {
-    "cached_date": "2026-08-07T22:01:03.489001",
+    "cached_date": "2026-09-25T03:32:16.410906",
     "sub_sector": "Broad Market Equity"
   },
   "SPMD": {
@@ -22920,7 +22920,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "SPMO": {
-    "cached_date": "2026-08-19T01:09:11.019512",
+    "cached_date": "2026-09-25T03:32:16.716826",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "SPQAX": {
@@ -22948,8 +22948,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "SPSM": {
-    "cached_date": "2026-07-29T03:33:58.088438",
-    "sub_sector": "Broad Market Equity"
+    "cached_date": "2026-09-25T03:32:17.529389",
+    "sub_sector": "Software & Services"
   },
   "SPTE": {
     "cached_date": "2026-07-29T03:33:58.145751",
@@ -23000,7 +23000,7 @@
     "sub_sector": "Software & Services"
   },
   "SPXL": {
-    "cached_date": "2026-08-19T01:09:11.127743",
+    "cached_date": "2026-09-25T03:32:17.624363",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "SPXN": {
@@ -23020,7 +23020,7 @@
     "sub_sector": "Software & Services"
   },
   "SPY": {
-    "cached_date": "2026-08-19T01:09:11.185090",
+    "cached_date": "2026-09-25T03:32:17.722429",
     "sub_sector": "Software & Services"
   },
   "SPYA": {
@@ -23036,7 +23036,7 @@
     "sub_sector": "Equity REITs"
   },
   "SPYG": {
-    "cached_date": "2026-08-19T01:09:11.295491",
+    "cached_date": "2026-09-25T03:32:17.885457",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "SPYH": {
@@ -23060,7 +23060,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "SPYV": {
-    "cached_date": "2026-07-29T04:06:58.783541",
+    "cached_date": "2026-09-25T03:32:18.673664",
     "sub_sector": "Technology Hardware, Storage & Peripherals"
   },
   "SPYX": {
@@ -23544,7 +23544,7 @@
     "sub_sector": "Software & Services"
   },
   "SWPPX": {
-    "cached_date": "2026-08-09T14:18:44.620384",
+    "cached_date": "2026-09-25T03:33:28.407442",
     "sub_sector": "Software & Services"
   },
   "SWRLX": {
@@ -24588,7 +24588,7 @@
     "sub_sector": "Oil, Gas & Consumable Fuels"
   },
   "TQAIX": {
-    "cached_date": "2026-08-13T16:00:59.641008",
+    "cached_date": "2026-09-25T03:33:29.533858",
     "sub_sector": "Broad Market Equity"
   },
   "TQCAX": {
@@ -24632,7 +24632,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "TRBCX": {
-    "cached_date": "2026-08-09T14:18:44.694606",
+    "cached_date": "2026-09-25T03:33:29.625914",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "TRDFX": {
@@ -24812,8 +24812,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "TRULX": {
-    "cached_date": "2026-08-09T14:18:44.757621",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:33:29.719289",
+    "sub_sector": "Software & Services"
   },
   "TRUT": {
     "cached_date": "2026-07-29T04:59:19.641427",
@@ -25360,7 +25360,7 @@
     "sub_sector": "Metals & Mining"
   },
   "UOPIX": {
-    "cached_date": "2026-08-09T14:18:44.828998",
+    "cached_date": "2026-09-25T03:33:29.846990",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "UPAR": {
@@ -25512,8 +25512,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "USD": {
-    "cached_date": "2026-08-19T01:10:16.488605",
-    "sub_sector": "Broad Market Equity"
+    "cached_date": "2026-09-25T03:33:30.129527",
+    "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "USDU": {
     "cached_date": "2026-07-31T11:29:28.673689",
@@ -25588,7 +25588,7 @@
     "sub_sector": "Oil, Gas & Consumable Fuels"
   },
   "USNQX": {
-    "cached_date": "2026-08-09T14:18:44.892739",
+    "cached_date": "2026-09-25T03:33:30.217384",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "USNZ": {
@@ -25616,7 +25616,7 @@
     "sub_sector": "Software & Services"
   },
   "USRT": {
-    "cached_date": "2026-07-29T05:56:29.359612",
+    "cached_date": "2026-09-25T03:33:30.309943",
     "sub_sector": "Equity REITs"
   },
   "USSCX": {
@@ -25872,7 +25872,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VEMRX": {
-    "cached_date": "2026-08-09T21:29:03.689700",
+    "cached_date": "2026-09-25T03:33:30.396065",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VENAX": {
@@ -26028,7 +26028,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "VGT": {
-    "cached_date": "2026-08-19T01:10:16.547127",
+    "cached_date": "2026-09-25T03:33:30.484546",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VGWIX": {
@@ -26080,8 +26080,8 @@
     "sub_sector": "Broad Market Equity"
   },
   "VIG": {
-    "cached_date": "2026-08-19T01:10:16.754140",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:33:30.573622",
+    "sub_sector": "Software & Services"
   },
   "VIGAX": {
     "cached_date": "2026-08-18T03:17:32.337323",
@@ -26092,8 +26092,8 @@
     "sub_sector": "Banks"
   },
   "VIMAX": {
-    "cached_date": "2026-08-09T21:29:04.608837",
-    "sub_sector": "Technology Hardware, Storage & Peripherals"
+    "cached_date": "2026-09-25T03:33:31.529532",
+    "sub_sector": "Oil, Gas & Consumable Fuels"
   },
   "VIMCX": {
     "cached_date": "2026-08-18T03:17:32.403109",
@@ -26160,7 +26160,7 @@
     "sub_sector": "Software & Services"
   },
   "VLCAX": {
-    "cached_date": "2026-08-09T21:29:04.681155",
+    "cached_date": "2026-09-25T03:33:31.626116",
     "sub_sector": "Software & Services"
   },
   "VLEIX": {
@@ -26196,7 +26196,7 @@
     "sub_sector": "Software & Services"
   },
   "VLUE": {
-    "cached_date": "2026-08-19T01:10:17.765123",
+    "cached_date": "2026-09-25T03:33:32.362866",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VLXVX": {
@@ -26300,7 +26300,7 @@
     "sub_sector": "Broadline Retail & E-Commerce"
   },
   "VOO": {
-    "cached_date": "2026-08-19T01:10:17.823114",
+    "cached_date": "2026-09-25T03:33:32.454490",
     "sub_sector": "Software & Services"
   },
   "VOOG": {
@@ -26384,8 +26384,8 @@
     "sub_sector": "Equity REITs"
   },
   "VSGAX": {
-    "cached_date": "2026-08-09T21:29:05.877218",
-    "sub_sector": "Semiconductors & Semiconductor Equipment"
+    "cached_date": "2026-09-25T03:33:33.185747",
+    "sub_sector": "Healthcare Equipment & Supplies"
   },
   "VSGX": {
     "cached_date": "2026-07-29T05:57:36.369082",
@@ -26412,7 +26412,7 @@
     "sub_sector": "Broad Market Equity"
   },
   "VSMPX": {
-    "cached_date": "2026-08-09T21:29:05.949223",
+    "cached_date": "2026-09-25T03:33:33.282208",
     "sub_sector": "Software & Services"
   },
   "VSMV": {
@@ -26440,7 +26440,7 @@
     "sub_sector": "Software & Services"
   },
   "VTCLX": {
-    "cached_date": "2026-08-13T16:02:06.435687",
+    "cached_date": "2026-09-25T03:33:33.372986",
     "sub_sector": "Software & Services"
   },
   "VTHR": {
@@ -26576,7 +26576,7 @@
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VWILX": {
-    "cached_date": "2026-08-09T21:29:06.848001",
+    "cached_date": "2026-09-25T03:33:34.208644",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VWINX": {
@@ -26588,7 +26588,7 @@
     "sub_sector": "Software & Services"
   },
   "VWNEX": {
-    "cached_date": "2026-08-09T21:29:07.587167",
+    "cached_date": "2026-09-25T03:33:34.705172",
     "sub_sector": "Software & Services"
   },
   "VWNFX": {
@@ -26596,7 +26596,7 @@
     "sub_sector": "Software & Services"
   },
   "VWO": {
-    "cached_date": "2026-07-29T05:57:36.988151",
+    "cached_date": "2026-09-25T03:33:34.798411",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
   "VWUSX": {

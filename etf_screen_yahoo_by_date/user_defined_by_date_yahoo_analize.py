@@ -138,7 +138,10 @@ def load_input_data(input_file, config: Dict = None):
         else:
             sheet_name = xls.sheet_names[0]
         
-        df = pd.read_excel(input_file, sheet_name=sheet_name, index_col=0)
+        df = pd.read_excel(input_file, sheet_name=sheet_name)
+        # Set Ticker as index if it exists as a column
+        if 'Ticker' in df.columns:
+            df = df.set_index('Ticker')
         df.index = df.index.astype(str)
         tickers = safe_tickers(df.index)
         
@@ -470,9 +473,14 @@ def save_workbook_with_retry(wb, file_path):
     Features:
         - Handles PermissionError when file is open in another application
         - Prompts user to close file and retry
+        - Ensures all sheets are visible before saving (fixes Excel recovery message)
     """
     while True:
         try:
+            # Ensure all sheets are visible before saving (fixes Excel recovery message)
+            for sheet in wb.worksheets:
+                sheet.sheet_state = 'visible'
+            
             wb.save(file_path)
             return
         except PermissionError:

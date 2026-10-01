@@ -1,0 +1,14 @@
+choices_made:
+- available_count: 353
+  choice: month
+  missing_count: 3
+  n: 6
+  period_sheet: 6-month-overview
+  total_sheet: Total-6-month-overview
+input_file: /Users/lihongfeng/Library/CloudStorage/OneDrive-YaleUniversity/Projects/ETF-Fund-Screener/output/etf_screener/results_profile_A_2026-09-23_22-49-00.xlsx
+output_file: /Users/lihongfeng/Library/CloudStorage/OneDrive-YaleUniversity/Projects/ETF-Fund-Screener/output/etf_screener/results_profile_A_2026-09-23_22-49-00.xlsx
+query_parameters:
+  beginning_date: '2026-01-01'
+  ending_date: '2026-09-27'
+  num_tickers: 353
+timestamp: '2026-09-29T10:47:46.922935'

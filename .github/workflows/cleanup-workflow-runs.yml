@@ -1,0 +1,52 @@
+name: Cleanup Workflow Runs
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # First day of each month at midnight UTC
+  workflow_dispatch:
+
+jobs:
+  cleanup_runs:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh
+
+      - name: Authenticate with GitHub
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Delete old workflow runs (keep last 10)
+        run: |
+          # Get all workflow runs
+          RUNS=$(gh run list --json databaseId,name,createdAt --limit 100 --jq '.[]')
+          
+          # Count total runs
+          TOTAL=$(echo "$RUNS" | jq 'length')
+          echo "Total workflow runs: $TOTAL"
+          
+          # Keep last 10, delete the rest
+          if [ $TOTAL -gt 10 ]; then
+            DELETE_COUNT=$((TOTAL - 10))
+            echo "Deleting $DELETE_COUNT old workflow runs..."
+            
+            # Get IDs of runs to delete (all except last 10)
+            DELETE_IDS=$(echo "$RUNS" | jq -r 'reverse | .[10:] | .[].databaseId')
+            
+            for ID in $DELETE_IDS; do
+              echo "Deleting run ID: $ID"
+              gh run delete "$ID" || echo "Failed to delete run $ID"
+            done
+            
+            echo "Deleted $DELETE_COUNT workflow runs"
+          else
+            echo "Less than or equal to 10 runs, nothing to delete"
+          fi

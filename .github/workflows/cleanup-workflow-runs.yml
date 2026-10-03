@@ -27,9 +27,10 @@ jobs:
       - name: Delete old workflow runs (keep last 10 per workflow)
         run: |
           # Get all workflow names and their IDs
-          WORKFLOWS=$(gh workflow list --json name,id --jq '.[]')
+          gh workflow list --json name,id --jq '.[]' > /tmp/workflows.json
           
-          echo "$WORKFLOWS" | jq -c '.' | while read -r WORKFLOW; do
+          # Process each workflow
+          jq -c '.' /tmp/workflows.json | while IFS= read -r WORKFLOW; do
             WORKFLOW_NAME=$(echo "$WORKFLOW" | jq -r '.name')
             WORKFLOW_ID=$(echo "$WORKFLOW" | jq -r '.id')
             
@@ -43,7 +44,7 @@ jobs:
             echo "  Total runs for $WORKFLOW_NAME: $TOTAL"
             
             # Keep last 10 per workflow, delete the rest
-            if [ $TOTAL -gt 10 ]; then
+            if [ "$TOTAL" -gt 10 ]; then
               DELETE_COUNT=$((TOTAL - 10))
               echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW_NAME..."
               
@@ -60,3 +61,5 @@ jobs:
               echo "  Less than or equal to 10 runs, nothing to delete"
             fi
           done
+          
+          rm /tmp/workflows.json

@@ -12,9 +12,6 @@ jobs:
       actions: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Setup GitHub CLI
         run: |
           sudo apt-get update
@@ -24,29 +21,36 @@ jobs:
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
 
-      - name: Delete old workflow runs (keep last 10)
+      - name: Delete old workflow runs (keep last 10 per workflow)
         run: |
-          # Get all workflow runs
-          RUNS=$(gh run list --json databaseId,name,createdAt --limit 100 --jq '.[]')
+          # Get all workflow names
+          WORKFLOWS=$(gh workflow list --json name --jq '.[].name')
           
-          # Count total runs
-          TOTAL=$(echo "$RUNS" | jq 'length')
-          echo "Total workflow runs: $TOTAL"
-          
-          # Keep last 10, delete the rest
-          if [ $TOTAL -gt 10 ]; then
-            DELETE_COUNT=$((TOTAL - 10))
-            echo "Deleting $DELETE_COUNT old workflow runs..."
+          for WORKFLOW in $WORKFLOWS; do
+            echo "Processing workflow: $WORKFLOW"
             
-            # Get IDs of runs to delete (all except last 10)
-            DELETE_IDS=$(echo "$RUNS" | jq -r 'reverse | .[10:] | .[].databaseId')
+            # Get all runs for this workflow
+            RUNS=$(gh run list --workflow="$WORKFLOW" --json databaseId,name,createdAt --limit 100 --jq '.[]')
             
-            for ID in $DELETE_IDS; do
-              echo "Deleting run ID: $ID"
-              gh run delete "$ID" || echo "Failed to delete run $ID"
-            done
+            # Count total runs for this workflow
+            TOTAL=$(echo "$RUNS" | jq 'length')
+            echo "  Total runs for $WORKFLOW: $TOTAL"
             
-            echo "Deleted $DELETE_COUNT workflow runs"
-          else
-            echo "Less than or equal to 10 runs, nothing to delete"
-          fi
+            # Keep last 10 per workflow, delete the rest
+            if [ $TOTAL -gt 10 ]; then
+              DELETE_COUNT=$((TOTAL - 10))
+              echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW..."
+              
+              # Get IDs of runs to delete (all except last 10)
+              DELETE_IDS=$(echo "$RUNS" | jq -r 'reverse | .[10:] | .[].databaseId')
+              
+              for ID in $DELETE_IDS; do
+                echo "    Deleting run ID: $ID"
+                gh run delete "$ID" || echo "    Failed to delete run $ID"
+              done
+              
+              echo "  Deleted $DELETE_COUNT runs from $WORKFLOW"
+            else
+              echo "  Less than or equal to 10 runs, nothing to delete"
+            fi
+          done

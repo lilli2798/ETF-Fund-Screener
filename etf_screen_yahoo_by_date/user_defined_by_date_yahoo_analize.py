@@ -145,8 +145,10 @@ def load_input_data(input_file, config: Dict = None):
         df.index = df.index.astype(str)
         tickers = safe_tickers(df.index)
         
-        output_file = str(input_path)
-        write_in_place = True
+        # Create a new output file with timestamp instead of modifying the input file
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = str(input_path.parent / f"{input_path.stem}_yahoo_analysis_{timestamp}.xlsx")
+        write_in_place = False
         selected_sheet = sheet_name
         return df, tickers, output_file, write_in_place, selected_sheet
     
@@ -473,14 +475,9 @@ def save_workbook_with_retry(wb, file_path):
     Features:
         - Handles PermissionError when file is open in another application
         - Prompts user to close file and retry
-        - Ensures all sheets are visible before saving (fixes Excel recovery message)
     """
     while True:
         try:
-            # Ensure all sheets are visible before saving (fixes Excel recovery message)
-            for sheet in wb.worksheets:
-                sheet.sheet_state = 'visible'
-            
             wb.save(file_path)
             return
         except PermissionError:
@@ -507,22 +504,27 @@ def write_result_to_excel(output_file, write_in_place, period_sheet, total_sheet
         None (writes to Excel file)
     
     Features:
-        - Replaces existing sheets with same names
+        - Adds new sheets without deleting existing ones (avoids Excel recovery message)
+        - If sheet exists, skips it to prevent duplicates
         - Handles file access errors with retry logic
     """
     while True:
         try:
             wb = open_or_create_workbook(output_file, write_in_place)
 
-            if period_sheet in wb.sheetnames:
-                del wb[period_sheet]
-            ws1 = wb.create_sheet(period_sheet)
-            add_sheet_as_table(ws1, period_out.reset_index().rename(columns={"index": "Ticker"}))
+            # Add period sheet if it doesn't exist
+            if period_sheet not in wb.sheetnames:
+                ws1 = wb.create_sheet(period_sheet)
+                add_sheet_as_table(ws1, period_out.reset_index().rename(columns={"index": "Ticker"}))
+            else:
+                print(f"  Sheet '{period_sheet}' already exists, skipping")
 
-            if total_sheet in wb.sheetnames:
-                del wb[total_sheet]
-            ws2 = wb.create_sheet(total_sheet)
-            add_sheet_as_table(ws2, total_out.reset_index().rename(columns={"index": "Ticker"}))
+            # Add total sheet if it doesn't exist
+            if total_sheet not in wb.sheetnames:
+                ws2 = wb.create_sheet(total_sheet)
+                add_sheet_as_table(ws2, total_out.reset_index().rename(columns={"index": "Ticker"}))
+            else:
+                print(f"  Sheet '{total_sheet}' already exists, skipping")
 
             save_workbook_with_retry(wb, output_file)
             wb.close()

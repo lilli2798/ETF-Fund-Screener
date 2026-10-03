@@ -24,10 +24,3 @@ jobs:
       - name: Update fund ratings
         working-directory: etf_screener
         run: python update_fund_ratings.py
-
-      - name: Upload database artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: etf-screener-database
-          path: data/etf_screener.db
-          retention-days: 90

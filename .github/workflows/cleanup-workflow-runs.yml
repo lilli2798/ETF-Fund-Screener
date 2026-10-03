@@ -26,31 +26,36 @@ jobs:
 
       - name: Delete old workflow runs (keep last 10 per workflow)
         run: |
-          # Get all workflow names and their IDs
+          # This script cleans up old GitHub Actions workflow runs to save storage and keep the workflow history clean.
+          # It keeps the last 10 runs for each workflow and deletes any older runs.
+          # This is done per workflow, so each workflow (daily-etf-screener, monthly-rating-update, etc.) maintains its own history.
+          
+          # Step 1: Get all workflow names and their IDs from the repository
           gh workflow list --json name,id --jq '.[]' > /tmp/workflows.json
           
-          # Process each workflow
+          # Step 2: Process each workflow individually
           jq -c '.' /tmp/workflows.json | while IFS= read -r WORKFLOW; do
             WORKFLOW_NAME=$(echo "$WORKFLOW" | jq -r '.name')
             WORKFLOW_ID=$(echo "$WORKFLOW" | jq -r '.id')
             
             echo "Processing workflow: $WORKFLOW_NAME (ID: $WORKFLOW_ID)"
             
-            # Get all runs for this workflow using workflow ID
+            # Step 3: Get all runs for this specific workflow (up to 100 most recent)
             RUNS=$(gh run list --workflow="$WORKFLOW_ID" --json databaseId,name,createdAt --limit 100 --jq '.[]')
             
-            # Count total runs for this workflow
+            # Step 4: Count total runs for this workflow
             TOTAL=$(echo "$RUNS" | jq 'length')
             echo "  Total runs for $WORKFLOW_NAME: $TOTAL"
             
-            # Keep last 10 per workflow, delete the rest
+            # Step 5: If more than 10 runs exist, delete the older ones
             if [ "$TOTAL" -gt 10 ]; then
               DELETE_COUNT=$((TOTAL - 10))
               echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW_NAME..."
               
-              # Get IDs of runs to delete (all except last 10)
+              # Get IDs of runs to delete (all except the last 10, reversed to delete oldest first)
               DELETE_IDS=$(echo "$RUNS" | jq -r 'reverse | .[10:] | .[].databaseId')
               
+              # Step 6: Delete each old run individually
               for ID in $DELETE_IDS; do
                 echo "    Deleting run ID: $ID"
                 gh run delete "$ID" || echo "    Failed to delete run $ID"
@@ -62,4 +67,5 @@ jobs:
             fi
           done
           
+          # Cleanup temp file
           rm /tmp/workflows.json

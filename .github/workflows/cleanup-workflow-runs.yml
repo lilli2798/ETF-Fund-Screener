@@ -40,11 +40,11 @@ jobs:
             
             echo "Processing workflow: $WORKFLOW_NAME (ID: $WORKFLOW_ID)"
             
-            # Step 3: Get all runs for this specific workflow (up to 100 most recent)
-            RUNS=$(gh run list --workflow="$WORKFLOW_ID" --json databaseId,name,createdAt --limit 100 --jq '.[]')
+            # Step 3: Get all runs for this specific workflow (increase limit to 500 to handle workflows with many runs)
+            gh run list --workflow="$WORKFLOW_ID" --json databaseId,name,createdAt --limit 500 --jq '.[]' > /tmp/runs.json
             
             # Step 4: Count total runs for this workflow
-            TOTAL=$(echo "$RUNS" | jq 'length')
+            TOTAL=$(jq 'length' /tmp/runs.json)
             echo "  Total runs for $WORKFLOW_NAME: $TOTAL"
             
             # Step 5: If more than 10 runs exist, delete the older ones
@@ -53,18 +53,20 @@ jobs:
               echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW_NAME..."
               
               # Get IDs of runs to delete (all except the last 10, reversed to delete oldest first)
-              DELETE_IDS=$(echo "$RUNS" | jq -r 'reverse | .[10:] | .[].databaseId')
+              jq -r 'reverse | .[10:] | .[].databaseId' /tmp/runs.json > /tmp/delete_ids.txt
               
               # Step 6: Delete each old run individually
-              for ID in $DELETE_IDS; do
+              while IFS= read -r ID; do
                 echo "    Deleting run ID: $ID"
                 gh run delete "$ID" || echo "    Failed to delete run $ID"
-              done
+              done < /tmp/delete_ids.txt
               
               echo "  Deleted $DELETE_COUNT runs from $WORKFLOW_NAME"
             else
               echo "  Less than or equal to 10 runs, nothing to delete"
             fi
+            
+            rm /tmp/runs.json
           done
           
           # Cleanup temp file

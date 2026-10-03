@@ -26,23 +26,26 @@ jobs:
 
       - name: Delete old workflow runs (keep last 10 per workflow)
         run: |
-          # Get all workflow names
-          WORKFLOWS=$(gh workflow list --json name --jq '.[].name')
+          # Get all workflow names and their IDs
+          WORKFLOWS=$(gh workflow list --json name,id --jq '.[]')
           
-          for WORKFLOW in $WORKFLOWS; do
-            echo "Processing workflow: $WORKFLOW"
+          echo "$WORKFLOWS" | jq -c '.' | while read -r WORKFLOW; do
+            WORKFLOW_NAME=$(echo "$WORKFLOW" | jq -r '.name')
+            WORKFLOW_ID=$(echo "$WORKFLOW" | jq -r '.id')
             
-            # Get all runs for this workflow
-            RUNS=$(gh run list --workflow="$WORKFLOW" --json databaseId,name,createdAt --limit 100 --jq '.[]')
+            echo "Processing workflow: $WORKFLOW_NAME (ID: $WORKFLOW_ID)"
+            
+            # Get all runs for this workflow using workflow ID
+            RUNS=$(gh run list --workflow="$WORKFLOW_ID" --json databaseId,name,createdAt --limit 100 --jq '.[]')
             
             # Count total runs for this workflow
             TOTAL=$(echo "$RUNS" | jq 'length')
-            echo "  Total runs for $WORKFLOW: $TOTAL"
+            echo "  Total runs for $WORKFLOW_NAME: $TOTAL"
             
             # Keep last 10 per workflow, delete the rest
             if [ $TOTAL -gt 10 ]; then
               DELETE_COUNT=$((TOTAL - 10))
-              echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW..."
+              echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW_NAME..."
               
               # Get IDs of runs to delete (all except last 10)
               DELETE_IDS=$(echo "$RUNS" | jq -r 'reverse | .[10:] | .[].databaseId')
@@ -52,7 +55,7 @@ jobs:
                 gh run delete "$ID" || echo "    Failed to delete run $ID"
               done
               
-              echo "  Deleted $DELETE_COUNT runs from $WORKFLOW"
+              echo "  Deleted $DELETE_COUNT runs from $WORKFLOW_NAME"
             else
               echo "  Less than or equal to 10 runs, nothing to delete"
             fi

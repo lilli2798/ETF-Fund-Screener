@@ -27,9 +27,15 @@ Output:
 Usage:
     python user_defined_by_date_yahoo_analize.py
 
+    Press Enter at the input-file prompt to use the latest ETF screener
+    results (~370 funds). Answer "y" to pick a volatile market period from
+    volatile_config.yaml (built by volatile_periods.py) instead of typing dates.
+
 Note: For yearly history cache management, use yearly_cache_manager.py instead.
 """
 
+import re
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
@@ -40,8 +46,15 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
-from yearly_executions.config import DEFAULT_CONFIG, DEFAULT_INDEXES
-from yearly_executions.yearly_cache_manager import to_date, make_return_series, download_adj_close
+# yearly_executions/ modules import each other as top-level modules
+# (e.g. `from config import ...`), so put that folder on the path.
+BASE_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(BASE_DIR / "yearly_executions"))
+
+from benchmark_stats import add_better_worst_stats, add_percentile_bucket_counts, append_index_validation_rows  # noqa: E402
+from config import DEFAULT_CONFIG, DEFAULT_INDEXES  # noqa: E402
+from volatile_periods import pick_period  # noqa: E402
+from yearly_cache_manager import to_date, make_return_series, download_adj_close  # noqa: E402
 
 
 # =========================================================================
@@ -86,6 +99,19 @@ def safe_tickers(vals):
     return [x for x in vals if x and x != "NAN"]
 
 
+def latest_screener_output(config: Dict = None):
+    """Most recent ETF screener result (results_*.xlsx), or None.
+
+    Using the screener's ~370 funds as the default keeps the Yahoo download
+    small (a few batches) instead of the full ~5,000-ticker list.
+    """
+    if config is None:
+        config = DEFAULT_CONFIG
+    screener_dir = BASE_DIR / config.get("paths", {}).get("screener_output_dir", "../output/etf_screener")
+    files = list(screener_dir.glob("results_*.xlsx"))
+    return max(files, key=lambda f: f.stat().st_mtime) if files else None
+
+
 def load_input_data(input_file, config: Dict = None):
     """Load input data from Excel or text file with default fallback.
     
@@ -104,21 +130,16 @@ def load_input_data(input_file, config: Dict = None):
     if config is None:
         config = DEFAULT_CONFIG
     
-    # If no input provided, use default
-    if not input_file:
-        paths_config = config.get("paths", {})
-        default_input_dir = paths_config.get("default_input_dir", "../etf_screener/data/structural-data")
-        
-        # Look for Excel files in default directory
-        default_dir = Path(default_input_dir)
-        xlsx_files = list(default_dir.glob("*.xlsx"))
-        
-        if xlsx_files:
-            # Use the most recent file
-            input_file = str(max(xlsx_files, key=lambda f: f.stat().st_mtime))
-            print(f"Using default input file: {input_file}")
-        else:
-            raise FileNotFoundError(f"No Excel files found in {default_input_dir}")
+    # If no input provided, use the latest screener result. Its output goes
+    # to default_output_dir, NOT next to the screener results -- alerts.py
+    # emails the newest results_*.xlsx there and must not pick this file up.
+    used_default = not input_file
+    if used_default:
+        latest = latest_screener_output(config)
+        if latest is None:
+            raise FileNotFoundError("No screener results (results_*.xlsx) found; run the ETF screener first or give an input file.")
+        input_file = str(latest)
+        print(f"Using latest screener results: {input_file}")
     
     input_path = Path(input_file)
     
@@ -147,7 +168,11 @@ def load_input_data(input_file, config: Dict = None):
         
         # Create a new output file with timestamp instead of modifying the input file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = str(input_path.parent / f"{input_path.stem}_yahoo_analysis_{timestamp}.xlsx")
+        out_dir = input_path.parent
+        if used_default:
+            out_dir = BASE_DIR / config.get("paths", {}).get("default_output_dir", "../output/yahoo_screen")
+            out_dir.mkdir(parents=True, exist_ok=True)
+        output_file = str(out_dir / f"{input_path.stem}_yahoo_analysis_{timestamp}.xlsx")
         write_in_place = False
         selected_sheet = sheet_name
         return df, tickers, output_file, write_in_place, selected_sheet
@@ -166,117 +191,6 @@ def load_input_data(input_file, config: Dict = None):
 
     else:
         raise ValueError("Only .xlsx and .txt input files are supported")
-
-
-# =========================================================================
-# STATISTICS FUNCTIONS
-# =========================================================================
-
-def add_better_worst_stats(out_df, return_df, indexes: List[str] = None):
-    """Add statistics comparing ticker performance to benchmark indexes.
-    
-    Args:
-        out_df: Output DataFrame to add stats to (tickers as index)
-        return_df: DataFrame of returns (tickers as index, periods as columns)
-        indexes: List of benchmark index symbols (uses DEFAULT_INDEXES if None)
-    
-    Returns:
-        DataFrame with additional columns:
-        - better: Count of indexes beaten by ticker in each period
-        - worst: Count of indexes underperformed by ticker in each period
-        - total_columns: Total number of periods
-        - no_null_columns: Number of periods with non-null data
-        - better_%: Percentage of periods where ticker beat indexes
-        - worst_%: Percentage of periods where ticker underperformed indexes
-        - better_worst_diff: Difference between better and worst counts
-    """
-    if indexes is None:
-        indexes = DEFAULT_INDEXES
-    
-    idx_return_df = return_df.loc[return_df.index.intersection(indexes)].copy()
-    ticker_return_df = return_df.drop(index=indexes, errors="ignore").copy()
-
-    highest_index = idx_return_df.max(axis=0)
-    lowest_index = idx_return_df.min(axis=0)
-
-    compare_high = ticker_return_df.gt(highest_index, axis=1)
-    compare_low = ticker_return_df.lt(lowest_index, axis=1)
-
-    stats = pd.DataFrame(index=ticker_return_df.index)
-    stats["better"] = compare_high.sum(axis=1)
-    stats["worst"] = compare_low.sum(axis=1)
-    stats["total_columns"] = len(ticker_return_df.columns)
-    stats["no_null_columns"] = ticker_return_df.count(axis=1)
-    stats["better_%"] = np.where(stats["no_null_columns"] > 0, stats["better"] / stats["no_null_columns"], np.nan)
-    stats["worst_%"] = np.where(stats["no_null_columns"] > 0, stats["worst"] / stats["no_null_columns"], np.nan)
-    stats["better_worst_diff"] = stats["better"] - stats["worst"]
-
-    return out_df.join(stats, how="left")
-
-
-def add_percentile_bucket_counts(out_df, return_df, indexes: List[str] = None):
-    """Add percentile bucket counts for each ticker's performance.
-    
-    Args:
-        out_df: Output DataFrame to add stats to (tickers as index)
-        return_df: DataFrame of returns (tickers as index, periods as columns)
-        indexes: List of benchmark index symbols to exclude (uses DEFAULT_INDEXES if None)
-    
-    Returns:
-        DataFrame with additional columns showing count of periods in each percentile bucket:
-        - top_10%, top_20%, top_30%, top_40%, top_50%, top_60%, top_70%, top_80%, top_90%
-        - worse_10%
-        Percentiles are calculated across all tickers for each period.
-    """
-    if indexes is None:
-        indexes = DEFAULT_INDEXES
-    
-    ticker_return_df = return_df.drop(index=indexes, errors="ignore").copy()
-    pct_rank = ticker_return_df.rank(axis=0, method="average", pct=True)
-
-    stats = pd.DataFrame(index=ticker_return_df.index)
-    stats["top_10%"] = ((pct_rank > 0.90) & (pct_rank <= 1.00)).sum(axis=1)
-    stats["top_20%"] = ((pct_rank > 0.80) & (pct_rank <= 0.90)).sum(axis=1)
-    stats["top_30%"] = ((pct_rank > 0.70) & (pct_rank <= 0.80)).sum(axis=1)
-    stats["top_40%"] = ((pct_rank > 0.60) & (pct_rank <= 0.70)).sum(axis=1)
-    stats["top_50%"] = ((pct_rank > 0.50) & (pct_rank <= 0.60)).sum(axis=1)
-    stats["top_60%"] = ((pct_rank > 0.40) & (pct_rank <= 0.50)).sum(axis=1)
-    stats["top_70%"] = ((pct_rank > 0.30) & (pct_rank <= 0.40)).sum(axis=1)
-    stats["top_80%"] = ((pct_rank > 0.20) & (pct_rank <= 0.30)).sum(axis=1)
-    stats["top_90%"] = ((pct_rank > 0.10) & (pct_rank <= 0.20)).sum(axis=1)
-    stats["worse_10%"] = (pct_rank <= 0.10).sum(axis=1)
-
-    return out_df.join(stats, how="left")
-
-
-def append_index_validation_rows(out_df, return_df, indexes: List[str] = None):
-    """Append benchmark index rows for validation/comparison.
-    
-    Args:
-        out_df: Output DataFrame to append to
-        return_df: DataFrame of returns containing index data
-        indexes: List of benchmark index symbols to append (uses DEFAULT_INDEXES if None)
-    
-    Returns:
-        DataFrame with index rows appended at the bottom, separated by a blank row.
-        Index rows have NaN for columns not present in their original data.
-    """
-    if indexes is None:
-        indexes = DEFAULT_INDEXES
-    
-    idx_rows = return_df.loc[return_df.index.intersection(indexes)].copy()
-
-    if idx_rows.empty:
-        return out_df
-
-    for col in out_df.columns:
-        if col not in idx_rows.columns:
-            idx_rows[col] = np.nan
-
-    idx_rows = idx_rows[out_df.columns]
-    blank = pd.DataFrame([[np.nan] * len(out_df.columns)], columns=out_df.columns, index=[""])
-    final_df = pd.concat([out_df, blank, idx_rows], axis=0)
-    return final_df
 
 
 # =========================================================================
@@ -371,6 +285,46 @@ def build_overviews(df, adj, beginning_date, ending_date, choice, n, indexes: Li
     )
 
 
+def _returns_over(adj, tickers: List[str], legs: Dict[str, tuple]) -> pd.DataFrame:
+    """Return per ticker for each {column: (start, end)} leg (first close on/after
+    start to last close on/before end). Missing history stays blank."""
+    rows = {}
+    for ticker in tickers:
+        if ticker not in adj.columns:
+            continue
+        prices = adj[[ticker]].dropna()
+        for col, (start, end) in legs.items():
+            r = make_return_series(prices, to_date(start), to_date(end))
+            if ticker in r.index:
+                rows.setdefault(ticker, {})[col] = r[ticker]
+    return pd.DataFrame.from_dict(rows, orient="index").reindex(columns=list(legs))
+
+
+def _with_benchmark_stats(out: pd.DataFrame, indexes: List[str]) -> pd.DataFrame:
+    if out.empty:
+        return out
+    out = add_better_worst_stats(out, out, indexes)
+    out = add_percentile_bucket_counts(out, out, indexes)
+    return append_index_validation_rows(out, out, indexes)
+
+
+def build_volatile_period_overview(df, adj, period: Dict, indexes: List[str] = None):
+    """Exact returns over a volatile period picked from volatile_config.yaml.
+
+    Columns: decline_return (period start -> end, e.g. S&P high -> low) and,
+    when the period has a recovery date, recovery_return (end -> recovery),
+    plus the same benchmark/percentile stats as the other sheets and the
+    index rows at the bottom.
+    """
+    if indexes is None:
+        indexes = DEFAULT_INDEXES
+    tickers = list(dict.fromkeys(safe_tickers(df.index) + indexes))
+    legs = {"decline_return": (period["start"], period["end"])}
+    if period.get("recovery"):
+        legs["recovery_return"] = (period["end"], period["recovery"])
+    return _with_benchmark_stats(_returns_over(adj, tickers, legs), indexes)
+
+
 # =========================================================================
 # EXCEL OUTPUT
 # =========================================================================
@@ -402,7 +356,8 @@ def add_sheet_as_table(ws, df):
     max_col = ws.max_column
     ref = f"A1:{get_column_letter(max_col)}{max_row}"
 
-    tab = Table(displayName=f"Table_{ws.title}", ref=ref)
+    # Excel table names allow only letters, digits and underscores
+    tab = Table(displayName="Table_" + re.sub(r"\W", "_", ws.title), ref=ref)
     style = TableStyleInfo(
         name="TableStyleMedium2",
         showFirstColumn=False,
@@ -453,7 +408,10 @@ def open_or_create_workbook(output_file, write_in_place):
     Returns:
         openpyxl Workbook object
     """
-    if write_in_place and Path(output_file).exists():
+    # The output file is new for each run (timestamped), so once this run has
+    # created it, later choices must add to it -- not start a blank workbook
+    # and overwrite the sheets written earlier.
+    if Path(output_file).exists():
         return load_workbook(output_file)
 
     wb = Workbook()
@@ -508,23 +466,24 @@ def write_result_to_excel(output_file, write_in_place, period_sheet, total_sheet
         - If sheet exists, skips it to prevent duplicates
         - Handles file access errors with retry logic
     """
+    write_sheets_to_excel(output_file, write_in_place, {period_sheet: period_out, total_sheet: total_out})
+
+
+def write_sheets_to_excel(output_file, write_in_place, sheets: Dict[str, pd.DataFrame]):
+    """Write each {sheet_name: DataFrame} as a table; existing sheets are skipped.
+
+    Handles file access errors with retry logic.
+    """
     while True:
         try:
             wb = open_or_create_workbook(output_file, write_in_place)
 
-            # Add period sheet if it doesn't exist
-            if period_sheet not in wb.sheetnames:
-                ws1 = wb.create_sheet(period_sheet)
-                add_sheet_as_table(ws1, period_out.reset_index().rename(columns={"index": "Ticker"}))
-            else:
-                print(f"  Sheet '{period_sheet}' already exists, skipping")
-
-            # Add total sheet if it doesn't exist
-            if total_sheet not in wb.sheetnames:
-                ws2 = wb.create_sheet(total_sheet)
-                add_sheet_as_table(ws2, total_out.reset_index().rename(columns={"index": "Ticker"}))
-            else:
-                print(f"  Sheet '{total_sheet}' already exists, skipping")
+            for sheet_name, sheet_df in sheets.items():
+                if sheet_name not in wb.sheetnames:
+                    ws = wb.create_sheet(sheet_name)
+                    add_sheet_as_table(ws, sheet_df.reset_index().rename(columns={"index": "Ticker"}))
+                else:
+                    print(f"  Sheet '{sheet_name}' already exists, skipping")
 
             save_workbook_with_retry(wb, output_file)
             wb.close()
@@ -592,7 +551,8 @@ def generate_run_report(
         "output_file": output_file,
     }
 
-    report_dir = Path(report_path).parent
+    report_path = BASE_DIR / report_path  # relative to this script, not the working directory
+    report_dir = report_path.parent
     report_dir.mkdir(parents=True, exist_ok=True)
     
     with open(report_path, "w", encoding="utf-8") as f:
@@ -639,18 +599,27 @@ def main():
             input_file = input("input file (.xlsx or .txt, or press Enter for default): ").strip()
             if input_file:
                 break
-            # Use default if user pressed Enter
-            default_input_dir = paths_config.get("default_input_dir", "../etf_screener/data/structural-data")
-            default_dir = Path(default_input_dir)
-            xlsx_files = list(default_dir.glob("*.xlsx"))
-            if xlsx_files:
-                print(f"Will use default input file from {default_input_dir}")
+            # Use the latest screener results if user pressed Enter
+            latest = latest_screener_output(config)
+            if latest is not None:
+                print(f"Will use latest screener results: {latest.name}")
                 break
-            else:
-                print(f"No default files found in {default_input_dir}. Please provide a file path.")
+            print("No screener results (results_*.xlsx) found. Please provide a file path.")
         
+        # Optionally pick a ready-made volatile period (volatile_config.yaml)
+        period = None
+        if input("Use a volatile market period from volatile_config.yaml? (y / Enter for no): ").strip().lower() == "y":
+            period = pick_period()
+        if period:
+            beginning_date, ending_date = str(period["start"]), str(period["end"])
+            days = (pd.Timestamp(ending_date) - pd.Timestamp(beginning_date)).days
+            print(f"Using {period.get('name', period['id'])}: {beginning_date} -> {ending_date} "
+                  f"({days} days, about {days // 7} weeks / {days // 30} months)")
+            print("A volatile-... sheet with the exact return over this period is added "
+                  "automatically; next you can add week/month breakdowns, or type 99 to finish.")
+
         # Get beginning_date with validation
-        while True:
+        while period is None:
             beginning_date = input("beginning_date (yyyy-mm-dd, or press Enter for default): ").strip()
             if beginning_date:
                 try:
@@ -664,7 +633,7 @@ def main():
                 break
         
         # Get ending_date with validation
-        while True:
+        while period is None:
             ending_date = input("ending_date (yyyy-mm-dd, or press Enter for today): ").strip()
             if ending_date:
                 try:
@@ -701,11 +670,24 @@ def main():
             print(f"Using sheet: {selected_sheet}")
 
         print("Downloading Yahoo data once...")
-        adj = download_adj_close(tickers, beginning_date, ending_date, config)
+        indexes = config.get("indexes") or DEFAULT_INDEXES
+        download_symbols = list(dict.fromkeys(tickers + indexes))  # benchmarks are needed for better/worst stats
+        download_end = pd.Timestamp(period["recovery"]) if period and period.get("recovery") else pd.Timestamp(ending_date)
+        download_end = max(download_end, pd.Timestamp(ending_date))
+        # yfinance's `end` is exclusive, so add a day to include the last date
+        adj = download_adj_close(download_symbols, beginning_date, (download_end + pd.Timedelta(days=1)).strftime("%Y-%m-%d"), config)
 
         if adj.empty:
             print("No Yahoo data downloaded. Stop.")
             return
+
+        if period:
+            volatile_sheet = f"volatile-{period['start']}"
+            volatile_out = build_volatile_period_overview(df, adj, period, indexes)
+            write_sheets_to_excel(output_file, write_in_place, {volatile_sheet: volatile_out})
+            print(f"Added sheet: {volatile_sheet} (exact return over {period.get('name', period['id'])})")
+            print(f"Output file: {output_file}")
+            choices_made.append({"choice": "volatile_period", "period_id": period["id"], "sheet": volatile_sheet})
 
         while True:
             current_choice = input("\ncurrent_choice (year / month / week, or 99 to stop): ").strip().lower()

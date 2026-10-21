@@ -4,7 +4,10 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 
-INDEXES = ["^IXIC", "^DJI", "^GSPC"]
+from benchmark_stats import PERCENTILE_BUCKETS, add_better_worst_stats, add_percentile_bucket_counts
+from config import DEFAULT_INDEXES
+
+INDEXES = DEFAULT_INDEXES
 
 
 def analyze_yearly_returns(csv_file_path, output_file_path=None, db_path=None):
@@ -38,87 +41,24 @@ def analyze_yearly_returns(csv_file_path, output_file_path=None, db_path=None):
     # Remove indexes from the main dataframe for analysis
     etf_df = df_years.drop(INDEXES, errors='ignore')
     
-    # Initialize result dataframe with original data
-    result_df = etf_df.copy()
-    
-    # Calculate metrics
-    result_df['total_columns'] = len(year_columns)
-    result_df['no_null_columns'] = etf_df.count(axis=1)
-    
-    # Count better than max and worse than min for each ETF
-    better_count = (etf_df > max_per_year).sum(axis=1)
-    worst_count = (etf_df < min_per_year).sum(axis=1)
-    
-    result_df['better'] = better_count
-    result_df['worst'] = worst_count
-    result_df['better_%'] = result_df['better'] / result_df['no_null_columns']
-    result_df['worst_%'] = result_df['worst'] / result_df['no_null_columns']
-    result_df['better_worst_diff'] = result_df['better_%'] - result_df['worst_%']
-    
-    # Generate yearly rankings
-    for year in year_columns:
-        rank_col = f'Yearly_{year}_rank'
-        result_df[rank_col] = etf_df[year].rank(ascending=False, method='dense')
-    
-    # Calculate percentile buckets
-    data_size = len(result_df)
-    size_range = data_size / 10
-    
-    ranking_columns = [f'Yearly_{year}_rank' for year in year_columns]
-    ranking_data = result_df[ranking_columns]
-    
-    # Calculate percentile buckets per year
-    percentiles = ['10%', '20%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', 'worse_10%']
-    
-    # Initialize percentile columns with zeros
-    for percentile in percentiles:
-        result_df[percentile] = 0
-    
-    # Calculate percentiles for each year separately
-    for year in year_columns:
-        rank_col = f'Yearly_{year}_rank'
-        
-        # Get non-null ranks for this year
-        year_ranks = ranking_data[rank_col].dropna()
-        
-        if len(year_ranks) == 0:
-            continue
-        
-        year_size = len(year_ranks)
-        year_size_range = year_size / 10
-        
-        # Calculate percentile counts for this year
-        for i, percentile in enumerate(percentiles):
-            if percentile == 'worse_10%':
-                # Bottom 10% (ranks from 90% to 100%)
-                lower_bound = int(year_size_range * 9) + 1
-                upper_bound = int(year_size_range * 10) + 1
-            else:
-                # Top 10%, 20%, etc. (ranks start at 1 for best)
-                # For 10% (i=0): ranks 1 to int(year_size_range * 1)
-                # For 20% (i=1): ranks int(year_size_range * 1) + 1 to int(year_size_range * 2)
-                lower_bound = int(year_size_range * i) + 1 if i > 0 else 1
-                upper_bound = int(year_size_range * (i + 1))
-            
-            # Count ETFs in this percentile bucket for this year
-            in_percentile = ((year_ranks >= lower_bound) & (year_ranks <= upper_bound))
-            
-            # Add to the corresponding ETFs' percentile counts
-            for ticker in year_ranks[in_percentile].index:
-                result_df.loc[ticker, percentile] += 1
-    
-    # Reorder columns as specified
+    # Benchmark comparison + percentile buckets (shared with the
+    # user-defined date script so both report identical numbers)
+    stats = add_better_worst_stats(pd.DataFrame(index=etf_df.index), df_years, INDEXES)
+    stats = add_percentile_bucket_counts(stats, df_years, INDEXES)
+
+    # Yearly rankings (1 = best return that year)
+    ranks = pd.DataFrame(
+        {f'Yearly_{year}_rank': etf_df[year].rank(ascending=False, method='dense') for year in year_columns},
+        index=etf_df.index,
+    )
+
+    # Final column order
     metric_columns = [
         'total_columns', 'no_null_columns', 'better', 'worst',
         'better_%', 'worst_%', 'better_worst_diff'
     ]
-    rank_columns = [f'Yearly_{year}_rank' for year in year_columns]
-    percentile_columns = ['10%', '20%', '30%', '40%', '50%', '60%', '70%', '80%', '90%', 'worse_10%']
-    
-    # Final column order
-    final_columns = metric_columns + rank_columns + percentile_columns
-    result_df = result_df[final_columns]
-    
+    result_df = pd.concat([stats[metric_columns], ranks, stats[PERCENTILE_BUCKETS]], axis=1)
+
     # Save to Excel with formatting
     save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
     

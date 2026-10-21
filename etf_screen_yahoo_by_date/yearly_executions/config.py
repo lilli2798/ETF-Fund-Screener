@@ -30,9 +30,8 @@ DEFAULT_CACHING = {
 DEFAULT_PATHS = {
     "sources_dir": "sources",              # Directory for tickers.txt and cache files (local to yearly_executions/)
     "tickers_file": "sources/tickers.txt", # Path to tickers.txt file (local to yearly_executions/)
-    "default_input_dir": "../etf_screener/data/structural-data",  # Default directory to look for input files
-    "default_output_dir": "../output/yahoo_screen",       # Default directory for output files
-    "screener_output_dir": "../output/etf_screener",  # ETF screener output directory for date extraction
+    "default_output_dir": "../output/yahoo_screen",       # User-defined script output when using the default input (relative to etf_screen_yahoo_by_date/)
+    "screener_output_dir": "../output/etf_screener",  # ETF screener results; latest results_*.xlsx is the user-defined default input (relative to etf_screen_yahoo_by_date/)
     "report_path": "../output/yahoo_screen/run_recorder.yaml",  # Path for run metadata
 }
 

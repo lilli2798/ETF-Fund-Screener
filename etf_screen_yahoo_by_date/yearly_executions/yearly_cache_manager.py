@@ -427,6 +427,71 @@ def save_missing_data_report(failed_tickers: List[str], output_path: str = "sour
 
 
 # =========================================================================
+# YEARLY UPDATE FUNCTION
+# =========================================================================
+
+def add_missing_years(config: Dict = None) -> None:
+    """Add any completed year(s) missing from the cache for tickers already in it.
+
+    Meant to run once a year (early January): finds year columns between
+    history_start_date and the previous calendar year that the cache does
+    not have yet, downloads only that date range for every cached ticker
+    (including the benchmark indexes), and appends the new year column(s).
+    Existing values are never changed.
+    """
+    if config is None:
+        config = DEFAULT_CONFIG
+
+    cache_config = config.get("caching", {})
+    cache_path = cache_config.get("yearly_returns_cache_path", "sources/etf_yearly_history.csv")
+    history_start_year = to_date(cache_config.get("history_start_date", "2006-01-01")).year
+
+    cached_df = load_yearly_history_csv(cache_path)
+    if cached_df.empty:
+        print("No existing cache found -- nothing to extend (new tickers are handled by build_yearly_history_cache).")
+        return
+
+    previous_year = datetime.now().year - 1
+    missing_years = [
+        y for y in range(history_start_year, previous_year + 1)
+        if str(y) not in cached_df.columns
+    ]
+    if not missing_years:
+        print(f"Cache already has every year through {previous_year}. No yearly update needed.")
+        return
+
+    tickers = cached_df.index.tolist()
+    print(f"Adding year(s) {missing_years} for {len(tickers)} cached tickers...")
+
+    # yfinance's `end` is exclusive, so end on Jan 1 to include Dec 31.
+    adj = download_adj_close(
+        tickers,
+        start=f"{missing_years[0]}-01-01",
+        end=f"{missing_years[-1] + 1}-01-01",
+        config=config,
+    )
+    if adj.empty:
+        print("No data downloaded. Cache left unchanged.")
+        return
+
+    for year in missing_years:
+        year_start = pd.Timestamp(f"{year}-01-01")
+        year_end = pd.Timestamp(f"{year}-12-31")
+        year_returns = {}
+        for ticker in tickers:
+            if ticker not in adj.columns:
+                continue
+            r = make_return_series(adj[[ticker]].dropna(), year_start, year_end)
+            if ticker in r.index:
+                year_returns[ticker] = r[ticker]
+        cached_df[str(year)] = pd.Series(year_returns)
+        print(f"  {year}: returns for {len(year_returns)}/{len(tickers)} tickers")
+
+    save_yearly_history_csv(cache_path, cached_df)
+    print(f"Cache updated: {cache_path}")
+
+
+# =========================================================================
 # MAIN CACHE BUILD FUNCTION
 # =========================================================================
 
@@ -524,7 +589,8 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         retry_count = 0
         while retry_count < max_retries:
             try:
-                batch_data = yf.download(batch, start=beginning_date, end=ending_date, progress=False)
+                # yfinance's `end` is exclusive, so end on Jan 1 to include Dec 31.
+                batch_data = yf.download(batch, start=beginning_date, end=f"{current_year}-01-01", progress=False)
                 
                 if batch_data.empty:
                     print(f"    No data returned for batch {batch_num}")
@@ -648,6 +714,8 @@ def build_yearly_history_cache(config: Dict = None) -> None:
 
 
 if __name__ == "__main__":
-    print("Building yearly history cache...")
+    print("Adding any missing completed years for cached tickers...")
+    add_missing_years(DEFAULT_CONFIG)
+    print("\nAdding any new tickers from tickers.txt...")
     build_yearly_history_cache(DEFAULT_CONFIG)
     print("\nDone!")

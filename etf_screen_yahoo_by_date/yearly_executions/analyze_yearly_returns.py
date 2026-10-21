@@ -195,16 +195,23 @@ def save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_f
 
 
 if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+
     from config import DEFAULT_CONFIG
-    
-    csv_path = "/Users/lihongfeng/Library/CloudStorage/OneDrive-YaleUniversity/Projects/ETF-Fund-Screener/etf_screen_yahoo_by_date/yearly_executions/sources/etf_yearly_history.csv"
-    
+
+    # Usage: python analyze_yearly_returns.py [csv_path] [output_xlsx_path]
+    # Defaults to sources/etf_yearly_history.csv next to this script, with the
+    # output written beside the CSV (timestamped).
+    csv_path = sys.argv[1] if len(sys.argv) > 1 else str(Path(__file__).parent / "sources" / "etf_yearly_history.csv")
+    output_path = sys.argv[2] if len(sys.argv) > 2 else None
+    if output_path:
+        Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
     # Get database path from config
     cache_config = DEFAULT_CONFIG.get("caching", {})
     db_path = cache_config.get("yearly_returns_db_path", None)
-    
-    result = analyze_yearly_returns(csv_path, db_path=db_path)
+
+    result = analyze_yearly_returns(csv_path, output_file_path=output_path, db_path=db_path)
     print("Analysis complete!")
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    print(f"Results saved to {csv_path.replace('.csv', f'_analysis_{timestamp}.xlsx')}")
     print(result.head())

@@ -153,13 +153,14 @@ PROFILE_A_WEIGHTS = {
 # - Expense: 10%
 # - Quality: 10%
 MORNINGSTAR_LONG_TERM_WEIGHTS = {
-    "performance": 0.45,  # Combined 5Y (25%) + 10Y (20%) = 45%
+    "long_term_return_performance": 0.45,  # Combined 5Y (25%) + 10Y (20%) = 45%
+    "short_term_return_performance": 0.00,  # Not used in Morningstar's criteria
     "risk_adjusted": 0.20,  # 3Y Sharpe: 20%
     "volatility": 0.15,  # Drawdown: 15%
-    "quality_valuation": 0.10,  # Quality: 10%
-    "costs": 0.10,  # Expense: 10%
     "tracking": 0.00,  # Not used in Morningstar's criteria
     "liquidity_size": 0.00,  # Not used in Morningstar's criteria
+    "quality_valuation": 0.10,  # Quality: 10%
+    "costs": 0.10,  # Expense: 10%
     "tax_income": 0.00,  # Not used in Morningstar's criteria
 }
 
@@ -247,12 +248,31 @@ DEFAULT_CONCEPT_WEIGHTS = {
 # Morningstar's recommended concept weights for long-term investing.
 # Emphasizes 5Y/10Y returns, 3Y Sharpe, drawdown, expense ratio, and quality.
 MORNINGSTAR_CONCEPT_WEIGHTS = {
-    "performance": {
-        "return_5y": 0.56,  # 25% / 45% = 55.6% of performance weight
-        "return_10y": 0.44,  # 20% / 45% = 44.4% of performance weight
-        "return_3y": 0.00,  # Not emphasized in Morningstar's criteria
+    "long_term_return_performance": {
+        "return_5y": 0.56,  # 25% / 45% = 55.6% of long-term return weight
+        "return_10y": 0.44,  # 20% / 45% = 44.4% of long-term return weight
         "return_1y": 0.00,  # Not emphasized for long-term
-        "rank_3y": 0.00,  # Not used
+        "return_2y": 0.00,
+        "return_3y": 0.00,  # Not emphasized in Morningstar's criteria
+        "return_4y": 0.00,
+        "return_6y": 0.00,
+        "return_7y": 0.00,
+        "return_8y": 0.00,
+        "return_9y": 0.00,
+        "return_15y": 0.00,
+        "return_20y": 0.00,
+    },
+    "short_term_return_performance": {
+        # Concept weight is 0 in MORNINGSTAR_LONG_TERM_WEIGHTS; keys kept
+        # (all 0.0) because every required key must be present.
+        "return_1w": 0.00,
+        "return_1m": 0.00,
+        "return_2m": 0.00,
+        "return_qtd": 0.00,
+        "return_3m": 0.00,
+        "return_6m": 0.00,
+        "return_9m": 0.00,
+        "return_ytd": 0.00,
     },
     "risk_adjusted": {
         "sharpe_3y": 1.00,  # 100% on 3Y Sharpe per Morningstar's criteria
@@ -278,18 +298,24 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
         "trading_volume": 0.00,  # Not used
     },
     "quality_valuation": {
-        "growth_grade": 0.25,  # Growth grade (40% of quality weight)
-        "financial_health": 0.15,  # Financial health (40% of quality weight)
-        "profitability_grade": 0.15,  # Profitability grade (A-F)
-        "price_fair_value": 0.15,  # Price vs fair value (20% of quality weight)
+        "growth_grade": 0.25,  # Portfolio growth grade (A-F)
+        "financial_health": 0.15,  # Portfolio financial health grade (A-F)
+        "profitability_grade": 0.15,  # Portfolio profitability grade (A-F)
+        "price_fair_value": 0.15,  # Price vs fair value
         "medalist": 0.15,  # Not explicitly mentioned
-        "economic_moat_wide": 0.20,  # Not explicitly mentioned
+        "star_rating": 0.00,  # Not explicitly mentioned
+        "economic_moat_wide": 0.15,  # Not explicitly mentioned
     },
     "costs": {
         "adjusted_expense_ratio": 1.00,  # 100% on adjusted expense ratio (comprehensive fee measure)
     },
     "tax_income": {
-        "tax_cost_ratio": 0.00,  # Not used
+        "tax_cost_ratio_1y": 0.00,  # Not used
+        "tax_cost_ratio_2y": 0.00,  # Not used
+        "dividend_per_share_trailing": 0.00,  # Not used
+        "dividend_per_share_forward": 0.00,  # Not used
+        "dividend_per_share_1y_avg": 0.00,  # Not used
+        "dividend_per_share_3y_avg": 0.00,  # Not used
         "sec_yield": 0.00,  # Not used
     },
 }

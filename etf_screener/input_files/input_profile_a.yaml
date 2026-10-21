@@ -78,19 +78,20 @@ thresholds:
   #
   # You can omit any section here - it will use the default values from config.py
   #
-  # MORNINGSTAR LONG-TERM CRITERIA (recommended by Morningstar):
-  # To use Morningstar's recommended long-term investment weights, replace the
-  # weights section below with:
+  # MORNINGSTAR LONG-TERM CRITERIA (same values as
+  # config.MORNINGSTAR_LONG_TERM_WEIGHTS). To use them, replace the weights
+  # section below with:
   #
   #   weights:
-  #     performance: 0.45      # Combined 5Y (25%) + 10Y (20%) returns
-  #     risk_adjusted: 0.20    # 3Y Sharpe ratio
-  #     volatility: 0.15        # Drawdown (3Y and 5Y)
-  #     quality_valuation: 0.10 # Quality metrics
-  #     costs: 0.10            # Expense ratio
-  #     tracking: 0.00         # Not used
-  #     liquidity_size: 0.00    # Not used
-  #     tax_income: 0.00       # Not used
+  #     long_term_return_performance: 0.45  # Combined 5Y (25%) + 10Y (20%) returns
+  #     short_term_return_performance: 0.00 # Not used
+  #     risk_adjusted: 0.20                 # 3Y Sharpe ratio
+  #     volatility: 0.15                    # Drawdown (3Y and 5Y)
+  #     tracking: 0.00                      # Not used
+  #     liquidity_size: 0.00                # Not used
+  #     quality_valuation: 0.10             # Quality metrics
+  #     costs: 0.10                         # Expense ratio
+  #     tax_income: 0.00                    # Not used
   #
   # And update concept_weights (see below) to match Morningstar's emphasis.
   # ============================================================================
@@ -128,33 +129,50 @@ thresholds:
   # values in that section will use their defaults. This makes it easy to
   # experiment with small adjustments without changing everything.
   #
-  # MORNINGSTAR LONG-TERM CONCEPT WEIGHTS:
-  # To use Morningstar's criteria, replace the concept_weights section below with:
+  # MORNINGSTAR LONG-TERM CONCEPT WEIGHTS (same values as
+  # config.MORNINGSTAR_CONCEPT_WEIGHTS). To use them, replace the matching
+  # blocks in concept_weights below. Every key is listed because a key you
+  # leave out falls back to config.py's default, NOT to 0. Blocks whose
+  # concept weight is 0 above (short-term, tracking, liquidity, tax) don't
+  # affect the score, so they can stay as they are.
   #
   #   concept_weights:
-  #     performance:
-  #       return_5y: 0.56      # 5Y returns (55.6% of performance weight)
-  #       return_10y: 0.44     # 10Y returns (44.4% of performance weight)
-  #       return_3y: 0.00      # Not emphasized
-  #       return_1y: 0.00      # Not emphasized for long-term
-  #       rank_3y: 0.00        # Not used
+  #     long_term_return_performance:
+  #       return_5y: 0.56      # 5Y returns (55.6% of long-term return weight)
+  #       return_10y: 0.44     # 10Y returns (44.4% of long-term return weight)
+  #       return_1y: 0.00
+  #       return_2y: 0.00
+  #       return_3y: 0.00
+  #       return_4y: 0.00
+  #       return_6y: 0.00
+  #       return_7y: 0.00
+  #       return_8y: 0.00
+  #       return_9y: 0.00
+  #       return_15y: 0.00
+  #       return_20y: 0.00
   #     risk_adjusted:
   #       sharpe_3y: 1.00      # 100% on 3Y Sharpe
-  #       sharpe_1y: 0.00      # Not used
-  #       upside: 0.00         # Not used
-  #       downside: 0.00       # Not used
+  #       sharpe_1y: 0.00
+  #       upside: 0.00
+  #       downside: 0.00
+  #       yahoo_sharpe_3y: 0.00
+  #       yahoo_sharpe_1y: 0.00
+  #       yahoo_zscore_3y: 0.00
+  #       yahoo_zscore_1y: 0.00
   #     volatility:
-  #       stdev_3y: 0.00      # Not used
-  #       drawdown_3y: 0.50   # 3Y drawdown (50% of volatility weight)
-  #       drawdown_5y: 0.50   # 5Y drawdown (50% of volatility weight)
+  #       stdev_3y: 0.00       # Drawdown is the key metric
+  #       drawdown_3y: 0.50
+  #       drawdown_5y: 0.50
   #     quality_valuation:
-  #       growth_grade: 0.40   # Growth grade (40% of quality weight)
-  #       financial_health: 0.40 # Financial health (40% of quality weight)
-  #       price_fair_value: 0.20 # Price vs fair value (20% of quality weight)
-  #       medalist: 0.00       # Not used
+  #       growth_grade: 0.25
+  #       financial_health: 0.15
+  #       profitability_grade: 0.15
+  #       price_fair_value: 0.15
+  #       medalist: 0.15
+  #       star_rating: 0.00
+  #       economic_moat_wide: 0.15
   #     costs:
-  #       net_expense_ratio: 1.00 # 100% on expense ratio
-  #       management_fee: 0.00    # Not used
+  #       adjusted_expense_ratio: 1.00
   # ============================================================================
 
   concept_weights:
@@ -185,7 +203,6 @@ thresholds:
       return_6m: 0.12   # 1/8 = 12.5%
       return_9m: 0.1   # 1/8 = 12.5%
       return_ytd: 0.05  # 1/8 = 12.5%
-      return_1y: 0.08  # 1/12 ≈ 8.33%
 
     # RISK-ADJUSTED: How different risk metrics are weighted
     risk_adjusted:

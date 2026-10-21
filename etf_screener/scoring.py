@@ -178,7 +178,7 @@ REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "volatility": ["stdev_3y", "drawdown_3y", "drawdown_5y"],
     "tracking": ["tracking_error_3y", "tracking_error_1y"],
     "liquidity_size": ["fund_size", "trading_volume"],
-    "quality_valuation": ["growth_grade", "financial_health", "profitability_grade", "price_fair_value", "medalist", "star_rating" ],
+    "quality_valuation": ["growth_grade", "financial_health", "profitability_grade", "price_fair_value", "medalist", "star_rating", "economic_moat_wide"],
     "costs": ["adjusted_expense_ratio"],
     "tax_income": ["tax_cost_ratio_1y", "tax_cost_ratio_2y", "dividend_per_share_trailing", "dividend_per_share_forward", "dividend_per_share_1y_avg", "dividend_per_share_3y_avg", "sec_yield"],
 }

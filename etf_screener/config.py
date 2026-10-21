@@ -223,11 +223,12 @@ DEFAULT_CONCEPT_WEIGHTS = {
     },
     "quality_valuation": {
         "growth_grade": 0.20,
-        "financial_health": 0.20,
+        "financial_health": 0.15,
+        "profitability_grade": 0.15,  # Portfolio profitability grade (A-F)
         "price_fair_value": 0.15,
         "medalist": 0.15,  # NEW — raise/lower as you like; use 0.0 to ignore
         "star_rating": 0.15,  # NEW — Morningstar Rating for Funds (star rating)
-        "economic_moat_wide": 0.15,  # NEW — Portfolio Economic Moat Coverage (Wide)
+        "economic_moat_wide": 0.05,  # NEW — Portfolio Economic Moat Coverage (Wide)
     },
     "costs": {
         "adjusted_expense_ratio": 1.0,

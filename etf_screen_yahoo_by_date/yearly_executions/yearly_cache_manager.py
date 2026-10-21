@@ -101,6 +101,26 @@ def _batch_generator(all_symbols: List[str], batch_size: int):
         print(f"  Batch {batch_num}/{total_batches}: {len(batch)} symbols")
         yield batch, batch_num, total_batches
 
+def _extract_adjusted_close(batch_data: pd.DataFrame, batch: List[str]) -> pd.DataFrame:
+    """Return dividend/split-adjusted closes (tickers as columns) from a
+    yf.download(..., auto_adjust=True) result.
+
+    With auto_adjust=True the adjusted price is in "Close". Don't look for
+    "Adj Close" first: yfinance adds an "Adj Close" column only for tickers
+    that FAILED (e.g. delisted), so picking it would drop every good ticker
+    in the batch.
+    """
+    if isinstance(batch_data.columns, pd.MultiIndex):
+        if "Close" not in batch_data.columns.get_level_values(0):
+            raise ValueError("Close not found in download")
+        return batch_data["Close"].copy()
+    if "Close" not in batch_data.columns:
+        raise ValueError("Close not found in download")
+    single = batch_data[["Close"]].copy()
+    single.columns = [batch[0]] if len(batch) == 1 else ["Close"]
+    return single
+
+
 def download_adj_close(tickers, start, end, config: Dict = None):
     """Download adjusted close prices with rate limiting and error handling.
     
@@ -141,28 +161,13 @@ def download_adj_close(tickers, start, end, config: Dict = None):
         retry_count = 0
         while retry_count < max_retries:
             try:
-                batch_data = yf.download(batch, start=start, end=end, progress=False)
+                batch_data = yf.download(batch, start=start, end=end, auto_adjust=True, progress=False)
                 
                 if batch_data.empty:
                     print(f"    No data returned for batch {batch_num}")
                     break
                 
-                # Handle different yfinance return formats
-                if isinstance(batch_data.columns, pd.MultiIndex):
-                    if "Adj Close" in batch_data.columns.get_level_values(0):
-                        batch_adj = batch_data["Adj Close"].copy()
-                    elif "Close" in batch_data.columns.get_level_values(0):
-                        batch_adj = batch_data["Close"].copy()
-                    else:
-                        raise ValueError("Neither Adj Close nor Close found in download")
-                else:
-                    if "Adj Close" in batch_data.columns:
-                        batch_adj = batch_data[["Adj Close"]].copy()
-                    elif "Close" in batch_data.columns:
-                        batch_adj = batch_data[["Close"]].copy()
-                        batch_adj.columns = ["Adj Close"]
-                    else:
-                        raise ValueError("Neither Adj Close nor Close found in download")
+                batch_adj = _extract_adjusted_close(batch_data, batch)
                 
                 # Handle single ticker case (Series vs DataFrame)
                 if isinstance(batch_adj, pd.Series):
@@ -508,13 +513,14 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         1. Read tickers from sources/tickers.txt
         2. If no tickers.txt, extract tickers from most recent .xlsx in ../etf_screener/output/
         3. Load existing cache if it exists
-        4. Identify tickers that need to be added (not in existing cache)
+        4. Identify tickers to download: not in the cache, or cached with no data
         5. Download data from 2006-01-01 to previous year 12-31 for new tickers
         6. Calculate yearly returns for each complete year
         7. Merge with existing cache and save to sources/etf_yearly_history.csv
         8. Report failed tickers to sources/missing_data.csv
     
-    Note: This function preserves existing cache data and only adds new tickers.
+    Note: This function preserves existing cache data. It adds new tickers and
+    retries tickers whose cached row is entirely empty.
     """
     if config is None:
         config = DEFAULT_CONFIG
@@ -548,8 +554,14 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         # Get tickers from cache and remove duplicates from input
         cached_tickers = set(cached_df.index.tolist())
         input_tickers = set(tickers)
-        tickers_to_add = list(input_tickers - cached_tickers)
-        print(f"Found {len(tickers_to_add)} new tickers to download (not in cache)")
+        new_tickers = input_tickers - cached_tickers
+        # Tickers whose cached row is completely empty (e.g. added before
+        # they had a full trading history, or a failed download) are retried
+        # too -- otherwise they would stay empty forever.
+        empty_tickers = set(cached_df.index[cached_df.isna().all(axis=1)]) & input_tickers
+        tickers_to_add = sorted(new_tickers | empty_tickers)
+        print(f"Found {len(new_tickers)} new tickers (not in cache) and "
+              f"{len(empty_tickers)} cached tickers with no data to retry")
     else:
         print("No existing cache found, building from scratch...")
         tickers_to_add = tickers
@@ -590,28 +602,13 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         while retry_count < max_retries:
             try:
                 # yfinance's `end` is exclusive, so end on Jan 1 to include Dec 31.
-                batch_data = yf.download(batch, start=beginning_date, end=f"{current_year}-01-01", progress=False)
+                batch_data = yf.download(batch, start=beginning_date, end=f"{current_year}-01-01", auto_adjust=True, progress=False)
                 
                 if batch_data.empty:
                     print(f"    No data returned for batch {batch_num}")
                     break
                 
-                # Handle different yfinance return formats
-                if isinstance(batch_data.columns, pd.MultiIndex):
-                    if "Adj Close" in batch_data.columns.get_level_values(0):
-                        batch_adj = batch_data["Adj Close"].copy()
-                    elif "Close" in batch_data.columns.get_level_values(0):
-                        batch_adj = batch_data["Close"].copy()
-                    else:
-                        raise ValueError("Neither Adj Close nor Close found in download")
-                else:
-                    if "Adj Close" in batch_data.columns:
-                        batch_adj = batch_data[["Adj Close"]].copy()
-                    elif "Close" in batch_data.columns:
-                        batch_adj = batch_data[["Close"]].copy()
-                        batch_adj.columns = ["Adj Close"]
-                    else:
-                        raise ValueError("Neither Adj Close nor Close found in download")
+                batch_adj = _extract_adjusted_close(batch_data, batch)
                 
                 # Handle single ticker case (Series vs DataFrame)
                 if isinstance(batch_adj, pd.Series):
@@ -635,10 +632,13 @@ def build_yearly_history_cache(config: Dict = None) -> None:
                             continue
                         
                         try:
-                            ticker_adj = batch_adj[[ticker]]
+                            # Drop this ticker's blank rows (dates other tickers in the
+                            # batch traded but it didn't, e.g. before a mid-year launch)
+                            # so the year's first/last prices are its own.
+                            ticker_adj = batch_adj[[ticker]].dropna()
                             year_return = make_return_series(ticker_adj, year_start, year_end)
-                            
-                            if not year_return.empty and ticker in year_return.index:
+
+                            if ticker in year_return.index and pd.notna(year_return[ticker]):
                                 batch_yearly_data[ticker][str(year)] = year_return[ticker]
                                 ticker_has_data = True
                         except Exception as e:
@@ -690,8 +690,12 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     
     if not new_df.empty:
         if not cached_df.empty:
-            # Append new data to existing cache - new data is added, existing data is preserved
-            final_merged = pd.concat([cached_df, new_df])
+            # Append new data to existing cache. Retried empty rows that now
+            # have data are replaced; everything else is preserved.
+            refilled = [t for t in new_df.index if t in cached_df.index]
+            if refilled:
+                print(f"Filled {len(refilled)} previously empty tickers")
+            final_merged = pd.concat([cached_df.drop(index=refilled), new_df])
         else:
             final_merged = new_df
         

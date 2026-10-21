@@ -36,6 +36,26 @@ YEARLY_RETURNS_CSV: str = str(
 )
 YEARLY_RETURN_YEARS: int = 10
 
+# Volatile market periods (S&P 500 >= 15% declines and volatility spikes since
+# 1976) from etf_screen_yahoo_by_date/volatile_config.yaml -- regenerate with
+# volatile_periods.py. Each fund's return in every period is attached to the
+# output ("Volatile Decline/Recovery: ..."); results are cached in
+# VOLATILE_RETURNS_CSV so only new funds are downloaded on later runs.
+YAHOO_BY_DATE_DIR: str = str(Path(__file__).resolve().parent.parent / "etf_screen_yahoo_by_date")
+VOLATILE_CONFIG_PATH: str = str(Path(YAHOO_BY_DATE_DIR) / "volatile_config.yaml")
+VOLATILE_RETURNS_CSV: str = str(
+    Path(YAHOO_BY_DATE_DIR) / "yearly_executions" / "sources" / "etf_volatile_history.csv"
+)
+VOLATILE_DOWNLOAD = {
+    "batch_size": 50,
+    "rest_delay_seconds": 10.0,
+    "jitter_seconds": 10.0,
+    "max_retries": 3,
+}
+
+# Benchmarks for the "beat / trailed all indexes" stats.
+BENCHMARK_INDEXES: List[str] = ["^IXIC", "^DJI", "^GSPC"]
+
 # --- Combined data columns (new Morningstar format) ------------------
 # All columns needed from the new Morningstar profile-based Excel files.
 # These files contain both performance and structural data in a single file.

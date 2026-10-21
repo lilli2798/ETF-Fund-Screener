@@ -57,12 +57,14 @@ jobs:
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
         run: python alerts.py
 
-      - name: Commit updated sub-sector cache
+      - name: Commit updated caches
         run: |
           git config user.name "etf-screener-bot"
           git config user.email "actions@users.noreply.github.com"
           git add etf_screener/utils/sector_cache.json
-          git diff --cached --quiet || git commit -m "Update Yahoo sub-sector cache [skip ci]"
+          # Volatile-period returns for funds seen for the first time (so later runs skip the download)
+          git add etf_screen_yahoo_by_date/yearly_executions/sources/etf_volatile_history.csv
+          git diff --cached --quiet || git commit -m "Update Yahoo sub-sector and volatile-period caches [skip ci]"
           git push
 
       - name: Upload output artifact

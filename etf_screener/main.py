@@ -54,6 +54,7 @@ from config import (
 from data_loading import load_data
 from input_file import load_profile_input, ProfileInput
 from merging import apply_fund_filter, attach_yearly_returns
+from performance import attach_volatile_performance, attach_yearly_stats
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
 
@@ -233,6 +234,10 @@ def process_data(
 
     print(f"Attaching last {YEARLY_RETURN_YEARS} calendar-year returns...")
     df, yearly_missing_report = attach_yearly_returns(df, YEARLY_RETURNS_CSV, n_years=YEARLY_RETURN_YEARS)
+    df = attach_yearly_stats(df, YEARLY_RETURNS_CSV, n_years=YEARLY_RETURN_YEARS)
+
+    print("Attaching performance in volatile market periods...")
+    df, volatile_report = attach_volatile_performance(df)
 
     if "Inception Date" in df.columns:
         three_years_ago = pd.Timestamp.now() - pd.Timedelta(days=3 * 365)
@@ -302,7 +307,7 @@ def process_data(
         output_dir=out_path,
         output_filename=os.path.basename(final_out_path),
         thresholds=thresholds,
-        extra={"yearly_returns_missing": yearly_missing_report},
+        extra={"yearly_returns_missing": yearly_missing_report, "volatile_performance": volatile_report},
     )
 
     print("Writing used-weights report for this run...")

@@ -9,3 +9,6 @@ etf_screener/output/*.xlsx
 
 # Explicitly track the Yahoo sub-sector cache (needed for CI persistence)
 !etf_screener/utils/sector_cache.json
+
+# PyCharm / IntelliJ project settings (per-machine)
+.idea/

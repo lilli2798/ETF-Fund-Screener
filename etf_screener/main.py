@@ -184,6 +184,7 @@ def process_data(
     profile_name: str = DEFAULT_PROFILE_NAME,
     top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
     thresholds: dict = None,
+    save_to_db: bool = True,
 ) -> Tuple[pd.DataFrame, str]:
     """
     Run the full pipeline end-to-end for a single profile:
@@ -320,17 +321,21 @@ def process_data(
         if category_col in df_export.columns:
             create_sheets_by_category(df_export, category_col, category_output_dir, sheet_name=sheet_name)
 
-    # Save results to SQLite database
-    print("Saving results to SQLite database...")
-    db = ETFScreenerDatabase()
-    run_id = db.save_results(
-        df=df_export,
-        profile_name=profile_name,
-        weights=thresholds
-    )
+    # Save results to SQLite database (local runs only -- CI passes
+    # save_to_db=False so the database stays on the local machine)
+    if save_to_db:
+        print("Saving results to SQLite database...")
+        db = ETFScreenerDatabase()
+        run_id = db.save_results(
+            df=df_export,
+            profile_name=profile_name,
+            weights=thresholds
+        )
 
-    db.close()
-    print(f"Results saved to database with run_id: {run_id}")
+        db.close()
+        print(f"Results saved to database with run_id: {run_id}")
+    else:
+        print("Skipping SQLite database save (save_to_db=False).")
 
     return df_ranked, final_out_path
 

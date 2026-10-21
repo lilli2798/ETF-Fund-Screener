@@ -20,6 +20,7 @@ if __name__ == "__main__":
         profile_name=profile_input.profile_name,
         top_n=profile_input.top_n_per_category,
         thresholds=profile_input.thresholds,
+        save_to_db=False,  # database is kept locally, not in CI
     )
     print(f"CI run complete. Output written to: {out_path}")
     sys.exit(0)

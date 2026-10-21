@@ -18,11 +18,18 @@ import os
 import smtplib
 import sys
 from email.message import EmailMessage
+from pathlib import Path
 
 import pandas as pd
 import requests
 
-OUTPUT_DIR = "output"
+from input_file import load_profile_input
+
+# Read the output folder from the same profile YAML run_ci.py uses, so the
+# alert step always looks where the screener actually wrote its results.
+# Set OUTPUT_DIR in the environment to override.
+PROFILE_INPUT_PATH = str(Path(__file__).parent / "input_files" / "input_profile_a.yaml")
+OUTPUT_DIR = os.environ.get("OUTPUT_DIR") or load_profile_input(PROFILE_INPUT_PATH).out_path
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
 # --- Email configuration (all optional; email is skipped if EMAIL_TO is unset) ---
@@ -124,7 +131,7 @@ def send_email(subject: str, body: str, attachment_path: str | None = None) -> N
 def main():
     latest_xlsx = find_latest_file(OUTPUT_DIR, "results_*.xlsx")
     if not latest_xlsx:
-        print("No output file found; skipping alerts.")
+        print(f"No output file found in {os.path.abspath(OUTPUT_DIR)}; skipping alerts.")
         return
 
     df = pd.read_excel(latest_xlsx)

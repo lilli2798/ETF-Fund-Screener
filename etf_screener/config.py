@@ -13,6 +13,7 @@ IMPORTANT NOTE ABOUT COLUMN NAMES:
   check your Excel file headers and update these lists to match exactly.
 """
 
+from pathlib import Path
 from typing import List
 
 DEFAULT_TOP_N_PER_CATEGORY: int = 5
@@ -24,6 +25,16 @@ DEFAULT_OUT_PATH: str = "../output/etf_screener"
 
 # Default profile to run when none is specified.
 DEFAULT_PROFILE_NAME: str = "A"
+
+# Calendar-year returns maintained by etf_screen_yahoo_by_date/yearly_executions
+# (updated by the yearly GitHub workflow). The most recent N years are
+# attached to the screener output as "Yearly Return (YYYY)" columns, in
+# percent like Morningstar's Total Return columns. Display only -- not scored.
+YEARLY_RETURNS_CSV: str = str(
+    Path(__file__).resolve().parent.parent
+    / "etf_screen_yahoo_by_date" / "yearly_executions" / "sources" / "etf_yearly_history.csv"
+)
+YEARLY_RETURN_YEARS: int = 10
 
 # --- Combined data columns (new Morningstar format) ------------------
 # All columns needed from the new Morningstar profile-based Excel files.

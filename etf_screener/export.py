@@ -18,11 +18,18 @@ from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 
 
-def append_to_recorder(output_dir: str, output_filename: str, thresholds: Dict[str, Any]) -> str:
+def append_to_recorder(
+    output_dir: str,
+    output_filename: str,
+    thresholds: Dict[str, Any],
+    extra: Optional[Dict[str, Any]] = None,
+) -> str:
     """
     Append output_filename -> thresholds (which already includes the nested
     'weights' sub-dict) into a persistent run_recorder.yaml in output_dir.
     Creates the file/dir if missing. Never overwrites prior entries.
+    `extra` adds run notes (e.g. yearly_returns_missing) next to the
+    thresholds in the same entry.
     """
     Path(output_dir).mkdir(parents=True, exist_ok=True)
     recorder_path = os.path.join(output_dir, "run_recorder.yaml")
@@ -33,7 +40,7 @@ def append_to_recorder(output_dir: str, output_filename: str, thresholds: Dict[s
     else:
         recorder_data = {}
 
-    recorder_data[output_filename] = thresholds
+    recorder_data[output_filename] = {**thresholds, **(extra or {})}
 
     with open(recorder_path, "w") as f:
         yaml.safe_dump(recorder_data, f, default_flow_style=False, sort_keys=False)

@@ -48,10 +48,12 @@ from config import (
     DEFAULT_DATA_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
+    YEARLY_RETURN_YEARS,
+    YEARLY_RETURNS_CSV,
 )
 from data_loading import load_data
 from input_file import load_profile_input, ProfileInput
-from merging import apply_fund_filter
+from merging import apply_fund_filter, attach_yearly_returns
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
 
@@ -229,6 +231,9 @@ def process_data(
 
     df = pd.merge(df, df_yahoo, on="Ticker", how="left")
 
+    print(f"Attaching last {YEARLY_RETURN_YEARS} calendar-year returns...")
+    df, yearly_missing_report = attach_yearly_returns(df, YEARLY_RETURNS_CSV, n_years=YEARLY_RETURN_YEARS)
+
     if "Inception Date" in df.columns:
         three_years_ago = pd.Timestamp.now() - pd.Timedelta(days=3 * 365)
         is_established: pd.Series = df["Inception Date"].notna() & (df["Inception Date"] <= three_years_ago)
@@ -297,6 +302,7 @@ def process_data(
         output_dir=out_path,
         output_filename=os.path.basename(final_out_path),
         thresholds=thresholds,
+        extra={"yearly_returns_missing": yearly_missing_report},
     )
 
     print("Writing used-weights report for this run...")

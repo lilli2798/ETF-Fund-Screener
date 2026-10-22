@@ -13,9 +13,6 @@ etf_screener/output/*.xlsx
 # PyCharm / IntelliJ project settings (per-machine)
 .idea/
 
-# Yearly analysis reports written next to the CSV when run without an output path
-etf_screener/yahoo_returns/sources/*_analysis_*.xlsx
-
 # Generated reports (screener results, yearly analysis, user-defined runs).
 # GitHub Actions builds its own copies and attaches them to each run.
 /output/

@@ -1,6 +1,7 @@
 """
-Benchmark comparison statistics shared by analyze_yearly_returns.py and
-user_defined_by_date_yahoo_analize.py, so both report the same numbers.
+Benchmark comparison statistics shared by the screener (etf_screener/
+performance.py) and user_defined_by_date_yahoo_analize.py, so both report
+the same numbers.
 
 All functions take a returns DataFrame with tickers as the index and one
 column per period (a year, month, week, ...). Rows whose ticker is one of

@@ -654,22 +654,8 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
 
 
 if __name__ == "__main__":
-    from analyze_yearly_returns import add_tickers_to_analysis, analyze_yearly_returns
-
     print("Adding any missing completed years for cached tickers...")
-    years_added = add_missing_years(DEFAULT_CONFIG)
+    add_missing_years(DEFAULT_CONFIG)
     print("\nAdding any new tickers from tickers.txt...")
-    tickers_added = build_yearly_history_cache(DEFAULT_CONFIG)
-
-    csv_path = DEFAULT_CONFIG["caching"]["yearly_returns_cache_path"]
-    report = DEFAULT_CONFIG["paths"]["yearly_analysis_path"]
-    if years_added or not Path(report).exists():
-        # A new year changes every fund's row -> rebuild the whole report
-        print("\nRebuilding the yearly analysis report...")
-        analyze_yearly_returns(csv_path, report)
-    elif tickers_added:
-        print(f"\nAdding {len(tickers_added)} ticker(s) to the yearly analysis report...")
-        add_tickers_to_analysis(csv_path, tickers_added, report)
-    else:
-        print("\nNo changes -- yearly analysis report left as is.")
+    build_yearly_history_cache(DEFAULT_CONFIG)
     print("\nDone!")

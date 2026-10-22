@@ -40,7 +40,6 @@ DEFAULT_PATHS = {
     "tickers_file": str(SOURCES_DIR / "tickers.txt"),      # Tickers for the yearly returns cache
     "default_output_dir": str(REPO_DIR / "output" / "yahoo_screen"),    # User-defined script output when using the default input
     "screener_output_dir": str(REPO_DIR / "output" / "etf_screener"),  # ETF screener results; latest results_*.xlsx is the user-defined default input
-    "yearly_analysis_path": str(REPO_DIR / "output" / "yahoo_screen" / "etf_yearly_history_analysis.xlsx"),  # analyze_yearly_returns.py report, overwritten each run
 }
 
 # Default query parameters (used when user doesn't provide input)

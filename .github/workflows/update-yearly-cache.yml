@@ -33,9 +33,9 @@ jobs:
         run: pip install -r requirements.txt
 
       # Appends last year's returns for every cached ticker (incl. ^GSPC/^DJI/^IXIC),
-      # downloads any tickers in sources/tickers.txt not in the cache yet, retries
-      # empty rows, then refreshes output/yahoo_screen/etf_yearly_history_analysis.xlsx.
-      - name: Update yearly returns cache and analysis
+      # downloads any tickers in sources/tickers.txt not in the cache yet, and
+      # retries empty rows.
+      - name: Update yearly returns cache
         run: python yearly_cache_manager.py
 
       - name: Commit and push cache update
@@ -51,9 +51,3 @@ jobs:
             git pull --rebase
             git push
           fi
-
-      - name: Upload analysis report
-        uses: actions/upload-artifact@v4
-        with:
-          name: yearly-returns-analysis
-          path: output/yahoo_screen/etf_yearly_history_analysis.xlsx

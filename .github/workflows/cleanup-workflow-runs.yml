@@ -28,7 +28,7 @@ jobs:
         run: |
           # This script cleans up old GitHub Actions workflow runs to save storage and keep the workflow history clean.
           # It keeps the last 10 runs for each workflow and deletes any older runs.
-          # This is done per workflow, so each workflow (daily-etf-screener, monthly-rating-update, etc.) maintains its own history.
+          # This is done per workflow, so each workflow (daily-etf-screener, update-yearly-cache, etc.) maintains its own history.
           
           # Step 1: Get all workflow names and their IDs from the repository
           gh workflow list --json name,id --jq '.[]' > /tmp/workflows.json

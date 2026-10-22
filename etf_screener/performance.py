@@ -260,3 +260,49 @@ def attach_volatile_performance(df: pd.DataFrame) -> Tuple[pd.DataFrame, Dict[st
     report = {"periods": len(periods), "funds_with_data": with_data, "funds_total": len(df)}
     anchor = "Yearly " if any(str(c).startswith("Yearly ") for c in df.columns) else "Total Return ("
     return _insert_after(df, table, anchor), report
+
+
+# ---------------------------------------------------------------------------
+# Benchmark rows for the report
+# ---------------------------------------------------------------------------
+
+BENCHMARK_NAMES: Dict[str, str] = {
+    "^GSPC": "Benchmark: S&P 500",
+    "^DJI": "Benchmark: Dow Jones Industrial Average",
+    "^IXIC": "Benchmark: NASDAQ Composite",
+}
+
+
+def append_benchmark_rows(df: pd.DataFrame, yearly_csv: str) -> pd.DataFrame:
+    """Return df with one row per benchmark index (^GSPC, ^DJI, ^IXIC) at the
+    bottom, so the funds can be compared against them in the report.
+
+    Only the "Yearly Return (YYYY)" and "Volatile Decline/Recovery: ..."
+    columns are filled (from the same caches as the funds); every other
+    column -- Morningstar data, scores, ranks, flags, stats -- stays blank,
+    so the rows are never scored, ranked, selected or alerted on.
+    """
+    rows = pd.DataFrame({"Ticker": BENCHMARK_INDEXES}, index=range(len(BENCHMARK_INDEXES)))
+    if "Name" in df.columns:
+        rows["Name"] = [BENCHMARK_NAMES.get(t, f"Benchmark: {t}") for t in BENCHMARK_INDEXES]
+
+    # Yearly returns
+    year_cols = {c: c[len("Yearly Return ("):-1] for c in df.columns if str(c).startswith("Yearly Return (")}
+    if year_cols and os.path.exists(yearly_csv):
+        yearly = pd.read_csv(yearly_csv, index_col=0).reindex(BENCHMARK_INDEXES)
+        for col, year in year_cols.items():
+            if year in yearly.columns:
+                rows[col] = yearly[year].to_numpy() * 100.0
+
+    # Volatile-period returns (same cache keys as the funds)
+    if os.path.exists(VOLATILE_RETURNS_CSV):
+        cache = pd.read_csv(VOLATILE_RETURNS_CSV, index_col=0).reindex(BENCHMARK_INDEXES)
+        for p in load_periods(Path(VOLATILE_CONFIG_PATH)):
+            pairs = [(f"Volatile Decline: {p['name']}", _decline_col(p))]
+            if p.get("recovery"):
+                pairs.append((f"Volatile Recovery: {p['name']}", _recovery_col(p)))
+            for out_col, key in pairs:
+                if out_col in df.columns and key in cache.columns:
+                    rows[out_col] = cache[key].to_numpy() * 100.0
+
+    return pd.concat([df, rows.reindex(columns=df.columns)], ignore_index=True)

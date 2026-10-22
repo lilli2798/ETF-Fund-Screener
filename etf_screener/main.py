@@ -54,7 +54,7 @@ from config import (
 from data_loading import load_data
 from input_file import load_profile_input, ProfileInput
 from merging import apply_fund_filter, attach_yearly_returns
-from performance import attach_volatile_performance, attach_yearly_stats
+from performance import append_benchmark_rows, attach_volatile_performance, attach_yearly_stats
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
 
@@ -297,7 +297,9 @@ def process_data(
     sheet_name = f"{current_date.strftime('%m%d%Y')}-overview"
 
     print("Saving results...")
-    write_excel_with_retry(df_export, final_out_path, sheet_name=sheet_name)
+    # Benchmark index rows (^GSPC, ^DJI, ^IXIC) go at the bottom of the main
+    # report only -- not into the database or the per-category files.
+    write_excel_with_retry(append_benchmark_rows(df_export, YEARLY_RETURNS_CSV), final_out_path, sheet_name=sheet_name)
 
     print("Formatting header row...")
     apply_header_formatting(final_out_path)

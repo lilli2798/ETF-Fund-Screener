@@ -376,27 +376,6 @@ def update_cache_for_new_tickers(new_tickers: List[str], config: Dict = None) ->
         return cached_df, tickers_to_add
 
 
-def save_missing_data_report(failed_tickers: List[str], output_path: str = str(SOURCES_DIR / "missing_data.csv")) -> None:
-    """Save failed tickers to a CSV report file.
-    
-    Args:
-        failed_tickers: List of ticker symbols that failed to download
-        output_path: Path to save the missing data report CSV
-    
-    Returns:
-        None
-    """
-    if not failed_tickers:
-        return
-    
-    output_file = Path(output_path)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-    
-    df = pd.DataFrame({"Ticker": failed_tickers, "Error": "No data found in Yahoo Finance"})
-    df.to_csv(output_file, index=False)
-    print(f"  Missing data report saved to {output_path}")
-
-
 # =========================================================================
 # YEARLY UPDATE FUNCTION
 # =========================================================================
@@ -483,7 +462,7 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
         4. Download data from 2006-01-01 to previous year 12-31 for new tickers
         5. Calculate yearly returns for each complete year
         6. Merge with existing cache and save to sources/etf_yearly_history.csv
-        7. Report failed tickers to sources/missing_data.csv
+        7. Print tickers Yahoo had no data for
     
     Note: This function preserves existing cache data. It adds new tickers and
     retries tickers whose cached row is entirely empty.
@@ -640,7 +619,6 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
     
     if adj.empty:
         print("No data downloaded. All tickers failed.")
-        save_missing_data_report(tickers_to_add)
         return []
     
     # Convert yearly_data to DataFrame and merge with existing cache
@@ -670,10 +648,8 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
     del adj
     del yearly_data
     
-    # Step 7: Report failed tickers
     if failed_tickers:
-        save_missing_data_report(failed_tickers)
-        print(f"Failed to retrieve data for {len(failed_tickers)} tickers")
+        print(f"No Yahoo data for: {', '.join(sorted(set(failed_tickers)))}")
     return added
 
 

@@ -2,16 +2,15 @@
 
 This module is the single source of truth for everything derived from
 Yahoo Finance: sub-sector classification (via top-holdings look-through),
-Sharpe Ratio (1Y/3Y), and sector-relative Z-Scores. It supersedes the
-sub-sector-only logic that used to live in yahoo_subsector.py (kept as a
-thin backward-compatible shim) and the inline logic in get_yahoo_dta.py
-(which is now a thin CLI wrapper around get_yahoo_metrics_for_tickers()).
+Sharpe Ratio (1Y/3Y), and sector-relative Z-Scores. The command-line
+wrapper standalone_utils/get_yahoo_dta.py calls get_yahoo_metrics_for_tickers()
+for an ad hoc watchlist.
 
 Design goals:
   - Callable two ways: pass a list of tickers directly (main.py's CI
     flow, using tickers already present in the merged Morningstar
     dataframe), or read tickers from a tickers.txt-style file (standalone
-    local runs via get_yahoo_dta.py, useful for testing against an
+    local runs via standalone_utils/get_yahoo_dta.py, useful for testing against an
     arbitrary watchlist independent of the spreadsheet universe).
   - Every per-ticker Yahoo Finance call is wrapped so a single bad/
     delisted/rate-limited ticker never aborts the whole batch -- failures
@@ -127,8 +126,6 @@ class YahooMetricsConfig:
     subsector_cache_path: str = "utils/sector_cache.json"
     subsector_cache_max_age_days: int = 30
     force_refresh_subsector: bool = False
-    checkpoint_path: str = "utils/yahoo_checkpoint.json"
-    enable_resume: bool = True
 
     @property
     def risk_free_monthly(self) -> float:
@@ -191,7 +188,7 @@ def _is_cache_entry_fresh(entry: Dict[str, str], max_age_days: int) -> bool:
 def read_tickers_from_file(path: str) -> List[str]:
     """Read a tickers.txt-style file: comma/tab/newline separated, '#'
     comment lines ignored, deduplicated and sorted. Used only by the
-    standalone CLI (get_yahoo_dta.py) for ad hoc local runs -- the CI
+    standalone CLI (standalone_utils/get_yahoo_dta.py) for ad hoc local runs -- the CI
     flow (main.py) passes tickers in directly from the merged dataframe
     instead of reading this file.
     """
@@ -455,25 +452,8 @@ def get_yahoo_metrics_for_tickers(
 
     batches = [unique_tickers[i:i + cfg.batch_size] for i in range(0, len(unique_tickers), cfg.batch_size)]
     records: List[dict] = []
-    
-    # Check for resume checkpoint
-    start_batch = 1
-    if cfg.enable_resume and os.path.exists(cfg.checkpoint_path):
-        try:
-            with open(cfg.checkpoint_path, "r", encoding="utf-8") as f:
-                checkpoint = json.load(f)
-                last_completed = checkpoint.get("last_completed_batch", 0)
-                if last_completed > 0 and last_completed < len(batches):
-                    start_batch = last_completed + 1
-                    print(f"  [Yahoo Metrics] Resuming from batch {start_batch}/{len(batches)} (checkpoint from {checkpoint.get('timestamp', 'unknown')})")
-        except Exception as e:
-            print(f"  [Yahoo Metrics] Warning: Failed to load checkpoint: {e}")
 
     for batch_idx, batch in enumerate(batches, start=1):
-        # Skip already completed batches when resuming
-        if batch_idx < start_batch:
-            continue
-            
         print(f"  [Yahoo Metrics] Batch {batch_idx}/{len(batches)} ({len(batch)} tickers)...")
         batch_errors: List[str] = []
 
@@ -510,19 +490,6 @@ def get_yahoo_metrics_for_tickers(
         if batch_idx < len(batches):
             delay = cfg.rest_delay_seconds + random.uniform(0, cfg.rest_delay_jitter_seconds)
             time.sleep(delay)
-            
-            # Save checkpoint for resume capability
-            if cfg.enable_resume:
-                checkpoint = {
-                    "last_completed_batch": batch_idx,
-                    "total_batches": len(batches),
-                    "timestamp": datetime.now().isoformat(),
-                }
-                try:
-                    with open(cfg.checkpoint_path, "w", encoding="utf-8") as f:
-                        json.dump(checkpoint, f, indent=2)
-                except Exception as e:
-                    print(f"  [Yahoo Metrics] Warning: Failed to save checkpoint: {e}")
 
     _save_subsector_cache(cfg.subsector_cache_path, subsector_cache)
     cache_hits_after = len(subsector_cache) - cache_hits_before

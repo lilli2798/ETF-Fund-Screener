@@ -220,7 +220,7 @@ def process_data(
     print(f"After fund filter: {len(df)} rows")
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
-    yahoo_cfg = YahooMetricsConfig(**thresholds.get("yahoo_metrics", {}))
+    yahoo_cfg = YahooMetricsConfig.from_thresholds(thresholds)  # ignores unknown/old keys
     df_yahoo: pd.DataFrame = get_yahoo_metrics_for_tickers(df["Ticker"], cfg=yahoo_cfg)
 
     # TEMP DEBUG (per user request 2026-07-19): print raw Yahoo results

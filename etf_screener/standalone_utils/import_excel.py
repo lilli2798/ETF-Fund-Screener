@@ -58,7 +58,8 @@ def import_excel_to_sqlite(excel_path, db_path):
     print("All sheets imported successfully.")
 
 if __name__ == "__main__":
-    DB_FILE = 'data/etf_screener.db'
+    # Local results database at <project root>/data/etf_screener.db (works from any directory)
+    DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'data', 'etf_screener.db')
     
     # Get file path from command line argument or prompt
     if len(sys.argv) > 1:

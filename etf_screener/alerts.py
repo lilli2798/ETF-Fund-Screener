@@ -4,7 +4,7 @@ via Slack webhook and/or email.
 The screener pipeline (main.py / profiles/profile_a.py) exports a
 "Profile A Selected Flag" column (True for rows ranked in the top_n of
 their category) -- there is no "Decision" column in that output (that
-name only exists in the separate get_yahoo_dta.py Sharpe/Decision CSV
+name only exists in the separate standalone_utils/get_yahoo_dta.py Sharpe/Decision CSV
 workflow). Alert-worthy rows here are therefore rows where the profile's
 Selected Flag column is True.
 

@@ -145,8 +145,18 @@ ETF-Fund-Screener/
 │   ├── docs/                # Detailed technical documentation
 │   │   ├── column_glossary.md      # Definitions of all metrics
 │   │   └── profile_a_design.md     # Profile A design details
-│   └── input_files/        # Configuration file templates
-│       └── input_profile_a.yaml
+│   ├── input_files/        # Configuration file templates
+│   │   └── input_profile_a.yaml
+│   ├── performance.py       # Yearly + volatile-period columns for the output sheet
+│   ├── yahoo_returns/       # Yearly & volatile-period return caches (used by the screener and GitHub jobs)
+│   │   ├── yearly_cache_manager.py   # Updates sources/etf_yearly_history.csv (add tickers to sources/tickers.txt)
+│   │   ├── volatile_periods.py       # Finds S&P 500 volatile periods -> volatile_config.yaml
+│   │   └── user_defined_by_date_yahoo_analize.py  # Interactive: returns for your own dates / a volatile period
+│   └── standalone_utils/    # Hand-run tools, not used by the screener
+│       ├── query_results.py, import_excel.py      # Search / import into the local results database
+│       ├── compare_results.py                     # Compare selected funds across result files
+│       ├── get_yahoo_dta.py                       # Yahoo sector/Sharpe/Z-score for tickers.txt
+│       └── customized_query_returns.py, ...       # Older custom date-range return tool
 ├── eTrade/                  # eTrade-specific integration scripts
 ├── requirements.txt         # Python dependencies
 └── README.md               # This file

@@ -358,8 +358,6 @@ DEFAULT_YAHOO_METRICS = {
     "subsector_cache_path": "utils/sector_cache.json",
     "subsector_cache_max_age_days": 30,
     "force_refresh_subsector": False,
-    "checkpoint_path": "utils/yahoo_checkpoint.json",
-    "enable_resume": True,
 }
 
 # Full default `thresholds` schema for the profile input YAML. Any keys

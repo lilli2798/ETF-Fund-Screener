@@ -30,14 +30,13 @@ from config import (
     VOLATILE_CONFIG_PATH,
     VOLATILE_DOWNLOAD,
     VOLATILE_RETURNS_CSV,
-    YAHOO_BY_DATE_DIR,
+    YAHOO_RETURNS_DIR,
 )
 
-# Shared code from etf_screen_yahoo_by_date (appended, not prepended, so its
-# own config.py never shadows this project's config.py).
-for _p in (YAHOO_BY_DATE_DIR, os.path.join(YAHOO_BY_DATE_DIR, "yearly_executions")):
-    if _p not in sys.path:
-        sys.path.append(_p)
+# Shared code in yahoo_returns/ (appended, not prepended, so a same-named
+# module there never shadows one in this folder, e.g. database.py).
+if YAHOO_RETURNS_DIR not in sys.path:
+    sys.path.append(YAHOO_RETURNS_DIR)
 
 from benchmark_stats import add_better_worst_stats, add_percentile_bucket_counts  # noqa: E402
 from volatile_periods import load_periods  # noqa: E402

@@ -63,7 +63,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add etf_screener/utils/sector_cache.json
           # Volatile-period returns for funds seen for the first time (so later runs skip the download)
-          git add etf_screen_yahoo_by_date/yearly_executions/sources/etf_volatile_history.csv
+          git add etf_screener/yahoo_returns/sources/etf_volatile_history.csv
           git diff --cached --quiet || git commit -m "Update Yahoo sub-sector and volatile-period caches [skip ci]"
           git push
 

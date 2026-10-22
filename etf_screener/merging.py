@@ -118,7 +118,7 @@ def attach_yearly_returns(
       - launched_after_<last year>: inception after the last complete
         year, so no value is expected yet
       - not_in_yearly_file: ticker absent from the CSV (add it to
-        yearly_executions/sources/tickers.txt)
+        yahoo_returns/sources/tickers.txt)
       - no_data_in_yearly_file: ticker in the CSV but every year is empty
     """
     if not os.path.exists(csv_path):
@@ -168,7 +168,7 @@ def attach_yearly_returns(
     print(f"  Yearly returns {report['years']} attached for {report['funds_with_values']}/{len(df)} funds.")
     labels = {
         new_key: f"launched after {last_year} (expected, no full year yet)",
-        "not_in_yearly_file": "not in yearly file (add to yearly_executions/sources/tickers.txt)",
+        "not_in_yearly_file": "not in yearly file (add to yahoo_returns/sources/tickers.txt, then run yahoo_returns/yearly_cache_manager.py)",
         "no_data_in_yearly_file": "in yearly file but no data",
     }
     for k, label in labels.items():

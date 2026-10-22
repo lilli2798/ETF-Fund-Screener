@@ -9,7 +9,6 @@ Features:
 - Rate limiting with batch processing and random delays to avoid Yahoo API limits
 - Configurable benchmark indexes for comparison (^IXIC, ^DJI, ^GSPC)
 - Error handling for individual ticker failures
-- Run metadata reporting (similar to ETF screener's run_recorder.yaml)
 - Default file locations for automated runs
 - Interactive input with fallback to defaults
 
@@ -22,7 +21,6 @@ Output:
 - Excel file with period and total return sheets
 - Includes performance stats vs benchmarks
 - Percentile bucket counts
-- Run metadata report
 
 Usage:
     python user_defined_by_date_yahoo_analize.py
@@ -46,14 +44,15 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.table import Table, TableStyleInfo
 
-# yearly_executions/ modules import each other as top-level modules
-# (e.g. `from config import ...`), so put that folder on the path.
+# Sibling modules in this folder import each other by plain name, so make
+# sure this folder is importable even when run from another directory.
 BASE_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(BASE_DIR / "yearly_executions"))
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 
 from benchmark_stats import add_better_worst_stats, add_percentile_bucket_counts, append_index_validation_rows  # noqa: E402
-from config import DEFAULT_CONFIG, DEFAULT_INDEXES  # noqa: E402
 from volatile_periods import pick_period  # noqa: E402
+from yahoo_config import DEFAULT_CONFIG, DEFAULT_INDEXES  # noqa: E402
 from yearly_cache_manager import to_date, make_return_series, download_adj_close  # noqa: E402
 
 
@@ -107,7 +106,7 @@ def latest_screener_output(config: Dict = None):
     """
     if config is None:
         config = DEFAULT_CONFIG
-    screener_dir = BASE_DIR / config.get("paths", {}).get("screener_output_dir", "../output/etf_screener")
+    screener_dir = Path(config.get("paths", {})["screener_output_dir"])
     files = list(screener_dir.glob("results_*.xlsx"))
     return max(files, key=lambda f: f.stat().st_mtime) if files else None
 
@@ -170,7 +169,7 @@ def load_input_data(input_file, config: Dict = None):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         out_dir = input_path.parent
         if used_default:
-            out_dir = BASE_DIR / config.get("paths", {}).get("default_output_dir", "../output/yahoo_screen")
+            out_dir = Path(config.get("paths", {})["default_output_dir"])
             out_dir.mkdir(parents=True, exist_ok=True)
         output_file = str(out_dir / f"{input_path.stem}_yahoo_analysis_{timestamp}.xlsx")
         write_in_place = False
@@ -183,8 +182,8 @@ def load_input_data(input_file, config: Dict = None):
         tickers = [x.strip().upper() for x in lines if x and x != "NAN"]
         
         df = pd.DataFrame(index=tickers)
-        p = input_path.with_suffix("") + "-output.xlsx"
-        output_file = str(p)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = str(input_path.with_name(f"{input_path.stem}-output_{timestamp}.xlsx"))
         write_in_place = False
         selected_sheet = None
         return df, tickers, output_file, write_in_place, selected_sheet
@@ -504,65 +503,6 @@ def write_sheets_to_excel(output_file, write_in_place, sheets: Dict[str, pd.Data
 
 
 # =========================================================================
-# REPORT GENERATION
-# =========================================================================
-
-def generate_run_report(
-    input_file: str,
-    beginning_date: str,
-    ending_date: str,
-    tickers: List[str],
-    choices_made: List[Dict],
-    output_file: str,
-    config: Dict = None
-) -> None:
-    """Generate a run metadata report similar to run_recorder.yaml.
-    
-    Args:
-        input_file: Path to the input file used
-        beginning_date: Start date for the analysis
-        ending_date: End date for the analysis
-        tickers: List of ticker symbols processed
-        choices_made: List of dictionaries tracking user choices (period, n, sheets created)
-        output_file: Path to the output Excel file
-        config: Configuration dictionary
-    
-    Returns:
-        None (saves report to YAML file)
-    """
-    if config is None:
-        config = DEFAULT_CONFIG
-    
-    report_config = config.get("report", {})
-    if not report_config.get("enable_report", True):
-        return
-    
-    report_path = report_config.get("report_path", "output/run_recorder.yaml")
-    
-    report = {
-        "timestamp": datetime.now().isoformat() if report_config.get("include_timestamp", True) else None,
-        "input_file": input_file,
-        "query_parameters": {
-            "beginning_date": beginning_date if report_config.get("include_query_params", True) else None,
-            "ending_date": ending_date if report_config.get("include_query_params", True) else None,
-            "num_tickers": len(tickers),
-        },
-        "choices_made": choices_made,
-        "output_file": output_file,
-    }
-
-    report_path = BASE_DIR / report_path  # relative to this script, not the working directory
-    report_dir = report_path.parent
-    report_dir.mkdir(parents=True, exist_ok=True)
-    
-    with open(report_path, "w", encoding="utf-8") as f:
-        import yaml
-        yaml.dump(report, f, default_flow_style=False)
-    
-    print(f"  Run report saved to {report_path}")
-
-
-# =========================================================================
 # MAIN ENTRY POINT
 # =========================================================================
 
@@ -572,14 +512,12 @@ def main():
     Features:
         - Interactive mode: Download data and analyze returns over custom periods
         - File access error handling with retry logic
-        - Run metadata report generation
     
     User Flow:
         1. Provide input file, dates
         2. Download Yahoo Finance data
         3. Choose analysis periods (year/month/week) and number of periods
         4. Generate Excel reports with performance statistics
-        5. Save run metadata report
     
     Returns:
         None
@@ -587,7 +525,6 @@ def main():
     Note: For yearly history cache management, use yearly_cache_manager.py instead.
     """
     config = DEFAULT_CONFIG
-    choices_made = []
     
     # Interactive mode
     try:
@@ -687,7 +624,6 @@ def main():
             write_sheets_to_excel(output_file, write_in_place, {volatile_sheet: volatile_out})
             print(f"Added sheet: {volatile_sheet} (exact return over {period.get('name', period['id'])})")
             print(f"Output file: {output_file}")
-            choices_made.append({"choice": "volatile_period", "period_id": period["id"], "sheet": volatile_sheet})
 
         while True:
             current_choice = input("\ncurrent_choice (year / month / week, or 99 to stop): ").strip().lower()
@@ -736,15 +672,6 @@ def main():
                 print(f"Output file: {output_file}")
                 print(f"Available tickers: {len(available)}, Missing: {len(missing)}")
 
-                # Track choice for report
-                choices_made.append({
-                    "choice": current_choice,
-                    "n": n,
-                    "period_sheet": period_sheet,
-                    "total_sheet": total_sheet,
-                    "available_count": len(available),
-                    "missing_count": len(missing)
-                })
 
             except Exception as e:
                 print(f"\nError while processing choice '{current_choice}' with n={n}: {e}")
@@ -752,17 +679,6 @@ def main():
                 if ans == "99":
                     break
 
-        # Generate run report
-        if choices_made:
-            generate_run_report(
-                input_file=input_file or "default",
-                beginning_date=beginning_date,
-                ending_date=ending_date,
-                tickers=tickers,
-                choices_made=choices_made,
-                output_file=output_file,
-                config=config
-            )
 
     except FileNotFoundError as e:
         print(f"File not found: {e}")

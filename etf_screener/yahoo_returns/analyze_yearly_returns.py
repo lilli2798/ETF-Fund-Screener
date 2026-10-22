@@ -1,29 +1,41 @@
-from datetime import datetime
+from pathlib import Path
 
 import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill, Font
 
 from benchmark_stats import PERCENTILE_BUCKETS, add_better_worst_stats, add_percentile_bucket_counts
-from config import DEFAULT_INDEXES
+from yahoo_config import DEFAULT_CONFIG, DEFAULT_INDEXES
 
 INDEXES = DEFAULT_INDEXES
 
 
 def analyze_yearly_returns(csv_file_path, output_file_path=None, db_path=None):
     """
-    Analyze yearly ETF returns against index benchmarks.
+    Analyze yearly ETF returns against index benchmarks and write the full report.
     
     Args:
         csv_file_path: Path to etf_yearly_history.csv
-        output_file_path: Path to save the output Excel file (optional, defaults to csv_path with _analysis suffix and timestamp)
-        db_path: Path to SQLite database file (optional, defaults to sources/etf_yearly_returns.db)
+        output_file_path: Path to save the output Excel file (optional, defaults to
+            paths.yearly_analysis_path in yahoo_config.py; overwritten each run)
+        db_path: Unused; kept for backward compatibility
     """
-    # Generate default output path if not provided
     if output_file_path is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file_path = csv_file_path.replace('.csv', f'_analysis_{timestamp}.xlsx')
-    
+        output_file_path = DEFAULT_CONFIG["paths"]["yearly_analysis_path"]
+    Path(output_file_path).parent.mkdir(parents=True, exist_ok=True)
+
+    result_df, etf_df, max_per_year, min_per_year, year_columns = compute_yearly_analysis(csv_file_path)
+    save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
+    return result_df
+
+
+def compute_yearly_analysis(csv_file_path):
+    """Compute the analysis for every ticker in the CSV (no file is written).
+
+    Returns (result_df, etf_df, max_per_year, min_per_year, year_columns).
+    Ranks and percentile buckets are always computed against ALL tickers in
+    the CSV, so a single ticker's row matches what a full rebuild would give.
+    """
     # Read the CSV file
     df = pd.read_csv(csv_file_path, index_col=0)
     
@@ -59,10 +71,70 @@ def analyze_yearly_returns(csv_file_path, output_file_path=None, db_path=None):
     ]
     result_df = pd.concat([stats[metric_columns], ranks, stats[PERCENTILE_BUCKETS]], axis=1)
 
-    # Save to Excel with formatting
-    save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
-    
-    return result_df
+    return result_df, etf_df, max_per_year, min_per_year, year_columns
+
+
+YELLOW_FILL = PatternFill(start_color='FFFF00', end_color='FFFF00', fill_type='solid')  # beat every index that year
+GRAY_FILL = PatternFill(start_color='D3D3D3', end_color='D3D3D3', fill_type='solid')    # trailed every index that year
+LARGE_FONT = Font(size=15)
+
+
+def add_tickers_to_analysis(csv_file_path, tickers, output_file_path=None):
+    """Add (or update) rows for `tickers` in an existing analysis report.
+
+    Other rows are left untouched, so their ranks / percentile buckets are
+    not re-computed. If the report doesn't exist yet, or its year columns
+    differ from the CSV (e.g. a new year was added), the full report is
+    rebuilt instead. Returns the number of tickers written.
+    """
+    if output_file_path is None:
+        output_file_path = DEFAULT_CONFIG["paths"]["yearly_analysis_path"]
+
+    result_df, etf_df, max_per_year, min_per_year, year_columns = compute_yearly_analysis(csv_file_path)
+    tickers = [t for t in tickers if t in result_df.index]
+    if not tickers:
+        return 0
+
+    if not Path(output_file_path).exists():
+        print("  No existing report -- building the full report.")
+        save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
+        return len(tickers)
+
+    wb = load_workbook(output_file_path)
+    ws_raw, ws_analysis = wb['Sheet1'], wb['analysis_result']
+    raw_header = [c.value for c in ws_raw[1]]
+    if [h for h in raw_header[1:] if h is not None] != list(year_columns):
+        wb.close()
+        print("  Report years differ from the CSV -- rebuilding the full report.")
+        save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns)
+        return len(tickers)
+
+    def write_row(ws, ticker, values_by_header):
+        header = [c.value for c in ws[1]]
+        rows = {ws.cell(row=r, column=1).value: r for r in range(2, ws.max_row + 1)}
+        r = rows.get(ticker, ws.max_row + 1)  # update a refilled row in place, else append
+        ws.cell(row=r, column=1, value=ticker).font = LARGE_FONT
+        for c, name in enumerate(header[1:], start=2):
+            val = values_by_header.get(name)
+            cell = ws.cell(row=r, column=c, value=None if pd.isna(val) else val)
+            cell.font = LARGE_FONT
+            cell.fill = PatternFill()
+        return r
+
+    for t in tickers:
+        r = write_row(ws_raw, t, etf_df.loc[t].to_dict())
+        for c, year in enumerate(raw_header[1:], start=2):
+            val = etf_df.at[t, year]
+            if pd.notna(val):
+                if val > max_per_year[year]:
+                    ws_raw.cell(row=r, column=c).fill = YELLOW_FILL
+                elif val < min_per_year[year]:
+                    ws_raw.cell(row=r, column=c).fill = GRAY_FILL
+        write_row(ws_analysis, t, result_df.loc[t].to_dict())
+
+    wb.save(output_file_path)
+    print(f"Added/updated {len(tickers)} ticker(s) in {output_file_path}: {', '.join(tickers)}")
+    return len(tickers)
 
 
 def save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_file_path, year_columns):
@@ -136,13 +208,12 @@ def save_with_formatting(result_df, etf_df, max_per_year, min_per_year, output_f
 
 if __name__ == "__main__":
     import sys
-    from pathlib import Path
 
-    from config import DEFAULT_CONFIG
+    from yahoo_config import DEFAULT_CONFIG
 
     # Usage: python analyze_yearly_returns.py [csv_path] [output_xlsx_path]
-    # Defaults to sources/etf_yearly_history.csv next to this script, with the
-    # output written beside the CSV (timestamped).
+    # Defaults to sources/etf_yearly_history.csv next to this script and the
+    # single report at paths.yearly_analysis_path (overwritten each run).
     csv_path = sys.argv[1] if len(sys.argv) > 1 else str(Path(__file__).parent / "sources" / "etf_yearly_history.csv")
     output_path = sys.argv[2] if len(sys.argv) > 2 else None
     if output_path:

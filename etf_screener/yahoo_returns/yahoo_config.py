@@ -3,7 +3,15 @@ Configuration for Yahoo Finance historical data downloader.
 
 This module contains default settings for the user_defined_by_date_yahoo_analize script,
 including rate limiting, caching, and input/output paths.
+
+All paths are absolute, built from this folder (etf_screener/yahoo_returns/),
+so the scripts work no matter which directory they are run from.
 """
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent          # etf_screener/yahoo_returns
+SOURCES_DIR = BASE_DIR / "sources"                  # tickers.txt and the returns caches
+REPO_DIR = BASE_DIR.parent.parent                   # ETF-Fund-Screener
 
 # Default benchmark indexes for comparison
 DEFAULT_INDEXES = ["^IXIC", "^DJI", "^GSPC"]
@@ -19,27 +27,20 @@ DEFAULT_RATE_LIMITING = {
 # Caching settings for price history data
 DEFAULT_CACHING = {
     "enable_cache": True,                # Enable/disable caching
-    "cache_path": "cache/yahoo_price_cache.json",  # Path to cache file
+    "cache_path": str(BASE_DIR / "cache" / "yahoo_price_cache.json"),  # Path to cache file
     "cache_max_age_days": 1,             # Cache validity period in days
-    "yearly_returns_cache_path": "sources/etf_yearly_history.csv",  # Path for yearly returns cache (CSV format) - relative to yearly_executions/
+    "yearly_returns_cache_path": str(SOURCES_DIR / "etf_yearly_history.csv"),  # Yearly returns cache (CSV)
     "yearly_returns_max_age_days": 30,   # Yearly returns cache validity
     "history_start_date": "2006-01-01",  # Always start history from this date
 }
 
 # Default input/output paths
 DEFAULT_PATHS = {
-    "sources_dir": "sources",              # Directory for tickers.txt and cache files (local to yearly_executions/)
-    "tickers_file": "sources/tickers.txt", # Path to tickers.txt file (local to yearly_executions/)
-    "default_output_dir": "../output/yahoo_screen",       # User-defined script output when using the default input (relative to etf_screen_yahoo_by_date/)
-    "screener_output_dir": "../output/etf_screener",  # ETF screener results; latest results_*.xlsx is the user-defined default input (relative to etf_screen_yahoo_by_date/)
-    "report_path": "../output/yahoo_screen/run_recorder.yaml",  # Path for run metadata
-}
-
-# Report/metadata settings
-DEFAULT_REPORT = {
-    "enable_report": True,               # Generate run metadata report
-    "include_query_params": True,        # Include query parameters in report
-    "include_timestamp": True,           # Include run timestamp
+    "sources_dir": str(SOURCES_DIR),                       # tickers.txt and cache files
+    "tickers_file": str(SOURCES_DIR / "tickers.txt"),      # Tickers for the yearly returns cache
+    "default_output_dir": str(REPO_DIR / "output" / "yahoo_screen"),    # User-defined script output when using the default input
+    "screener_output_dir": str(REPO_DIR / "output" / "etf_screener"),  # ETF screener results; latest results_*.xlsx is the user-defined default input
+    "yearly_analysis_path": str(REPO_DIR / "output" / "yahoo_screen" / "etf_yearly_history_analysis.xlsx"),  # analyze_yearly_returns.py report, overwritten each run
 }
 
 # Default query parameters (used when user doesn't provide input)
@@ -56,6 +57,5 @@ DEFAULT_CONFIG = {
     "rate_limiting": DEFAULT_RATE_LIMITING,
     "caching": DEFAULT_CACHING,
     "paths": DEFAULT_PATHS,
-    "report": DEFAULT_REPORT,
     "query": DEFAULT_QUERY,
 }

@@ -25,7 +25,7 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import yfinance as yf
 
-from config import DEFAULT_CONFIG
+from yahoo_config import DEFAULT_CONFIG, SOURCES_DIR
 
 
 # =========================================================================
@@ -266,40 +266,6 @@ def load_tickers_from_file(tickers_file: str) -> List[str]:
         return []
 
 
-def extract_tickers_from_xlsx(output_dir: str) -> List[str]:
-    """Extract tickers from the most recent .xlsx file in the output directory.
-    
-    Args:
-        output_dir: Directory path to search for .xlsx files
-    
-    Returns:
-        List of ticker symbols extracted from the index column of the most recent .xlsx file.
-        Returns empty list if no files found or extraction fails.
-    """
-    output_path = Path(output_dir)
-    if not output_path.exists():
-        return []
-    
-    xlsx_files = list(output_path.glob("*.xlsx"))
-    if not xlsx_files:
-        return []
-    
-    # Get the most recent file by modification time
-    latest_file = max(xlsx_files, key=lambda f: f.stat().st_mtime)
-    
-    try:
-        # Read the first sheet and get index as tickers
-        xls = pd.ExcelFile(latest_file)
-        df = pd.read_excel(latest_file, sheet_name=xls.sheet_names[0], index_col=0)
-        df.index = df.index.astype(str)
-        tickers = [t.strip().upper() for t in df.index.tolist() if t and str(t) != "NAN"]
-        print(f"Extracted {len(tickers)} tickers from {latest_file.name}")
-        return tickers
-    except Exception as e:
-        print(f"Error extracting tickers from {latest_file.name}: {e}")
-        return []
-
-
 # =========================================================================
 # CACHE UPDATE FUNCTIONS
 # =========================================================================
@@ -410,7 +376,7 @@ def update_cache_for_new_tickers(new_tickers: List[str], config: Dict = None) ->
         return cached_df, tickers_to_add
 
 
-def save_missing_data_report(failed_tickers: List[str], output_path: str = "sources/missing_data.csv") -> None:
+def save_missing_data_report(failed_tickers: List[str], output_path: str = str(SOURCES_DIR / "missing_data.csv")) -> None:
     """Save failed tickers to a CSV report file.
     
     Args:
@@ -435,7 +401,7 @@ def save_missing_data_report(failed_tickers: List[str], output_path: str = "sour
 # YEARLY UPDATE FUNCTION
 # =========================================================================
 
-def add_missing_years(config: Dict = None) -> None:
+def add_missing_years(config: Dict = None) -> List[int]:
     """Add any completed year(s) missing from the cache for tickers already in it.
 
     Meant to run once a year (early January): finds year columns between
@@ -454,7 +420,7 @@ def add_missing_years(config: Dict = None) -> None:
     cached_df = load_yearly_history_csv(cache_path)
     if cached_df.empty:
         print("No existing cache found -- nothing to extend (new tickers are handled by build_yearly_history_cache).")
-        return
+        return []
 
     previous_year = datetime.now().year - 1
     missing_years = [
@@ -463,7 +429,7 @@ def add_missing_years(config: Dict = None) -> None:
     ]
     if not missing_years:
         print(f"Cache already has every year through {previous_year}. No yearly update needed.")
-        return
+        return []
 
     tickers = cached_df.index.tolist()
     print(f"Adding year(s) {missing_years} for {len(tickers)} cached tickers...")
@@ -477,7 +443,7 @@ def add_missing_years(config: Dict = None) -> None:
     )
     if adj.empty:
         print("No data downloaded. Cache left unchanged.")
-        return
+        return []
 
     for year in missing_years:
         year_start = pd.Timestamp(f"{year}-01-01")
@@ -494,30 +460,30 @@ def add_missing_years(config: Dict = None) -> None:
 
     save_yearly_history_csv(cache_path, cached_df)
     print(f"Cache updated: {cache_path}")
+    return missing_years
 
 
 # =========================================================================
 # MAIN CACHE BUILD FUNCTION
 # =========================================================================
 
-def build_yearly_history_cache(config: Dict = None) -> None:
+def build_yearly_history_cache(config: Dict = None) -> List[str]:
     """Build yearly history cache from scratch or update existing cache.
     
     Args:
         config: Configuration dictionary containing paths and caching settings
     
     Returns:
-        None
+        Tickers whose rows were added or refilled (have data now).
     
     Workflow:
-        1. Read tickers from sources/tickers.txt
-        2. If no tickers.txt, extract tickers from most recent .xlsx in ../etf_screener/output/
-        3. Load existing cache if it exists
-        4. Identify tickers to download: not in the cache, or cached with no data
-        5. Download data from 2006-01-01 to previous year 12-31 for new tickers
-        6. Calculate yearly returns for each complete year
-        7. Merge with existing cache and save to sources/etf_yearly_history.csv
-        8. Report failed tickers to sources/missing_data.csv
+        1. Read tickers to add from sources/tickers.txt (may list only new ones)
+        2. Load existing cache if it exists
+        3. Identify tickers to download: not in the cache, or cached with no data
+        4. Download data from 2006-01-01 to previous year 12-31 for new tickers
+        5. Calculate yearly returns for each complete year
+        6. Merge with existing cache and save to sources/etf_yearly_history.csv
+        7. Report failed tickers to sources/missing_data.csv
     
     Note: This function preserves existing cache data. It adds new tickers and
     retries tickers whose cached row is entirely empty.
@@ -527,24 +493,15 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     
     paths_config = config.get("paths", {})
     tickers_file = paths_config.get("tickers_file", "sources/tickers.txt")
-    screener_output_dir = paths_config.get("screener_output_dir", "../etf_screener/output")
     cache_config = config.get("caching", {})
     history_start_date = cache_config.get("history_start_date", "2006-01-01")
     cache_path = cache_config.get("yearly_returns_cache_path", "sources/etf_yearly_history.csv")
     
-    # Step 1: Try to load tickers from tickers.txt
+    # Step 1: tickers.txt lists tickers to ADD -- it can hold just the new
+    # ones. Tickers already in the cache are skipped, and cached tickers that
+    # aren't listed are kept.
     tickers = load_tickers_from_file(tickers_file)
-    
-    # Step 2: If no tickers.txt, extract from xlsx
-    if not tickers:
-        print(f"No tickers.txt found, extracting from {screener_output_dir}...")
-        tickers = extract_tickers_from_xlsx(screener_output_dir)
-    
-    if not tickers:
-        print("No tickers found. Please create sources/tickers.txt or ensure output directory has .xlsx files.")
-        return
-    
-    print(f"Found {len(tickers)} tickers in input...")
+    print(f"Found {len(tickers)} tickers in {tickers_file}")
     
     # Step 3: Load existing cache to preserve existing data
     cached_df = load_yearly_history_csv(cache_path)
@@ -558,7 +515,8 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         # Tickers whose cached row is completely empty (e.g. added before
         # they had a full trading history, or a failed download) are retried
         # too -- otherwise they would stay empty forever.
-        empty_tickers = set(cached_df.index[cached_df.isna().all(axis=1)]) & input_tickers
+        # Retry every cached ticker with no data, listed in tickers.txt or not
+        empty_tickers = set(cached_df.index[cached_df.isna().all(axis=1)])
         tickers_to_add = sorted(new_tickers | empty_tickers)
         print(f"Found {len(new_tickers)} new tickers (not in cache) and "
               f"{len(empty_tickers)} cached tickers with no data to retry")
@@ -568,7 +526,7 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     
     if not tickers_to_add:
         print("All tickers already in cache. No update needed.")
-        return
+        return []
     
     # Step 4: Download data from 2006-01-01 to previous year 12-31
     current_year = datetime.now().year
@@ -683,7 +641,7 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     if adj.empty:
         print("No data downloaded. All tickers failed.")
         save_missing_data_report(tickers_to_add)
-        return
+        return []
     
     # Convert yearly_data to DataFrame and merge with existing cache
     new_df = pd.DataFrame.from_dict(yearly_data, orient='index')
@@ -704,6 +662,7 @@ def build_yearly_history_cache(config: Dict = None) -> None:
         print(f"Total tickers in cache: {len(final_merged)}")
     else:
         print("No valid data to save.")
+    added = list(new_df.index)
     
     print(f"Failed tickers: {len(failed_tickers)}")
     
@@ -715,11 +674,26 @@ def build_yearly_history_cache(config: Dict = None) -> None:
     if failed_tickers:
         save_missing_data_report(failed_tickers)
         print(f"Failed to retrieve data for {len(failed_tickers)} tickers")
+    return added
 
 
 if __name__ == "__main__":
+    from analyze_yearly_returns import add_tickers_to_analysis, analyze_yearly_returns
+
     print("Adding any missing completed years for cached tickers...")
-    add_missing_years(DEFAULT_CONFIG)
+    years_added = add_missing_years(DEFAULT_CONFIG)
     print("\nAdding any new tickers from tickers.txt...")
-    build_yearly_history_cache(DEFAULT_CONFIG)
+    tickers_added = build_yearly_history_cache(DEFAULT_CONFIG)
+
+    csv_path = DEFAULT_CONFIG["caching"]["yearly_returns_cache_path"]
+    report = DEFAULT_CONFIG["paths"]["yearly_analysis_path"]
+    if years_added or not Path(report).exists():
+        # A new year changes every fund's row -> rebuild the whole report
+        print("\nRebuilding the yearly analysis report...")
+        analyze_yearly_returns(csv_path, report)
+    elif tickers_added:
+        print(f"\nAdding {len(tickers_added)} ticker(s) to the yearly analysis report...")
+        add_tickers_to_analysis(csv_path, tickers_added, report)
+    else:
+        print("\nNo changes -- yearly analysis report left as is.")
     print("\nDone!")

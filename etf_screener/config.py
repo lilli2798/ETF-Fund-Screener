@@ -26,26 +26,21 @@ DEFAULT_OUT_PATH: str = "../output/etf_screener"
 # Default profile to run when none is specified.
 DEFAULT_PROFILE_NAME: str = "A"
 
-# Calendar-year returns maintained by etf_screen_yahoo_by_date/yearly_executions
+# Calendar-year returns maintained by yahoo_returns/yearly_cache_manager.py
 # (updated by the yearly GitHub workflow). The most recent N years are
 # attached to the screener output as "Yearly Return (YYYY)" columns, in
 # percent like Morningstar's Total Return columns. Display only -- not scored.
-YEARLY_RETURNS_CSV: str = str(
-    Path(__file__).resolve().parent.parent
-    / "etf_screen_yahoo_by_date" / "yearly_executions" / "sources" / "etf_yearly_history.csv"
-)
+YAHOO_RETURNS_DIR: str = str(Path(__file__).resolve().parent / "yahoo_returns")
+YEARLY_RETURNS_CSV: str = str(Path(YAHOO_RETURNS_DIR) / "sources" / "etf_yearly_history.csv")
 YEARLY_RETURN_YEARS: int = 10
 
 # Volatile market periods (S&P 500 >= 15% declines and volatility spikes since
-# 1976) from etf_screen_yahoo_by_date/volatile_config.yaml -- regenerate with
-# volatile_periods.py. Each fund's return in every period is attached to the
+# 1976) from yahoo_returns/volatile_config.yaml -- regenerate with
+# yahoo_returns/volatile_periods.py. Each fund's return in every period is attached to the
 # output ("Volatile Decline/Recovery: ..."); results are cached in
 # VOLATILE_RETURNS_CSV so only new funds are downloaded on later runs.
-YAHOO_BY_DATE_DIR: str = str(Path(__file__).resolve().parent.parent / "etf_screen_yahoo_by_date")
-VOLATILE_CONFIG_PATH: str = str(Path(YAHOO_BY_DATE_DIR) / "volatile_config.yaml")
-VOLATILE_RETURNS_CSV: str = str(
-    Path(YAHOO_BY_DATE_DIR) / "yearly_executions" / "sources" / "etf_volatile_history.csv"
-)
+VOLATILE_CONFIG_PATH: str = str(Path(YAHOO_RETURNS_DIR) / "volatile_config.yaml")
+VOLATILE_RETURNS_CSV: str = str(Path(YAHOO_RETURNS_DIR) / "sources" / "etf_volatile_history.csv")
 VOLATILE_DOWNLOAD = {
     "batch_size": 50,
     "rest_delay_seconds": 10.0,

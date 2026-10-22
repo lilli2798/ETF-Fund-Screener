@@ -130,12 +130,15 @@ def attach_yearly_stats(df: pd.DataFrame, csv_path: str, n_years: int) -> pd.Dat
 # Volatile periods
 # ---------------------------------------------------------------------------
 
+# Cache columns include the dates, so editing a period's start/end/recovery
+# in volatile_config.yaml gives a new key and the returns are recomputed
+# (a key based on `id` alone would keep serving the old dates' returns).
 def _decline_col(p: Dict[str, Any]) -> str:
-    return f"{p['id']} decline"
+    return f"{p['id']} decline {p['start']}..{p['end']}"
 
 
 def _recovery_col(p: Dict[str, Any]) -> str:
-    return f"{p['id']} recovery"
+    return f"{p['id']} recovery {p['end']}..{p['recovery']}"
 
 
 def _download_closes(tickers: List[str], start: str, end: str) -> Tuple[pd.DataFrame, List[str]]:
@@ -195,7 +198,9 @@ def _update_volatile_cache(tickers: List[str], periods: List[Dict[str, Any]], ca
     new_cols = [c for c in cols if c not in cache.columns]
     to_fetch = [t for t in tickers if t not in cache.index]
     if new_cols:
-        to_fetch = list(dict.fromkeys(list(cache.index) + list(tickers)))  # new period: fill it for everyone
+        # new period or changed dates: recompute it for every cached ticker
+        print(f"  Volatile periods: {len(new_cols)} new or changed period column(s), recomputing for all tickers.")
+        to_fetch = list(dict.fromkeys(list(cache.index) + list(tickers)))
 
     if not to_fetch:
         return cache.reindex(columns=cols)
@@ -203,7 +208,7 @@ def _update_volatile_cache(tickers: List[str], periods: List[Dict[str, Any]], ca
     start = str(min(p["start"] for p in periods))
     last = max(pd.Timestamp(p.get("recovery") or p["end"]) for p in periods)
     end = (last + pd.Timedelta(days=1)).strftime("%Y-%m-%d")  # yfinance `end` is exclusive
-    print(f"  Volatile periods: computing returns for {len(to_fetch)} ticker(s) not in the cache ({start} -> {last.date()})...")
+    print(f"  Volatile periods: computing returns for {len(to_fetch)} ticker(s) ({start} -> {last.date()})...")
     closes, failed = _download_closes(to_fetch, start, end)
     if failed:
         print(f"  Volatile periods: {len(failed)} ticker(s) not downloaded; they will be retried next run.")

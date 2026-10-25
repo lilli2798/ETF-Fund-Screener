@@ -23,8 +23,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pandas as pd
-import yfinance as yf
 
+from utils.yf_download import download_prices
 from config import (
     BENCHMARK_INDEXES,
     VOLATILE_CONFIG_PATH,
@@ -148,29 +148,22 @@ def _download_closes(tickers: List[str], start: str, end: str) -> Tuple[pd.DataF
     "Adj Close" column only for tickers that FAILED, so reading it would drop
     every good ticker in a batch that contains a delisted one.
 
-    Also returns the tickers whose batch failed to download (network/rate
-    limit), so they are retried next run instead of cached as "no data".
+    Also returns the tickers that failed to download (network / rate
+    limit, after retries), so they are retried next run instead of cached
+    as "no data".
     """
     batch_size = VOLATILE_DOWNLOAD["batch_size"]
     batches = [tickers[i:i + batch_size] for i in range(0, len(tickers), batch_size)]
     frames, failed = [], []
     for n, batch in enumerate(batches, 1):
         print(f"    Volatile periods: downloading batch {n}/{len(batches)} ({len(batch)} tickers)...")
-        for attempt in range(1, VOLATILE_DOWNLOAD["max_retries"] + 1):
-            try:
-                data = yf.download(batch, start=start, end=end, auto_adjust=True, progress=False)
-                if not data.empty:
-                    close = data["Close"] if isinstance(data.columns, pd.MultiIndex) else data[["Close"]]
-                    if not isinstance(data.columns, pd.MultiIndex):
-                        close.columns = batch[:1]
-                    frames.append(close)
-                break
-            except Exception as exc:
-                if attempt == VOLATILE_DOWNLOAD["max_retries"]:
-                    print(f"    Batch {n} failed after {attempt} attempts: {exc}")
-                    failed.extend(batch)
-                else:
-                    time.sleep(VOLATILE_DOWNLOAD["rest_delay_seconds"])
+        close, batch_failed = download_prices(
+            batch, "Close", retries=VOLATILE_DOWNLOAD["max_retries"],
+            start=start, end=end, auto_adjust=True,
+        )
+        if not close.empty:
+            frames.append(close)
+        failed.extend(batch_failed)
         if n < len(batches):
             time.sleep(VOLATILE_DOWNLOAD["rest_delay_seconds"] + random.uniform(0, VOLATILE_DOWNLOAD["jitter_seconds"]))
     if not frames:

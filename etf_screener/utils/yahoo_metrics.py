@@ -26,13 +26,17 @@ import json
 import os
 import random
 import time
+import zlib
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
 import yfinance as yf
+
+from utils.yf_download import download_prices, is_rate_limit_error
 
 # =========================================================================
 # SECTOR / SUB-SECTOR TAXONOMY
@@ -115,16 +119,17 @@ class YahooMetricsConfig:
     config.DEFAULT_YAHOO_METRICS + input_file.deep_merge_dicts), so
     behavior can be tuned per-profile without editing code.
     """
-    batch_size: int = 50
-    rest_delay_seconds: float = 60
-    rest_delay_jitter_seconds: float = 10.0
-    sample_stock_lookups: int = 5
+    batch_size: int = 200               # tickers per price download
+    rest_delay_seconds: float = 3.0     # pause between price downloads
+    rest_delay_jitter_seconds: float = 2.0
+    subsector_workers: int = 4          # parallel sub-sector lookups
+    sample_stock_lookups: int = 10      # Yahoo lists at most 10 top holdings
     max_download_retries: int = 3
     risk_free_annual: float = 0.04
     price_history_period: str = "3y"
     log_unmapped_keys: bool = True
     subsector_cache_path: str = "utils/sector_cache.json"
-    subsector_cache_max_age_days: int = 30
+    subsector_cache_max_age_days: int = 365
     force_refresh_subsector: bool = False
 
     @property
@@ -169,7 +174,7 @@ def _save_subsector_cache(cache_path: str, cache_data: Dict[str, Dict[str, str]]
         json.dump(cache_data, f, indent=2, sort_keys=True)
 
 
-def _is_cache_entry_fresh(entry: Dict[str, str], max_age_days: int) -> bool:
+def _is_cache_entry_fresh(entry: Dict[str, str], max_age_days: int, ticker: str = "") -> bool:
     """True if entry has a parseable cached_date within max_age_days of now."""
     cached_date_str = entry.get("cached_date")
     if not cached_date_str:
@@ -178,7 +183,10 @@ def _is_cache_entry_fresh(entry: Dict[str, str], max_age_days: int) -> bool:
         cached_date = datetime.fromisoformat(cached_date_str)
     except Exception:
         return False
-    return (datetime.now() - cached_date) <= timedelta(days=max_age_days)
+    # Each ticker gets 0-29 extra days (fixed per ticker), so entries cached
+    # on the same day are refreshed over a month instead of all at once.
+    spread = zlib.crc32(ticker.encode()) % 30 if ticker else 0
+    return (datetime.now() - cached_date) <= timedelta(days=max_age_days + spread)
 
 
 # =========================================================================
@@ -236,6 +244,11 @@ def _is_skippable_holding_symbol(stock_symbol: str) -> bool:
     return False
 
 
+def _cache_subsector(cache: Optional[Dict[str, Dict[str, str]]], ticker: str, sub_sector: str) -> None:
+    if cache is not None:
+        cache[ticker] = {"sub_sector": sub_sector, "cached_date": datetime.now().isoformat()}
+
+
 def resolve_ticker_subsector(
     ticker: str,
     cfg: YahooMetricsConfig,
@@ -262,7 +275,7 @@ def resolve_ticker_subsector(
     """
     if subsector_cache is not None and not cfg.force_refresh_subsector:
         cached_entry = subsector_cache.get(ticker)
-        if cached_entry and _is_cache_entry_fresh(cached_entry, cfg.subsector_cache_max_age_days):
+        if cached_entry and _is_cache_entry_fresh(cached_entry, cfg.subsector_cache_max_age_days, ticker):
             return cached_entry.get("sub_sector", DEFAULT_SUBSECTOR)
 
     try:
@@ -272,17 +285,25 @@ def resolve_ticker_subsector(
     except Exception as exc:
         if errors is not None:
             errors.append(f"{ticker}: failed to fetch funds_data ({exc})")
+        # "No Fund data found" is Yahoo's real answer, so cache it like an
+        # empty holdings list; network / rate-limit errors are retried next run
+        if "No Fund data found" in str(exc):
+            _cache_subsector(subsector_cache, ticker, DEFAULT_SUBSECTOR)
         return DEFAULT_SUBSECTOR
 
     if holdings_df is None or holdings_df.empty:
         if errors is not None:
             errors.append(f"{ticker}: no top_holdings data available (non-ETF or unsupported by Yahoo)")
+        # cached too, so funds without holdings data (most bond / mutual
+        # funds) aren't looked up again every run
+        _cache_subsector(subsector_cache, ticker, DEFAULT_SUBSECTOR)
         return DEFAULT_SUBSECTOR
 
     weight_matrix: Dict[str, float] = {}
     top_stocks = holdings_df.index.tolist()
     loop_limit = min(len(top_stocks), cfg.sample_stock_lookups)
     info_cache: Dict[str, Any] = holding_info_cache if holding_info_cache is not None else {}
+    rate_limited = False
 
     for stock_symbol in top_stocks[:loop_limit]:
         try:
@@ -305,7 +326,8 @@ def resolve_ticker_subsector(
 
             sub_sector = classify_holding_subsector(ind_key, sec_key, log_unmapped=cfg.log_unmapped_keys)
             weight_matrix[sub_sector] = weight_matrix.get(sub_sector, 0.0) + holding_weight
-        except Exception:
+        except Exception as exc:
+            rate_limited = rate_limited or is_rate_limit_error(repr(exc))
             continue
 
     resolved_sub_sector = DEFAULT_SUBSECTOR
@@ -314,11 +336,10 @@ def resolve_ticker_subsector(
         if weight_matrix[max_sub_sector] > 0:
             resolved_sub_sector = max_sub_sector
 
-    if subsector_cache is not None:
-        subsector_cache[ticker] = {
-            "sub_sector": resolved_sub_sector,
-            "cached_date": datetime.now().isoformat(),
-        }
+    if rate_limited and errors is not None:
+        errors.append(f"{ticker}: Yahoo rate limit during holdings lookup -- sub-sector not cached, retried next run")
+    if not rate_limited:
+        _cache_subsector(subsector_cache, ticker, resolved_sub_sector)
 
     return resolved_sub_sector
 
@@ -332,33 +353,22 @@ def _download_price_history(
     cfg: YahooMetricsConfig,
     errors: Optional[List[str]] = None,
 ) -> pd.DataFrame:
-    """Download adjusted-close price history for a batch of tickers,
-    retrying on failure. Returns an empty DataFrame (never raises) if
-    every attempt fails, so callers can fall back to NaN Sharpe values
-    instead of crashing the whole pipeline.
+    """Adjusted-close daily prices (tickers as columns) for a batch,
+    retrying tickers Yahoo rate-limits. Never raises: tickers that still
+    fail are logged and get NaN Sharpe values.
     """
-    raw_data = pd.DataFrame()
-    for attempt in range(1, cfg.max_download_retries + 1):
-        try:
-            raw_data = yf.download(
-                tickers, period=cfg.price_history_period, interval="1d",
-                auto_adjust=False, progress=False,
-            )
-            if not raw_data.empty:
-                break
-        except Exception as exc:
-            if attempt == cfg.max_download_retries:
-                msg = f"Price download failed after {cfg.max_download_retries} attempts: {exc}"
-                print(f"  [Yahoo Metrics] [ERROR] {msg}")
-                if errors is not None:
-                    errors.append(msg)
-            else:
-                time.sleep(2)
-    return raw_data
+    prices, failed = download_prices(
+        tickers, "Adj Close", retries=cfg.max_download_retries,
+        period=cfg.price_history_period, interval="1d", auto_adjust=False,
+    )
+    if errors is not None:
+        for t in failed:
+            errors.append(f"{t}: price download failed (Yahoo rate limit) -- Sharpe left as NaN.")
+    return prices
 
 
 def _compute_sharpe_for_batch(
-    raw_data: pd.DataFrame,
+    daily_prices: pd.DataFrame,
     tickers: List[str],
     cfg: YahooMetricsConfig,
     errors: Optional[List[str]] = None,
@@ -372,38 +382,38 @@ def _compute_sharpe_for_batch(
         t: {"Sharpe_1Y": np.nan, "Sharpe_3Y": np.nan} for t in tickers
     }
 
-    if raw_data.empty or "Adj Close" not in raw_data.columns:
+    if daily_prices.empty:
         if errors is not None:
-            errors.append("Batch price data empty or missing 'Adj Close' -- Sharpe left as NaN for this batch.")
+            errors.append("Batch price data empty -- Sharpe left as NaN for this batch.")
         return results
 
-    daily_prices = (
-        raw_data.xs("Adj Close", axis=1, level=0)
-        if isinstance(raw_data.columns, pd.MultiIndex)
-        else raw_data["Adj Close"]
-    )
     monthly_prices = daily_prices.resample("ME").last()
-    all_monthly_returns = monthly_prices.pct_change().dropna()
-
-    returns_3y = all_monthly_returns.copy()
-    returns_1y = all_monthly_returns.tail(12).copy()
+    # Returns per fund: a batch-wide dropna() would cut every fund's history
+    # to the shortest one in the batch (one new or delisted fund could leave
+    # the whole batch with a few months, or none)
+    all_monthly_returns = monthly_prices.pct_change(fill_method=None)
+    last_12_months = all_monthly_returns.index[-12:]
     rf_monthly = cfg.risk_free_monthly
 
+    def _sharpe(returns: pd.Series, min_months: int) -> float:
+        returns = returns.dropna()
+        if len(returns) < min_months:
+            return np.nan  # too little history (e.g. a fund launched recently)
+        excess = returns - rf_monthly
+        std = excess.std()
+        return (excess.mean() / std) * np.sqrt(12) if (std > 0 and not pd.isna(std)) else np.nan
+
     for ticker in tickers:
-        if ticker not in all_monthly_returns.columns:
+        if ticker not in all_monthly_returns.columns or all_monthly_returns[ticker].isna().all():
             if errors is not None:
                 errors.append(f"{ticker}: no price series returned by Yahoo -- Sharpe left as NaN.")
             continue
         try:
-            exc_1y = returns_1y[ticker] - rf_monthly
-            std_1y = exc_1y.std()
-            sharpe_1y = (exc_1y.mean() / std_1y) * np.sqrt(12) if (std_1y > 0 and not pd.isna(std_1y)) else np.nan
-
-            exc_3y = returns_3y[ticker] - rf_monthly
-            std_3y = exc_3y.std()
-            sharpe_3y = (exc_3y.mean() / std_3y) * np.sqrt(12) if (std_3y > 0 and not pd.isna(std_3y)) else np.nan
-
-            results[ticker] = {"Sharpe_1Y": sharpe_1y, "Sharpe_3Y": sharpe_3y}
+            series = all_monthly_returns[ticker]
+            results[ticker] = {
+                "Sharpe_1Y": _sharpe(series.loc[last_12_months], min_months=11),
+                "Sharpe_3Y": _sharpe(series, min_months=30),
+            }
         except Exception as exc:
             if errors is not None:
                 errors.append(f"{ticker}: Sharpe calculation failed ({exc}) -- left as NaN.")
@@ -450,46 +460,56 @@ def get_yahoo_metrics_for_tickers(
     cache_hits_before = len(subsector_cache)
     holding_info_cache: Dict[str, Any] = {}
 
+    errors: List[str] = []
+
+    # Sub-sectors: cached tickers return immediately; the rest are looked up
+    # in parallel (each lookup is several small Yahoo requests).
+    def _subsector(ticker: str) -> Tuple[str, str, List[str]]:
+        errs: List[str] = []
+        sub = resolve_ticker_subsector(
+            ticker, cfg, errors=errs,
+            subsector_cache=subsector_cache,
+            holding_info_cache=holding_info_cache,
+        )
+        return ticker, sub, errs
+
+    print(f"  [Yahoo Metrics] Sub-sectors for {len(unique_tickers)} tickers "
+          f"({cfg.subsector_workers} parallel lookups for any not cached)...")
+    sub_sectors: Dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=max(1, cfg.subsector_workers)) as pool:
+        for ticker, sub, errs in pool.map(_subsector, unique_tickers):
+            sub_sectors[ticker] = sub
+            errors.extend(errs)
+
+    # Sharpe: one price download per batch (yfinance threads each batch).
     batches = [unique_tickers[i:i + cfg.batch_size] for i in range(0, len(unique_tickers), cfg.batch_size)]
-    records: List[dict] = []
-
+    sharpe_results: Dict[str, Dict[str, float]] = {}
     for batch_idx, batch in enumerate(batches, start=1):
-        print(f"  [Yahoo Metrics] Batch {batch_idx}/{len(batches)} ({len(batch)} tickers)...")
-        batch_errors: List[str] = []
-
-        sub_sectors: Dict[str, str] = {}
-        for ticker in batch:
-            sub_sectors[ticker] = resolve_ticker_subsector(
-                ticker, cfg, errors=batch_errors,
-                subsector_cache=subsector_cache,
-                holding_info_cache=holding_info_cache,
-            )
-
-        raw_data = _download_price_history(batch, cfg, errors=batch_errors)
-        sharpe_results = _compute_sharpe_for_batch(raw_data, batch, cfg, errors=batch_errors)
-
-        if batch_errors:
-            print(f"  [Yahoo Metrics] {len(batch_errors)} issue(s) in batch {batch_idx}:")
-            for msg in batch_errors:
-                print(f"    - {msg}")
-
-        ticker_error_map: Dict[str, str] = {}
-        for msg in batch_errors:
-            t = msg.split(":", 1)[0].strip()
-            ticker_error_map.setdefault(t, msg)
-
-        for ticker in batch:
-            records.append({
-                "Ticker": ticker,
-                "Yahoo_SubSector": sub_sectors.get(ticker, DEFAULT_SUBSECTOR),
-                "Sharpe_1Y": sharpe_results.get(ticker, {}).get("Sharpe_1Y", np.nan),
-                "Sharpe_3Y": sharpe_results.get(ticker, {}).get("Sharpe_3Y", np.nan),
-                "Yahoo_Fetch_Error": ticker_error_map.get(ticker, ""),
-            })
-
+        print(f"  [Yahoo Metrics] Prices batch {batch_idx}/{len(batches)} ({len(batch)} tickers)...")
+        daily_prices = _download_price_history(batch, cfg, errors=errors)
+        sharpe_results.update(_compute_sharpe_for_batch(daily_prices, batch, cfg, errors=errors))
         if batch_idx < len(batches):
-            delay = cfg.rest_delay_seconds + random.uniform(0, cfg.rest_delay_jitter_seconds)
-            time.sleep(delay)
+            time.sleep(cfg.rest_delay_seconds + random.uniform(0, cfg.rest_delay_jitter_seconds))
+
+    if errors:
+        print(f"  [Yahoo Metrics] {len(errors)} issue(s) (first 20 shown):")
+        for msg in errors[:20]:
+            print(f"    - {msg}")
+
+    ticker_error_map: Dict[str, str] = {}
+    for msg in errors:
+        ticker_error_map.setdefault(msg.split(":", 1)[0].strip(), msg)
+
+    records: List[dict] = [
+        {
+            "Ticker": ticker,
+            "Yahoo_SubSector": sub_sectors.get(ticker, DEFAULT_SUBSECTOR),
+            "Sharpe_1Y": sharpe_results.get(ticker, {}).get("Sharpe_1Y", np.nan),
+            "Sharpe_3Y": sharpe_results.get(ticker, {}).get("Sharpe_3Y", np.nan),
+            "Yahoo_Fetch_Error": ticker_error_map.get(ticker, ""),
+        }
+        for ticker in unique_tickers
+    ]
 
     _save_subsector_cache(cfg.subsector_cache_path, subsector_cache)
     cache_hits_after = len(subsector_cache) - cache_hits_before

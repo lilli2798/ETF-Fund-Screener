@@ -44,7 +44,12 @@ import numpy as np
 import pandas as pd
 
 from config import PROFILE_A_WEIGHTS
-from scoring import register_profile_filter, register_profile_scorer
+from scoring import (
+    build_structure_flags,
+    register_profile_filter,
+    register_profile_prefilter,
+    register_profile_scorer,
+)
 
 
 # Concept columns Profile A may weight. Anything not in this map is ignored
@@ -67,24 +72,27 @@ def _as_float_series(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce").astype("float64")
 
 
-@register_profile_filter("A")
-def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
+@register_profile_prefilter("A")
+def apply_profile_A_prefilter(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
     """
-    Apply Profile A's eligibility rules using values from the input-file
-    `thresholds` dict (falling back to config defaults if a key is
-    missing, so older YAML files without the newer keys still work):
-      - require_category (bool)
-      - max_expense_ratio (float)
-      - require_fund_size (bool)
-      - require_3y_return (bool)
-
-    These stay as hard gates on the RAW columns (not the concept
-    scores), per the project decision that funds without a full 3-year
-    history or fund size are excluded entirely, not scored on
-    whatever shorter history they have.
+    Profile A's hard rules on raw Morningstar columns, run right after the
+    data is loaded so excluded funds are never downloaded from Yahoo and
+    never affect the within-category scores of the funds that remain.
+    Missing YAML keys fall back to the defaults below.
+      - require_category, require_fund_size, require_3y_return (bool):
+        funds without a category, fund size or full 3-year history are
+        excluded, not scored on a shorter history
+      - max_expense_ratio (percent)
+      - exclude_leveraged_funds / exclude_interval_funds /
+        exclude_tender_offer_funds (bool)
+      - max_deferred_load, max_front_load (percent)
+      - min_initial_investment (dollars): the HIGHEST minimum allowed;
+        funds that require more are removed
+      - max_redemption_fee (percent)
+    Blank values pass (e.g. ETFs have no minimum initial investment).
     """
     start_count: int = len(df)
-    eligible: pd.DataFrame = df.copy()
+    eligible: pd.DataFrame = build_structure_flags(df)
 
     require_category = thresholds.get("require_category", True)
     max_expense_ratio = thresholds.get("max_expense_ratio", 0.75)
@@ -122,9 +130,7 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
     # Structural exclusions -- Profile A targets steady, long-term,
     # low-risk holdings, so leveraged/interval/tender-offer funds are
     # hard-excluded regardless of how well they score on the 8 weighted
-    # concepts. These flag columns are built unscored by
-    # scoring.build_structure_flags() (part of build_concept_scores()),
-    # so they must already exist on `df` by the time this filter runs.
+    # concepts. Flag columns come from scoring.build_structure_flags().
     exclude_leveraged_funds = thresholds.get("exclude_leveraged_funds", True)
     exclude_interval_funds = thresholds.get("exclude_interval_funds", True)
     exclude_tender_offer_funds = thresholds.get("exclude_tender_offer_funds", True)
@@ -147,7 +153,6 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
         eligible = eligible[~flag]
         print(f"  Profile A filter - exclude tender-offer funds: {before} -> {len(eligible)}")
 
-    # Load and investment requirement filters
     max_deferred_load = thresholds.get("max_deferred_load", 0.0)
     max_front_load = thresholds.get("max_front_load", 0.0)
     min_initial_investment = thresholds.get("min_initial_investment", 50000)
@@ -198,13 +203,28 @@ def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
             f"{before} -> {len(eligible)}"
         )
 
+    print(f"Profile A eligibility filter (Morningstar rules): {start_count} -> {len(eligible)} rows remain.")
+    return eligible.copy()
+
+
+@register_profile_filter("A")
+def apply_profile_A_filters(df: pd.DataFrame, thresholds: dict) -> pd.DataFrame:
+    """
+    Profile A rules that need data added during the run (yearly benchmark
+    stats). Everything that only reads raw Morningstar columns runs earlier
+    in apply_profile_A_prefilter(), before the Yahoo downloads.
+      - require_benchmark_outperformance / min_benchmark_beat_pct
+    """
+    start_count: int = len(df)
+    eligible: pd.DataFrame = df.copy()
+
     # Historical benchmark performance filter
     require_benchmark_outperformance = thresholds.get("require_benchmark_outperformance", False)
     min_benchmark_beat_pct = thresholds.get("min_benchmark_beat_pct", 50.0)
 
-    if require_benchmark_outperformance and "Better %" in eligible.columns:
+    if require_benchmark_outperformance and "Yearly Beat %" in eligible.columns:
         before = len(eligible)
-        better_pct = _as_float_series(eligible["Better %"])
+        better_pct = _as_float_series(eligible["Yearly Beat %"])
         # Require funds to beat benchmarks in at least X% of available years
         # Allow funds with NaN benchmark data to pass through
         eligible = eligible[better_pct.isna() | (better_pct >= float(min_benchmark_beat_pct))]

@@ -55,13 +55,15 @@ from data_loading import load_data
 from input_file import load_profile_input, ProfileInput
 from merging import apply_fund_filter, attach_yearly_returns
 from performance import append_benchmark_rows, attach_volatile_performance, attach_yearly_stats
-from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_SCORERS
+from extra_reports import build_momentum_tabs, split_no_yahoo_data
+from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_PREFILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
 
 YahooMetricsConfig = yahoo_metrics.YahooMetricsConfig
 get_yahoo_metrics_for_tickers = yahoo_metrics.get_yahoo_metrics_for_tickers
 
 from export import (
+    add_sheets_to_workbook,
     write_excel_with_retry,
     apply_header_formatting,
     format_column_names_for_export,
@@ -219,6 +221,10 @@ def process_data(
     df = apply_fund_filter(df)
     print(f"After fund filter: {len(df)} rows")
 
+    if profile_name in PROFILE_PREFILTERS:
+        print(f"Applying Profile {profile_name} eligibility filters (Morningstar rules)...")
+        df = PROFILE_PREFILTERS[profile_name](df, thresholds)
+
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
     yahoo_cfg = YahooMetricsConfig.from_thresholds(thresholds)  # ignores unknown/old keys
     df_yahoo: pd.DataFrame = get_yahoo_metrics_for_tickers(df["Ticker"], cfg=yahoo_cfg)
@@ -260,7 +266,7 @@ def process_data(
     from scoring import calculate_return_rankings
     df = calculate_return_rankings(df)
 
-    print(f"Applying Profile {profile_name} eligibility filters...")
+    print(f"Applying Profile {profile_name} benchmark filter...")
     df_eligible: pd.DataFrame = PROFILE_FILTERS[profile_name](df, thresholds)
 
     print(f"Computing Profile {profile_name} composite score and rankings...")
@@ -299,7 +305,12 @@ def process_data(
     print("Saving results...")
     # Benchmark index rows (^GSPC, ^DJI, ^IXIC) go at the bottom of the main
     # report only -- not into the database or the per-category files.
-    write_excel_with_retry(append_benchmark_rows(df_export, YEARLY_RETURNS_CSV), final_out_path, sheet_name=sheet_name)
+    # Funds Yahoo has no price history for get their own tab instead.
+    df_overview, no_yahoo_tab = split_no_yahoo_data(df_export)
+    write_excel_with_retry(append_benchmark_rows(df_overview, YEARLY_RETURNS_CSV), final_out_path, sheet_name=sheet_name)
+
+    print("Adding momentum tabs (top / bottom 50 for both 1W and 1M)...")
+    add_sheets_to_workbook(final_out_path, {**build_momentum_tabs(df_overview), **no_yahoo_tab})
 
     print("Formatting header row...")
     apply_header_formatting(final_out_path)
@@ -323,16 +334,25 @@ def process_data(
     print(f"Used-weights report saved to: {used_weights_path}")
 
     # Create separate files by category if columns exist
-    category_columns = ["Asset Class", "Morningstar Category", "Equity Style Box (Funds)"]
-    
+    # {subfolder: column}. Each split gets its own subfolder, since some
+    # names repeat across columns (e.g. "Large Blend" is both a Morningstar
+    # Category and a Style Box) and would overwrite each other.
+    category_columns = {
+        "Asset_Class": "Asset Class",
+        "Morningstar_Category": "Morningstar Category",
+        "Yahoo_Subsector": "Yahoo Subsector",
+        "Style_Box": "Equity Style Box (Funds)",
+    }
+
     # Create a subdirectory for category files with timestamp matching the results file
     base_filename_no_ext = os.path.splitext(os.path.basename(final_out_path))[0]
     category_output_dir = os.path.join(out_path, f"{base_filename_no_ext}_by_category")
-    os.makedirs(category_output_dir, exist_ok=True)
-    
-    for category_col in category_columns:
+
+    for folder, category_col in category_columns.items():
         if category_col in df_export.columns:
-            create_sheets_by_category(df_export, category_col, category_output_dir, sheet_name=sheet_name)
+            split_dir = os.path.join(category_output_dir, folder)
+            os.makedirs(split_dir, exist_ok=True)
+            create_sheets_by_category(df_export, category_col, split_dir, sheet_name=sheet_name)
 
     # Save results to SQLite database (local runs only -- CI passes
     # save_to_db=False so the database stays on the local machine)

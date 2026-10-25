@@ -154,7 +154,11 @@ def read_and_concat_excels(
             if usecols:
                 keep = [c for c in usecols if c in df_part.columns]
                 df_part = df_part[keep]
-        df_part["__source_file"] = os.path.basename(f)
+        # concat instead of df_part[col] = ...: pandas 3 reads each Excel
+        # column as its own block, and inserting into a 100+ block frame
+        # prints a PerformanceWarning for every file
+        source = pd.Series(os.path.basename(f), index=df_part.index, name="__source_file")
+        df_part = pd.concat([df_part, source], axis=1)
         frames.append(df_part)
 
     combined: pd.DataFrame = pd.concat(frames, ignore_index=True, sort=False)

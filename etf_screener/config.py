@@ -42,9 +42,9 @@ YEARLY_RETURN_YEARS: int = 10
 VOLATILE_CONFIG_PATH: str = str(Path(YAHOO_RETURNS_DIR) / "volatile_config.yaml")
 VOLATILE_RETURNS_CSV: str = str(Path(YAHOO_RETURNS_DIR) / "sources" / "etf_volatile_history.csv")
 VOLATILE_DOWNLOAD = {
-    "batch_size": 50,
-    "rest_delay_seconds": 10.0,
-    "jitter_seconds": 10.0,
+    "batch_size": 200,
+    "rest_delay_seconds": 3.0,
+    "jitter_seconds": 2.0,
     "max_retries": 3,
 }
 
@@ -347,16 +347,17 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
 }
 
 DEFAULT_YAHOO_METRICS = {
-    "batch_size": 50,
-    "rest_delay_seconds": 60.0,
-    "rest_delay_jitter_seconds": 10.0,
-    "sample_stock_lookups": 5,
+    "batch_size": 200,                 # tickers per price download
+    "rest_delay_seconds": 3.0,         # pause between price downloads
+    "rest_delay_jitter_seconds": 2.0,
+    "subsector_workers": 4,            # parallel sub-sector lookups (lower it if Yahoo rate-limits)
+    "sample_stock_lookups": 10,        # top holdings used for the sub-sector (Yahoo lists at most 10)
     "max_download_retries": 3,
     "risk_free_annual": 0.04,
     "price_history_period": "3y",
     "log_unmapped_keys": True,
     "subsector_cache_path": "utils/sector_cache.json",
-    "subsector_cache_max_age_days": 30,
+    "subsector_cache_max_age_days": 365,  # re-check each fund about once a year (+0-29 days spread)
     "force_refresh_subsector": False,
 }
 
@@ -381,7 +382,7 @@ DEFAULT_THRESHOLDS = {
     # Load and investment requirement filters
     "max_deferred_load": 0.0,  # Maximum deferred load (0.0 = no load allowed)
     "max_front_load": 0.0,      # Maximum front load (0.0 = no load allowed)
-    "min_initial_investment": 50000,  # Minimum initial investment in dollars
+    "min_initial_investment": 50000,  # Remove funds requiring a larger minimum initial investment ($)
     "max_redemption_fee": 0.0,  # Maximum redemption fee (0.0 = no fee allowed)
 
     # Profile-level concept weights (how much each concept counts).

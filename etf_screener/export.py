@@ -176,6 +176,18 @@ def write_excel_with_retry(
         raise last_error
 
 
+def add_sheets_to_workbook(path: str, sheets: Dict[str, pd.DataFrame]) -> None:
+    """Add (or replace) extra tabs in an existing results workbook, after
+    the main sheet. Empty DataFrames are skipped."""
+    sheets = {name: df for name, df in sheets.items() if df is not None and not df.empty}
+    if not sheets:
+        return
+    with pd.ExcelWriter(path, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        for name, df in sheets.items():
+            df.to_excel(writer, index=False, sheet_name=name[:31])
+    print(f"  Added tab(s) {list(sheets)} to: {path}")
+
+
 def format_column_names_for_export(df: pd.DataFrame) -> pd.DataFrame:
     """
     Convert internal snake_case/underscore column names into readable,
@@ -242,27 +254,29 @@ def apply_header_formatting(
     bold_wrap_font = Font(bold=True)
     wrap_alignment = Alignment(wrap_text=True, vertical="center", horizontal="center")
 
-    max_col: int = ws.max_column
-    max_row: int = ws.max_row
-    for col_idx in range(1, max_col + 1):
-        cell = ws.cell(row=1, column=col_idx)
-        cell.font = bold_wrap_font
-        cell.alignment = wrap_alignment
-        col_letter: str = get_column_letter(col_idx)
-        ws.column_dimensions[col_letter].width = wrap_column_width
+    # Same formatting on every tab (main sheet and any extra report tabs).
+    for sheet in wb.worksheets:
+        max_col: int = sheet.max_column
+        max_row: int = sheet.max_row
+        for col_idx in range(1, max_col + 1):
+            cell = sheet.cell(row=1, column=col_idx)
+            cell.font = bold_wrap_font
+            cell.alignment = wrap_alignment
+            col_letter: str = get_column_letter(col_idx)
+            sheet.column_dimensions[col_letter].width = wrap_column_width
 
-    ws.row_dimensions[1].height = header_row_height
+        sheet.row_dimensions[1].height = header_row_height
 
-    # AutoFilter dropdowns across the full header + data range.
-    last_col_letter: str = get_column_letter(max_col)
-    ws.auto_filter.ref = f"A1:{last_col_letter}{max_row}"
+        # AutoFilter dropdowns across the full header + data range.
+        last_col_letter: str = get_column_letter(max_col)
+        sheet.auto_filter.ref = f"A1:{last_col_letter}{max_row}"
 
-    # Freeze panes -- everything above/left of this cell stays fixed
-    # while scrolling. "A2" freezes just row 1 (the header row).
-    ws.freeze_panes = freeze_panes
+        # Freeze panes -- everything above/left of this cell stays fixed
+        # while scrolling. "A2" freezes just row 1 (the header row).
+        sheet.freeze_panes = freeze_panes
 
-    # Zoom level for the worksheet view.
-    ws.sheet_view.zoomScale = zoom_percent
+        # Zoom level for the worksheet view.
+        sheet.sheet_view.zoomScale = zoom_percent
 
     # Ensure at least one sheet is visible before saving (fixes openpyxl IndexError)
     for sheet in wb.worksheets:

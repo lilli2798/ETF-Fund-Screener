@@ -39,7 +39,7 @@ python run_ci.py      # same, without prompts (uses input_files/input_profile_a.
 
 ### Output (in `output/etf_screener/`, not stored in git)
 - `results_profile_A_<date-time>.xlsx` - the report (one row per fund, benchmark rows at the bottom)
-- `results_profile_A_<date-time>_by_category/` - one file per Asset Class / Morningstar Category / Style Box
+- `results_profile_A_<date-time>_by_category/` - one subfolder each for Asset Class, Morningstar Category, Yahoo sub-sector and Style Box, with one file per group
 - `results_profile_A_<date-time>_used_weights.yaml` - the exact weights used for that run
 - `run_recorder.yaml` - settings of every run, the funds missing yearly data, and how many funds have volatile-period data
 - Local runs also save results to the SQLite database `data/etf_screener.db` (kept on your computer only)
@@ -158,7 +158,7 @@ ETF-Fund-Screener/
 │   ├── database.py             # Local SQLite results database
 │   ├── utils/
 │   │   ├── yahoo_metrics.py    # Yahoo sub-sector, Sharpe, Z-scores
-│   │   └── sector_cache.json   # Cached sub-sectors (30 days)
+│   │   └── sector_cache.json   # Cached sub-sectors (about 1 year)
 │   ├── yahoo_returns/
 │   │   ├── yearly_cache_manager.py   # Updates the yearly returns CSV
 │   │   ├── volatile_periods.py       # Finds S&P 500 volatile periods
@@ -191,7 +191,7 @@ ETF-Fund-Screener/
 
 - **Indexes are price-only, funds include dividends**, so funds look about 1-2 points/year better than the indexes in the yearly and crisis comparisons (e.g. 2025: SPY 18.9% vs ^GSPC 17.5%).
 - **Yearly returns for 2006-2025 end on Dec 30** instead of Dec 31 (an old download bug, since fixed); 2026 onward is correct. A full rebuild of the yearly CSV would correct the older years.
-- **Yahoo sub-sectors come from a fund's top 5 holdings**, so broad funds can change sub-sector between lookups, which moves their Z-scores.
+- **Yahoo sub-sectors come from a fund's top 10 holdings** (the most Yahoo lists) and are re-checked about once a year; new funds are looked up the night they appear. Set `force_refresh_subsector: true` in `yahoo_metrics` for one run to refresh them all. Broad funds can change sub-sector between lookups, which moves their Z-scores.
 - **Only Profile A** (long-term, low-risk) is implemented; new profiles can be added in `profiles/`.
 - **The GitHub job screens its cached copy of your exports**, not your latest local files.
 

@@ -30,6 +30,10 @@ from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC, STAR_RATING_TO_NUMERIC
 
 PROFILE_FILTERS: Dict[str, Callable[[pd.DataFrame, dict], pd.DataFrame]] = {}
 PROFILE_SCORERS: Dict[str, Callable[[pd.DataFrame, int, dict], pd.DataFrame]] = {}
+# Optional hard rules on raw Morningstar columns (loads, minimums, fees),
+# applied right after loading so excluded funds are never downloaded from
+# Yahoo and never affect the within-category scores of the other funds.
+PROFILE_PREFILTERS: Dict[str, Callable[[pd.DataFrame, dict], pd.DataFrame]] = {}
 
 DEFAULT_CATEGORY_COL: str = "Morningstar Category"
 
@@ -40,6 +44,14 @@ def register_profile_filter(name: str):
         if name in PROFILE_FILTERS:
             print(f"Warning: overwriting existing profile filter registered under '{name}'.")
         PROFILE_FILTERS[name] = fn
+        return fn
+    return deco
+
+
+def register_profile_prefilter(name: str):
+    """Decorator: register a DataFrame -> DataFrame pre-filter under `name`."""
+    def deco(fn):
+        PROFILE_PREFILTERS[name] = fn
         return fn
     return deco
 

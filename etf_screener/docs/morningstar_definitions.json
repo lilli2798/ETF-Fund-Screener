@@ -1,0 +1,602 @@
+[
+ {
+  "column": "Morningstar Category",
+  "morningstar_definition": "Morningstar's peer group for a fund, assigned from what the fund actually holds rather than its stated objective. Placement uses the fund's average portfolio statistics over the past three years; new funds get an estimated category until enough history exists.",
+  "formula": "",
+  "key_facts": "Based on average holdings statistics over the trailing 3 years; reviewed by Morningstar's editorial team; may be reassigned after lasting portfolio changes; new funds get a provisional category.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/content/cs-assets/v3/assets/blt9415ea4cc4157833/bltc0c557175d70b1fd/68dea997aed382ecc562dbce/Morningstar_Category_Classification_for_Funds_-_October_2024.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Asset Class",
+  "morningstar_definition": "The broad group the fund's Morningstar Category belongs to. In the US scheme, every category maps into one of nine category groups: US Equity, Sector Equity, Allocation, International Equity, Alternative, Commodities, Taxable Bond, Municipal Bond and Money Market.",
+  "formula": "",
+  "key_facts": "Derived from the Morningstar Category, not chosen on its own. US scheme: about 127 categories in 9 groups. Morningstar has no standalone glossary entry for the exported 'Asset Class' field; the match to the US category groups is inferred.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advisor.morningstar.com/Enterprise/VTC/MorningstarCategoryClassificationUSFunds_April2025.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Primary Benchmark",
+  "morningstar_definition": "The fund's main benchmark index, taken from the fund's prospectus. Morningstar maps it to the leading broad-based index in the prospectus performance table. If the prospectus names none, the field is empty.",
+  "formula": "",
+  "key_facts": "Prospectus-sourced for funds (firm-reported for separate accounts). This is NOT necessarily the index Morningstar uses for its own alpha/beta/capture statistics, which often use a Morningstar standard or category index.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/Primary_Benchmark.htm",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Equity Style Box (Funds)",
+  "morningstar_definition": "A 3x3 grid that places a stock fund by the size (large, mid, small) and investment style (value, blend, growth) of its holdings. The fund's position is the asset-weighted average of its stocks' size and style scores.",
+  "formula": "Fund size = asset-weighted average of holdings' size scores; fund style = asset-weighted average of holdings' net style scores (growth score - value score, range -100 to +100).",
+  "key_facts": "Size bands are flexible by region: large = stocks making up the top 70% of market cap, mid = next 20%, small = the rest. Style uses 10 factors (5 value, 5 growth). Fund boxes are recalculated whenever new holdings arrive (based on the latest portfolio, not a 3-year average). Methodology updated Aug. 31, 2024.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advisor.morningstar.com/Enterprise/VTC/MorningstarEquityStyleBoxMethodology.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Inception Date",
+  "morningstar_definition": "No Morningstar glossary entry for this field was found. Morningstar's share-class documents treat inception as the date a share class's performance starts, and use the earliest inception date to pick a fund's oldest share class. A dormant share class's restart date counts as its inception.",
+  "formula": "",
+  "key_facts": "Per share class; can differ from the fund's oldest share class date. Dormancy end date is treated as the inception/performance start date.",
+  "verdict": "not found",
+  "correction": "",
+  "source_url": "https://morningstardirect.morningstar.com/clientcomm/Oldest_Share_Class_Methodology.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Broad Category Group",
+  "morningstar_definition": "Morningstar's top-level grouping of its global categories. In the 2025 restructuring, commodities and direct real estate were merged into a 'Real Assets' broad group, and convertible and preferred-stock funds were grouped as 'Hybrid Securities'. Alternative Strategies, Equity, Fixed Income and Allocation are also broad groups.",
+  "formula": "",
+  "key_facts": "Older (pre-2025) list: Equity, Allocation, Convertibles, Alternative, Commodities, Fixed Income, Money Market, Property, Miscellaneous. The 2025 update introduced Real Assets and Hybrid Securities. 'Capital Preservation' as a broad-group name could not be confirmed from a Morningstar page (it presumably replaced Money Market), so treat that one label as unverified.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advisor.morningstar.com/Enterprise/VTC/2025CategoryUpdateMappingFAQ.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "TTM Yield",
+  "morningstar_definition": "Trailing 12-month (TTM) yield is the percentage of income investors received from an investment over the last 12 months. Morningstar adds up the income (dividends and interest) paid in that period and divides by the latest month-end NAV plus any capital gains paid out over the same period.",
+  "formula": "TTM Yield = trailing 12-month income distributions / (last month-end NAV + trailing 12-month capital gains distributions) x 100",
+  "key_facts": "Income only in the numerator (capital gains excluded from the numerator); capital gains distributions are added to the NAV in the denominator. Uses month-end NAV, not the current market price. Differs from the 30-day SEC yield.",
+  "verdict": "corrects",
+  "correction": "Numerator should be income distributions only (not all distributions, i.e. exclude capital gains). Denominator is the last month-end NAV plus trailing 12-month capital gains distributions, not the current price. Correct: TTM Yield = 12-mo income / (month-end NAV + 12-mo capital gains) x 100.",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/12-Month_Yield.htm",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Total Return",
+  "morningstar_definition": "Total return is the change in NAV with all income and capital-gains distributions reinvested, divided by the starting NAV. It is net of management, administrative, 12b-1 and other fees taken from fund assets, but not sales loads. Periods longer than one year are shown as compounded (geometric) average annual returns.",
+  "formula": "Cumulative = (Ending NAV with distributions reinvested / Beginning NAV) - 1. Annualized = (product of (1 + monthly returns))^(1/n years) - 1.",
+  "key_facts": "Distributions reinvested (on the reinvestment date), not simply added to the ending value. Excludes sales charges/commissions. Geometric annualization for periods over 1 year, e.g. 100% over 5 years = about 14.9%/yr.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_Total_Return.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Sharpe Ratio",
+  "morningstar_definition": "The Sharpe ratio (a standard measure, not specific to Morningstar) is the return an investment earned above the risk-free rate (T-bills), divided by how much its returns swung (standard deviation): return per unit of risk. Higher is better; below 0 means it did worse than cash. Morningstar calculates it from monthly returns, using the standard deviation of the excess returns, and annualizes it.",
+  "formula": "Monthly Sharpe = mean(monthly excess return) / stdev(monthly excess return); Annualized Sharpe = monthly Sharpe x sqrt(12) (numerator x12, denominator x sqrt(12)); excess return = fund return - T-bill return.",
+  "key_facts": "General rule of thumb: above 1 good, above 2 very good (a convention, not a standard). Some sources divide by the standard deviation of the fund's returns, others (including Morningstar) by the standard deviation of excess returns; the two are equal when the risk-free rate is constant. Return, volatility and risk-free rate must use the same frequency. Morningstar: monthly Sharpe x sqrt(12).",
+  "verdict": "corrects",
+  "correction": "The denominator should be the standard deviation of monthly EXCESS returns (fund minus T-bill), not of the fund's monthly total returns. Annualize as monthly Sharpe x sqrt(12).",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_Sharpe_Ratio.html ; https://finimize.com/glossary/sharpe-ratio",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Standard Deviation",
+  "morningstar_definition": "How widely a fund's returns have varied around their average. Morningstar computes it from monthly total returns and annualizes it, so a higher number means bigger swings.",
+  "formula": "Monthly SD = sqrt( sum((Ri - mean)^2) / (n - 1) ); Annualized SD = monthly SD x sqrt(12).",
+  "key_facts": "Sample method (n-1), as in Excel STDEV, since Feb. 2005 (population method before that). Reported for 1, 3, 5, 10, 15 and 20-year periods. Uses total returns, not excess returns.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/content/dam/marketing/apac/au/pdfs/Legal/StandardDeviationSharpeRatio_Definition.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Worst Three Month Return",
+  "morningstar_definition": "The lowest total return over any consecutive three-month period, calculated on a rolling basis. Morningstar's glossary pairs it with Best Three-Month Return as a gauge of short-term volatility. The entry found is written for stocks and uses the trailing five years; no fund-specific entry was found.",
+  "formula": "",
+  "key_facts": "Rolling consecutive 3-month windows. The window is the trailing 5 years in Morningstar's stock glossary; the window for funds is unconfirmed.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/stocks/Best_Three_Month_Return_1.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Best Three Month Return",
+  "morningstar_definition": "The highest total return over any consecutive three-month period, calculated on a rolling basis. Morningstar's glossary entry is written for stocks and uses the trailing five years; no separate fund-specific entry was found.",
+  "formula": "",
+  "key_facts": "Rolling 3-month windows. Trailing 5-year lookback in the stock glossary; the fund lookback is unconfirmed. Used with Worst Three-Month Return to gauge short-term volatility.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/stocks/Best_Three_Month_Return_1.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Morningstar Risk Rating",
+  "morningstar_definition": "Morningstar's rating of how risky a fund has been compared with its category peers, based on the variation in its monthly returns with extra weight on downside swings. Funds are ranked within the category and placed in five bands from Low to High.",
+  "formula": "Ranking within the category on Morningstar Risk: lowest-risk 10% = Low, next 22.5% = Below Average, middle 35% = Average, next 22.5% = Above Average, highest-risk 10% = High. Overall = weighted average of the 3/5/10-year measures.",
+  "key_facts": "Morningstar Risk uses expected-utility theory to penalize downside more than upside variation. Requires at least 3 years of history. Overall weights: 36-59 months = 100% 3Y; 60-119 months = 60% 5Y / 40% 3Y; 120+ months = 50% 10Y / 30% 5Y / 20% 3Y.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_Morningstar_Risk_Rating.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Upside Capture Ratio",
+  "morningstar_definition": "Upside capture ratio measures an investment's relative performance in up markets, meaning months or quarters in which the market return was positive. Example: an 80% upside capture ratio means that when the market was up 10%, the investment was up about 8%. Above 100 means it beat the market in up periods.",
+  "formula": "Upside Capture = (fund's geometric average return in benchmark-up months / benchmark's geometric average return in those months) x 100",
+  "key_facts": "Monthly data; only months with a positive benchmark return are used. Morningstar averages returns geometrically. Shown for 1, 3, 5, 10 and 15 years. The benchmark is Morningstar's chosen index for the fund, which may not be the prospectus benchmark.",
+  "verdict": "corrects",
+  "correction": "Morningstar uses the geometric AVERAGE (annualized/per-period) of fund and benchmark returns in up months, not the total compounded return over those months. Should read: (geometric mean fund return in up months / geometric mean benchmark return in up months) x 100. The two methods give similar but not identical values.",
+  "source_url": "https://morningstar.ca/ca/news/185421/what-are-upside-and-downside-capture-ratios.aspx",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Downside Capture Ratio",
+  "morningstar_definition": "Downside capture ratio measures an investment's relative performance in down markets, meaning months or quarters in which the market return was negative. Example: an 80% downside capture ratio means that when the market was down 10%, the investment was down about 8%. Below 100 means it lost less than the market in down periods.",
+  "formula": "Downside Capture = (fund's geometric average return in benchmark-down months / benchmark's geometric average return in those months) x 100",
+  "key_facts": "Monthly data; only months with a negative benchmark return are used. Geometric averaging. Lower is better. Shown for 1, 3, 5, 10 and 15 years.",
+  "verdict": "corrects",
+  "correction": "Same issue as upside: Morningstar uses geometric average returns in down months, not compounded totals. Should read: (geometric mean fund return in down months / geometric mean benchmark return in down months) x 100.",
+  "source_url": "https://www.morningstar.com/investing-terms/downside-capture-ratio ; https://morningstar.ca/ca/news/185421/what-are-upside-and-downside-capture-ratios.aspx",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Maximum Drawdown",
+  "morningstar_definition": "No Morningstar definition page was found. The standard definition is the largest percentage drop from a running peak to a later low within the period.",
+  "formula": "Max Drawdown = min over t of (Value_t / max(Value_s, s <= t) - 1)",
+  "key_facts": "Depends on data frequency (monthly vs daily) and on the period chosen. Morningstar's own data frequency for this field is unconfirmed.",
+  "verdict": "not found",
+  "correction": "",
+  "source_url": "https://www.robeco.com/en-za/insights/2024/10/the-formula-maximum-drawdown",
+  "source_type": "Other: Robeco"
+ },
+ {
+  "column": "Portfolio Risk Score",
+  "morningstar_definition": "The Morningstar Portfolio Risk Score (MPRS) is a single number for the current, forward-looking risk of a portfolio or investment. It is based on the estimated volatility of future returns, mainly from Morningstar's Risk Model holdings-based style analysis (returns-based analysis when holdings data are insufficient). It usually runs 0-100; scores above 100 mean extreme risk.",
+  "formula": "Bands: Conservative 0-23, Moderate 24-47, Aggressive 48-78, Very Aggressive 79-99, Extreme 100+.",
+  "key_facts": "Forward-looking and volatility-based, rather than based on the stock/bond mix. Methodology paper: https://www.morningstar.com/research/signature",
+  "verdict": "corrects",
+  "correction": "The anchor is not 'global 60/40 = 50'. The scale is set so that a diversified 100% equity portfolio (per Target Allocation Indexes) scores about 100. The bands are wrong: Morningstar's glossary uses Conservative 0-23, Moderate 24-47, Aggressive 48-78, Very Aggressive 79-99, Extreme 100+. There are no 'Moderately Conservative' or 'Moderately Aggressive' bands.",
+  "source_url": "https://www.morningstar.com/investing-terms/portfolio-risk-score",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Beta",
+  "morningstar_definition": "Measures how sensitive a fund is to its benchmark's moves. Morningstar regresses the fund's monthly excess returns over T-bills on the index's excess returns, so the index itself has a beta of 1.00.",
+  "formula": "Beta = slope of regression of (fund return - T-bill) on (index return - T-bill), monthly, trailing 36 months; equals Cov(fund excess, index excess) / Var(index excess).",
+  "key_facts": "Default window 3 years of monthly returns. Most meaningful when R-squared is high. Morningstar uses a standard broad asset-class index (and separately a 'best-fit' index), which may not be the prospectus benchmark.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/indexes/mfratingsandrisk.htm",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Alpha",
+  "morningstar_definition": "The difference between a fund's actual return and the return expected from its beta, i.e. performance not explained by market exposure. Positive alpha means the fund did better than its beta predicted.",
+  "formula": "Alpha = Excess Return - Beta x (Benchmark return - T-bill return), where Excess Return = fund return - T-bill return; from the same 36-month regression as beta, annualized.",
+  "key_facts": "Same regression and index as beta; 3 years of monthly data by default; risk-free rate is the 90-day T-bill. Only reliable when R-squared is high.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/indexes/varatingsandrisk.htm",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Net Expense Ratio",
+  "morningstar_definition": "The share of fund assets taken each year for operating costs after any fee waivers and expense reimbursements. Morningstar keeps gross and net versions, from both the prospectus and the annual report.",
+  "formula": "Net Expense Ratio = annual operating expenses net of waivers and reimbursements / average net assets",
+  "key_facts": "Prospectus net expense ratio (forward-looking, from the latest prospectus) vs annual-report net expense ratio (actual fees for a past fiscal year). Some waivers expire; the gross ratio shows the cost without them. Excludes sales loads and brokerage costs.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/glossary_all_Expense_Ratio.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Adjusted Expense Ratio",
+  "morningstar_definition": "No Morningstar glossary text for this exact field could be retrieved. The term is listed in Morningstar's investing-terms index, but its entry page was blocked. A related Morningstar FAQ says that since July 31, 2018 Morningstar removes interest and dividend expense on short sales from the net expense ratio it publishes, treating those as trading costs rather than fund fees.",
+  "formula": "",
+  "key_facts": "Related Morningstar practice: short-sale interest and dividend expense is backed out of the published Net Expense Ratio, and the Gross Expense Ratio is not changed. Fund companies such as Eaton Vance/Calvert use 'Adjusted Expense Ratio' for the ratio excluding interest expense on borrowings and repurchase agreements and dividend expense on short sales. That matches our wording, but it is not Morningstar's text.",
+  "verdict": "not found",
+  "correction": "",
+  "source_url": "https://morningstardirect.morningstar.com/clientcomm/NetExpenseRatioFAQ.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Total Net Assets for Share Class",
+  "morningstar_definition": "The net assets held in one particular share class of a fund. Fund-level total assets are the sum of the net assets of all share classes.",
+  "formula": "Reported value (not derived)",
+  "key_facts": "Share-class level only. Fund companies calculate net assets daily at the close of trading. Morningstar's fund-level 'Total Assets' adds up all share classes.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_Net_Assets_1.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Fund Size",
+  "morningstar_definition": "The fund's total assets: the combined net assets of all its share classes. Morningstar uses it to gauge how large, and how nimble, a fund is.",
+  "formula": "Sum of net assets across all share classes",
+  "key_facts": "Morningstar's 'Total Assets' glossary reports it in $ millions. The Morningstar UK glossary calls it 'total market value' (formerly Total Net Assets), in the fund's base currency, as of month-end. The 0/$500M/$5B liquidity-score cutoffs in our formula are our own scoring rule, not Morningstar's.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/glossary_mf_ce_Total_Assets.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Premium/Discount",
+  "morningstar_definition": "How far an ETF's or closed-end fund's market price sits above (premium, +) or below (discount, -) its NAV, as a percentage of NAV. The 12-month average version averages the month-end premium/discount readings over the past year.",
+  "formula": "Premium/Discount = (Market Price / NAV - 1) x 100; 1Y Avg = mean of the 12 month-end values",
+  "key_facts": "(Price/NAV - 1) x 100 is algebraically identical to our (Price - NAV)/NAV x 100. The average is built from month-end observations, not daily ones. A negative average means shares traded below NAV on average.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/closed_end/glossary_ce_average_premium_discount.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Growth Grade",
+  "morningstar_definition": "Morningstar gives individual stocks a Growth grade from A to F, based mainly on how fast revenue per share has grown over the past five years. Grades are assigned relative to other companies in the same sector. No Morningstar text describing how stock grades are rolled up to a fund portfolio was found.",
+  "formula": "",
+  "key_facts": "Stock grades are relative within sector: equal numbers of A, B, C and D, with the bottom 10% getting F (there is no E). The input is revenue-per-share growth over 5 years. Portfolio aggregation is not documented in any source found.",
+  "verdict": "corrects",
+  "correction": "Our definition lists 'revenue, earnings, cash flow'. Morningstar's documented growth grade is based on revenue-per-share growth over the past 5 years, graded relative to sector peers (A-D in equal numbers, bottom 10% F). Suggested wording: 'Holdings' revenue-per-share growth over 5 years, graded A-F relative to sector peers.'",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/indexes/stkstockgrades.htm",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Financial Health Grade",
+  "morningstar_definition": "Morningstar's stock-level Financial Health grade (A-F) measures how financially sound a company is. In Morningstar's quantitative methodology it rests on 'Distance to Default', a measure that combines the company's equity volatility with its financial leverage. A higher Distance to Default means stronger health.",
+  "formula": "Based on Distance to Default (equity volatility + financial leverage, scored 0-1), graded relative to sector peers",
+  "key_facts": "This is partly a market-based measure (stock volatility), not purely balance-sheet ratios. Older Morningstar material describes it as balance-sheet strength: cash held, cash generated and where that cash goes. Grades are relative within sector. Portfolio aggregation is not documented in any source found.",
+  "verdict": "corrects",
+  "correction": "Ours says 'balance-sheet strength (debt, solvency)'. Morningstar's current quantitative financial-health measure is Distance to Default, which combines financial leverage with equity (stock-price) volatility, graded relative to sector peers. 'Debt' captures only part of it.",
+  "source_url": "https://bolsasymercados.es/bme-exchange/docs/MorningStar/Quantitative_Research_Ratios_Description.pdf",
+  "source_type": "Morningstar (document hosted by BME exchange) and awgmain.morningstar.com stock-grades glossary"
+ },
+ {
+  "column": "Portfolio Profitability Grade",
+  "morningstar_definition": "Morningstar's stock-level Profitability grade (A-F) is based on return on shareholders' equity (ROE) over the past five years. It considers the growth of ROE, its average level, and its level in the latest fiscal year. No Morningstar text describing the fund-portfolio roll-up was found.",
+  "formula": "Grade from: 5-year ROE growth rate, average 5-year ROE level, latest-fiscal-year ROE; ranked within sector",
+  "key_facts": "ROE only; margins are not cited by Morningstar. Grades are relative within sector, with letters A, B, C, D and F.",
+  "verdict": "corrects",
+  "correction": "Ours says 'return on equity, margins'. Morningstar's profitability grade is ROE-based only: the 5-year ROE trend, the average 5-year ROE, and the latest-year ROE. It is graded relative to sector peers. Drop 'margins'.",
+  "source_url": "https://www.morningstar.com/investing-terms/profitability-grade",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Economic Moat Coverage",
+  "morningstar_definition": "Morningstar analysts rate companies as having a wide, narrow or no economic moat, meaning a durable competitive advantage that lets a firm earn returns above its cost of capital. Wide means high confidence such excess returns last about 20 years. Narrow means they are more likely than not to last at least 10 years. None means no sustainable advantage, or one expected to fade quickly.",
+  "formula": "",
+  "key_facts": "Moat sources: network effect, cost advantage, efficient scale, intangible assets, switching costs. Only analyst-covered stocks have a moat rating. Morningstar's own text on the portfolio-level percentages (and on whether Wide+Narrow+None equals the covered share) was not found.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.co.uk/uk/glossary/98424/moat-size.aspx",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Return on Invested Capital",
+  "morningstar_definition": "No Morningstar definition of the portfolio-level ROIC field was found; the term appears in the investing-terms index but the entry was not retrievable. A Morningstar article describes company ROIC as how efficiently a company uses money invested in or lent to it to produce profits, and notes that the treatment of taxes and of invested capital varies between calculators.",
+  "formula": "",
+  "key_facts": "Morningstar's analogous portfolio ROA field is a weighted average built from each holding's trailing-12-month figures. Whether portfolio ROIC is built the same way is not confirmed.",
+  "verdict": "not found",
+  "correction": "",
+  "source_url": "https://www.morningstar.ca/ca/news/185397/a-key-tool-to-measure-profitability.aspx",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Price/Earnings",
+  "morningstar_definition": "The fund-level price-to-earnings ratio of its stock holdings. Since 2005 Morningstar computes portfolio price ratios as a weighted harmonic mean rather than a simple weighted average of P/Es. This stops loss-makers and very high P/E outliers from distorting the result.",
+  "formula": "Portfolio P/E = 1 / Σ( w_i x E_i/P_i ), where w_i = holding's weight among stocks with valid data (asset-weighted average earnings yield, then reciprocal)",
+  "key_facts": "Harmonic mean, so the result is typically lower than a simple weighted average of P/Es. Older glossary entries loosely say 'weighted average'.",
+  "verdict": "corrects",
+  "correction": "Ours says 'holding-weighted P/E' with P/E = price / EPS. Morningstar aggregates with a weighted harmonic mean: average the holdings' earnings yields (E/P) by weight, then take the reciprocal. It is not a simple weighted average of P/Es.",
+  "source_url": "https://seekingalpha.com/uploads/2017/5/15/4989515/MorningstarPriceRatioAverages_Methodology.pdf",
+  "source_type": "Morningstar (methodology paper, hosted on Seeking Alpha); also indexes.morningstar.com index-statistics methodology"
+ },
+ {
+  "column": "Portfolio Price/Book",
+  "morningstar_definition": "The fund-level price-to-book ratio of its stocks. Book value is assets minus liabilities, and it often excludes intangibles, which can make ratios high for brand- or patent-heavy firms. Morningstar's 2005 methodology moved all portfolio price ratios to the weighted harmonic mean.",
+  "formula": "Portfolio P/B = 1 / Σ( w_i x B_i/P_i )",
+  "key_facts": "Harmonic aggregation, the same as P/E. Book value often excludes intangible assets.",
+  "verdict": "corrects",
+  "correction": "Same issue as P/E: Morningstar aggregates with a weighted harmonic mean (reciprocal of the weighted average book-to-price), not a simple holding-weighted average of P/B.",
+  "source_url": "https://seekingalpha.com/uploads/2017/5/15/4989515/MorningstarPriceRatioAverages_Methodology.pdf",
+  "source_type": "Morningstar (methodology paper, hosted on Seeking Alpha)"
+ },
+ {
+  "column": "Portfolio Price/Sales",
+  "morningstar_definition": "The fund-level price-to-sales ratio. Morningstar takes the asset-weighted average of the holdings' sales yields (sales/price) and then takes the reciprocal.",
+  "formula": "Portfolio P/S = 1 / Σ( w_i x S_i/P_i )",
+  "key_facts": "Harmonic aggregation, stated explicitly in Morningstar's Price/Sales glossary entry.",
+  "verdict": "corrects",
+  "correction": "Ours says 'holding-weighted P/S'. Morningstar uses the reciprocal of the asset-weighted average sales yield (a weighted harmonic mean), not a weighted average of P/S ratios.",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_Price_Sales_Ratio.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Price/Free Cash Flow",
+  "morningstar_definition": "No Morningstar definition of the portfolio Price/Free Cash Flow field was found. It is listed in the investing-terms index, but the entry was not retrievable. Morningstar's documented cash-flow ratio is Price/Cash Flow, which uses operating cash flow.",
+  "formula": "",
+  "key_facts": "If it follows Morningstar's general portfolio price-ratio method, it would be a weighted harmonic mean, but this is not confirmed for this field.",
+  "verdict": "not found",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/investing-terms",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Portfolio Price/Fair Value",
+  "morningstar_definition": "The ratio of the market price of the holdings to Morningstar analysts' fair value estimates. Below 1 suggests undervalued, above 1 overvalued. At fund level it is built from the stocks Morningstar's equity analysts cover.",
+  "formula": "Price/Fair Value = Market Price / Morningstar Fair Value Estimate (portfolio level: aggregated over covered holdings)",
+  "key_facts": "Holdings not covered by analysts are assumed to trade at fair value (P/FV = 1). Low coverage therefore pulls the portfolio figure toward 1.0.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://nxtbook.com/nxtbooks/morningstar/advisor_20131201/index.php?startid=76",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "ETF Fair Value",
+  "morningstar_definition": "Morningstar's estimate of what one ETF share is worth. It adds up the analysts' fair values of the stocks in the portfolio, weighted by position size, and divides by the ETF's shares outstanding.",
+  "formula": "ETF Fair Value = Σ(position-weighted fair values of holdings, with uncovered stocks at market price) / ETF shares outstanding; equivalently = ETF price / portfolio Price/Fair Value",
+  "key_facts": "Uncovered stocks are assumed to trade at fair value. Mainly meaningful for equity ETFs. Older Morningstar ETF valuation ratings used risk-dependent thresholds (for example, an 8%/15%/20%+ discount for an Undervalued rating). The source is 2009-2013 material, so the method may have been updated.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://nxtbook.com/nxtbooks/morningstar/advisor_20131201/index.php?startid=76",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Tracking Error",
+  "morningstar_definition": "How much a fund's returns wander from its benchmark's: the volatility (standard deviation) of the difference between fund and benchmark returns, annualized. Also called active risk. It differs from 'tracking difference', the simple gap in cumulative return.",
+  "formula": "TE = annualized standard deviation of (fund return - benchmark return)",
+  "key_facts": "Morningstar ETF explainers describe it using daily return differences versus the underlying index. Our monthly x sqrt(12) version is the standard Morningstar risk-statistic convention and is consistent in substance. Index funds should show low TE, active funds high TE.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.in/posts/65060/",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Fund Managers",
+  "morningstar_definition": "The portfolio manager(s) currently running the fund, as Morningstar records them from the prospectus, fund surveys and official company press releases.",
+  "formula": "",
+  "key_facts": "Some funds disclose only 'Management Team' without names. Related field: Morningstar manager tenure shows the longest-serving manager's years on the fund.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_Manager_Tenure.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Medalist Rating",
+  "morningstar_definition": "Morningstar's forward-looking rating (Gold, Silver, Bronze, Neutral, Negative) of whether a fund is likely to beat its Morningstar Category average over time. It is based on the People (managers and analysts), Process (effectiveness and repeatability of the strategy) and Parent (the asset manager and whether it puts investors first) pillars, plus a Price Score for fees.",
+  "formula": "Overall = f(People, Process, Parent pillar scores) + Medalist Rating Price Score (-2.5 to +2.5), judged against the Morningstar Category average (2025-26 framework)",
+  "key_facts": "Pillars are rated by analysts directly, by analysts indirectly (mapped from related vehicles), or by algorithm. Companion fields 'Analyst-Driven %' and 'Data Coverage %' show how much of the rating is analyst-based. The framework was revised in April 2026 to compare against the category average instead of a benchmark. Pillars use a five-point scale; the exact labels (High...Low) were not confirmed in a retrieved source.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://global.morningstar.com/en-ca/funds/whats-changing-not-changing-with-morningstar-medalist-rating",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Morningstar Rating for Funds",
+  "morningstar_definition": "The 1-5 star rating of a fund's past performance after costs, adjusted for risk, compared with other funds in the same category. Funds need at least 3 years of history. Each share class is rated separately.",
+  "formula": "Rank Morningstar Risk-Adjusted Return (returns after all loads, sales charges and redemption fees, minus a penalty for monthly return variation that emphasises downside) within category: top 10% = 5 stars, next 22.5% = 4, middle 35% = 3, next 22.5% = 2, bottom 10% = 1. Overall: 36-59 months = 100% 3Y; 60-119 months = 60% 5Y + 40% 3Y; 120+ months = 50% 10Y + 30% 5Y + 20% 3Y",
+  "key_facts": "Minimum 36 months of history. Backward-looking. Loads are included. The overall weights depend on the length of history.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://profile.morningstar.com/ISR/DataDefinitions.html",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Morningstar Return Rating",
+  "morningstar_definition": "Ranks a fund's 'Morningstar Return' against its category. Morningstar Return is the annualized load-adjusted return in excess of the 90-day Treasury bill over 3, 5 or 10 years. Labels: High, Above Average, Average, Below Average, Low.",
+  "formula": "Within category: top 10% = High, next 22.5% = Above Average, middle 35% = Average, next 22.5% = Below Average, bottom 10% = Low; overall = weighted average of the 3/5/10Y measures",
+  "key_facts": "No risk adjustment, but load-adjusted and measured as excess return over T-bills. Funds with less than 3 years of history are not rated.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/Morningstar_Return_Rating.htm",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Tax Cost Ratio",
+  "morningstar_definition": "How much of a fund's annualized return, on average each year, was lost to taxes on the fund's distributions (dividends and capital gains). It reads like an expense ratio: 2% means investors gave up about 2% of their assets to taxes each year over the period.",
+  "formula": "Tax Cost Ratio = [1 - (1 + ATR) / (1 + L)] x 100, where ATR = annualized pre-liquidation after-tax return (taxes on distributions only; also load-adjusted) and L = annualized load-adjusted pre-tax return for the same period. Equivalently (1 + ATR) = (1 + L)(1 - TCR).",
+  "key_facts": "Calculated monthly, in-house, for US open-end funds, ETFs and VA subaccounts. Assumes the highest federal tax rates in effect at each distribution (SEC after-tax return rules); state/local taxes ignored; assumes shares are not sold (pre-liquidation). Typically 0-5%; 0% = no taxable distributions. Load-adjusted pre-tax return is used in the denominator so that sales charges cancel out and only the tax effect is measured. Methodology paper shows 1, 3, 5 and 10-year periods (website default is 3-year).",
+  "verdict": "corrects",
+  "correction": "Formula is right in shape but imprecise: 'pre-tax return' must be the ANNUALIZED LOAD-ADJUSTED pre-tax return and 'after-tax return' must be the annualized pre-liquidation (taxes-on-distributions-only) after-tax return, which is also load-adjusted. Also state it uses the highest FEDERAL rate only (no state tax) and assumes no sale of shares.",
+  "source_url": "https://www.morningstar.com/content/dam/marketing/shared/research/methodology/678272-TaxCostRatioMethodology.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Potential Capital Gains Exposure",
+  "morningstar_definition": "An estimate of what percent of a fund's assets are gains that have built up but have not yet been distributed to shareholders or taxed. A high positive value hints at possible future capital-gain distributions; a negative value means the fund has losses on its books that can offset future gains.",
+  "formula": "PCGE = (Unrealized Appreciation (Depreciation) + Undistributed Long-Term Capital Gains + Capital Loss Carryforward [a negative number]) / Current Net Assets x 100",
+  "key_facts": "Numerator components are tax-basis figures from the 'Components of Distributable Earnings' in the Notes to Financial Statements of the fund's annual report (point-in-time at fiscal year end); denominator is current net assets, so asset inflows/outflows move the ratio. Undistributed net income is excluded. Can be negative. Includes gains on investments, futures, short sales, written options and FX. Calculated for US open-end funds, closed-end funds and VA underlying funds (generally not ETFs). High PCGE is not a forecast and matters little for bond funds.",
+  "verdict": "corrects",
+  "correction": "Numerator is not just unrealized appreciation: it is unrealized appreciation (depreciation) PLUS undistributed long-term realized capital gains MINUS capital loss carryforwards, taken from the annual report, divided by current net assets. Note values can be negative (net losses that can offset future gains).",
+  "source_url": "https://www.morningstar.com/content/dam/marketing/shared/research/methodology/678273-PotentialCapitalGainMethodology.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "SEC 30-Day Yield",
+  "morningstar_definition": "The SEC's standardized yield: the fund's net investment income per share over a 30-day period ending on the last day of the previous month, divided by the maximum offering price per share on the last day, then annualized.",
+  "formula": "Yield = 2 x [((a - b) / (c x d) + 1)^6 - 1]; a = dividends and interest earned in the 30-day period, b = accrued expenses (net of reimbursements), c = average daily number of shares outstanding entitled to distributions, d = maximum offering price per share on the last day of the period.",
+  "key_facts": "Period ends on the last day of the previous month, so the figure lags by about one month; a dash means the available yield is more than 30 days old. Collected from fund company surveys. Uses maximum offering price (includes any front load). A separate 'unsubsidized' version excludes expense reimbursements.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advhypo.morningstar.com/Enterprise/VTC/QP_Snapshot_disclosures_Brokerage.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "SEC 7-Day Yield",
+  "morningstar_definition": "The standardized yield used for money market funds, reflecting the fund's income over the most recent seven days, annualized. Morningstar notes it reflects a money fund's current earnings more closely than total return.",
+  "formula": "Morningstar's glossary gives no full formula. Under the SEC money-market method (from fund filings, not Morningstar): base-period return = net change in value of one share over the 7 days, excluding capital changes, divided by starting value; annualized by multiplying by 365/7 (simple). An 'effective' version compounds it.",
+  "key_facts": "Applies to money market funds only. Reflects income net of expenses, excludes realized/unrealized gains. Changes daily.",
+  "verdict": "corrects",
+  "correction": "It is not 'the same SEC method on a 7-day window': the 30-day bond-fund formula (2 x [(...)^6 - 1]) does not apply. Money market 7-day yield is the 7-day base-period return (excluding capital changes) annualized by x 365/7 (or compounded for the effective yield).",
+  "source_url": "https://www.morningstar.com/investing-terms/sec-7-day-yield",
+  "source_type": "Morningstar (glossary seen via search snippet; page blocked to fetch); 365/7 annualization from Other: SEC fund filings"
+ },
+ {
+  "column": "Dividend per Share",
+  "morningstar_definition": "Dollar dividends per share. Trailing Annual = dividends actually paid over the past 12 months. Forward Annual = the latest declared dividend per share multiplied by how many times a year it is paid (an annualized run rate, not an analyst forecast).",
+  "formula": "Trailing Annual DPS = sum of dividends per share paid over trailing 12 months. Forward Annual DPS = latest declared dividend per share x payment frequency per year.",
+  "key_facts": "Forward figure is a mechanical annualization of the most recent (or latest announced) regular payment. Morningstar definitions for the 1Y Avg / 3Y Avg variants were not found.",
+  "verdict": "corrects",
+  "correction": "Forward Annual is not a projection of 'expected' dividends: Morningstar computes it as the latest declared dividend per share x number of payments per year. The 1Y/3Y Avg variants could not be verified from Morningstar sources.",
+  "source_url": "https://www.morningstar.com/investing-terms/dividend-per-share-forward-annual",
+  "source_type": "Morningstar (glossary seen via search snippet; page blocked to fetch)"
+ },
+ {
+  "column": "Leveraged Fund",
+  "morningstar_definition": "A fund that uses leverage to increase its market exposure, typically by borrowing (issuing debt), issuing preferred shares, or using derivatives. For closed-end funds the flag is set if the fund's leverage percentage is above zero.",
+  "formula": "",
+  "key_facts": "Covers closed-end funds that borrow or issue preferred shares, not just daily-reset 2x/3x/inverse ETFs. A closed-end fund is flagged if leverage % > 0.",
+  "verdict": "corrects",
+  "correction": "Too narrow: the flag is not limited to funds that multiply daily returns (2x, 3x, -1x). Morningstar applies it to any fund using leverage via debt, preferred shares or derivatives to raise exposure, e.g. leveraged closed-end funds (leverage % > 0).",
+  "source_url": "https://www.morningstar.com/investing-terms/leveraged-fund",
+  "source_type": "Morningstar (glossary seen via search snippet; page blocked to fetch)"
+ },
+ {
+  "column": "Interval Fund",
+  "morningstar_definition": "A semiliquid fund with set repurchase windows: it is not traded on an exchange, and shareholders can only sell shares back to the fund during scheduled periodic repurchase offers (most often quarterly).",
+  "formula": "",
+  "key_facts": "Under SEC Rule 23c-3, repurchase offers happen at least once a year and cover 5%-25% of outstanding shares, at NAV; if requests exceed the offer, shares are bought pro rata, so you may not get out fully. Usually invests in illiquid assets (private credit, real estate).",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/alternative-investments/closer-look-semiliquid-funds",
+  "source_type": "Morningstar (articles; no glossary data-point entry found)"
+ },
+ {
+  "column": "Fund of Funds",
+  "morningstar_definition": "A fund that invests substantially all of its assets in other pooled vehicles, such as other mutual funds or ETFs, rather than buying individual stocks and bonds directly.",
+  "formula": "",
+  "key_facts": "Target-date and many allocation funds are typical examples.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/investing-terms/fund-of-funds",
+  "source_type": "Morningstar (glossary seen via search snippet; page blocked to fetch)"
+ },
+ {
+  "column": "Investment Status",
+  "morningstar_definition": "Whether the fund is accepting money. 'Limited' is how Morningstar displays a fund that is closed to new investors (temporarily or permanently) while existing shareholders may still add to their holdings; 'Closed' means not accepting new purchases; 'Open' means open to all.",
+  "formula": "",
+  "key_facts": "Limited = closed to new investors only; existing shareholders are not restricted from adding money.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://gladmainnew.morningstar.com/directhelp/Glossary/Operations/Fund/Closed_to_New_Investors.htm",
+  "source_type": "Morningstar (Direct help glossary seen via search snippet; 'Limited' label confirmed by http://news.morningstar.com/Corrections/Correction.html?id=362376)"
+ },
+ {
+  "column": "Strategic Beta Group",
+  "morningstar_definition": "For index-tracking funds whose index is 'strategic beta' (smart beta), the group of funds with a similar objective. Groups: Commodity, Dividend, Fixed Income, Fundamentals, Growth, Momentum, Multifactor, Quality, Risk-Oriented, Value, Other.",
+  "formula": "",
+  "key_facts": "Assigned only to eligible index-tracking ETPs and open-end funds; standard (traditional) index funds get 'Not Applicable'. Blank for actively managed funds, funds tracking blended benchmarks, and leveraged/inverse ('trading' category) funds. Not all groups are factor tilts (e.g. Commodity, Fixed Income, Risk-Oriented such as low-vol/high-beta, Other). Taxonomy updated in 2018 from the older Return-Oriented / Risk-Oriented / Other scheme.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advhypo.morningstar.com/Enterprise/VTC/StrategicBetaandIndexStrategyDataMethedologyv2.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Share Class Type",
+  "morningstar_definition": "The distribution channel or fee structure a share class is sold through. Morningstar's main types are No Load, Front Load (A), Level Load (C), Deferred Load (B), Institutional, Retirement, Investor and Advisor; this export also labels exchange-traded share classes 'ETF'.",
+  "formula": "",
+  "key_facts": "A = front load (typically 4-5.75%); B = deferred load; C = level load (~1% 12b-1); Inst = large institutional buyers, usually $1M+ minimum and lowest expenses; Retirement = retirement-plan classes; Other = not elsewhere classified (<5% of funds).",
+  "verdict": "corrects",
+  "correction": "Morningstar's types are channel / fee based (No Load, Front Load, Level Load, Institutional, Retirement, ...). 'ETF' is not in Morningstar's published list but does appear as a value in this eTrade export.",
+  "source_url": "https://morningstardirect.morningstar.com/clientcomm/Share_Class_Types.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Tender Offer",
+  "morningstar_definition": "A semiliquid (usually closed-end, unlisted) fund whose only exit for investors is periodic offers by the fund to buy back a portion of its shares, typically at or near NAV. Unlike interval funds, the fund and its board decide when, and whether, to make these offers.",
+  "formula": "",
+  "key_facts": "Schedules are usually quarterly or annually but at board discretion; payments can be delayed; if more shares are tendered than offered, purchases are pro rata.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/funds/semiliquid-funds-are-coming-your-portfolio-are-you-ready-them",
+  "source_type": "Morningstar (articles; no glossary data-point entry found)"
+ },
+ {
+  "column": "Index Fund",
+  "morningstar_definition": "A fund that tracks a particular index and tries to match its returns (passive management).",
+  "formula": "",
+  "key_facts": "Morningstar separately recognizes 'enhanced index' funds; a fund's tracked index is identified from its prospectus.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/investing-terms/index-fund",
+  "source_type": "Morningstar (glossary seen via search snippet; page blocked to fetch)"
+ },
+ {
+  "column": "Maximum Deferred Load",
+  "morningstar_definition": "The maximum back-end sales charge (deferred load / CDSC) charged when an investor redeems shares; the percentage generally falls the longer the shares are held.",
+  "formula": "",
+  "key_facts": "Often paired with 12b-1 fees as an alternative to a front-end load (typical of B and C shares). Not included in the expense ratio.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advhypo.morningstar.com/Enterprise/VTC/QP_Snapshot_disclosures_Brokerage.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Maximum Front Load",
+  "morningstar_definition": "The maximum initial sales charge, deducted from each purchase; the actual charge is generally based on the amount invested (breakpoints lower it for larger purchases).",
+  "formula": "",
+  "key_facts": "Not included in the expense ratio. A shares typically 4%-5.75%. Maximum = rate before any breakpoint discounts.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advhypo.morningstar.com/Enterprise/VTC/QP_Snapshot_disclosures_Brokerage.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Minimum Initial Investment",
+  "morningstar_definition": "The smallest amount the fund will accept to open a new account.",
+  "formula": "",
+  "key_facts": "Separate data points exist for additional purchases, IRA minimums and automatic investment plan minimums, which are often lower.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://www.morningstar.com/investing-terms/minimum-initial-investment",
+  "source_type": "Morningstar (glossary seen via search snippet; page blocked to fetch)"
+ },
+ {
+  "column": "Redemption Fee",
+  "morningstar_definition": "Morningstar's 'Maximum Redemption Fee': the most a fund may charge if shares are sold within a specified period after purchase (for example 30, 180 or 365 days).",
+  "formula": "",
+  "key_facts": "Expressed as a percent of the amount redeemed; applies only within the stated holding window; not a sales load.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://advhypo.morningstar.com/Enterprise/VTC/QP_Snapshot_disclosures_Brokerage.pdf",
+  "source_type": "Morningstar"
+ },
+ {
+  "column": "Trading Volume",
+  "morningstar_definition": "Morningstar's ETF 'Volume' is the number of shares traded on the current (most recent) trading day; 'Average Daily Volume' is a separate data point averaging daily volume over a trailing window.",
+  "formula": "Reported directly from exchange data",
+  "key_facts": "Unit is shares, not dollars. Single-day volume and average volume are distinct fields; which one an export column holds depends on the data point chosen.",
+  "verdict": "corrects",
+  "correction": "Morningstar's plain 'Volume' is the shares traded on the latest trading day, not an average; the average is a separate 'Average (Daily) Volume' field. Either relabel the column as single-day volume or confirm the export actually uses the average-volume data point.",
+  "source_url": "http://quote.morningstar.com/ETFdefinition.html",
+  "source_type": "Morningstar (ETF data definitions seen via search snippet; not fetched)"
+ },
+ {
+  "column": "Management Style",
+  "morningstar_definition": "Not found. The closest Morningstar definitions: 'Management Team' is used when more than two people manage the fund together or the fund strongly promotes a team approach; 'Multiple Managers' is used when people manage portions independently.",
+  "formula": "",
+  "key_facts": "When a fund lists only 'Management Team' without names, Morningstar shows manager tenure as a dash.",
+  "verdict": "not found",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/Manager_Tenure_(Longest).htm",
+  "source_type": "Morningstar (related definitions only)"
+ },
+ {
+  "column": "3Y Return Rank in Category",
+  "morningstar_definition": "The fund's 3-year total-return percentile rank among all funds in the same Morningstar Category, on a 1-100 scale where 1 is the best (highest return) and 100 the worst.",
+  "formula": "Percentile rank = based on absolute rank / number of funds in the category with a 3-year record (e.g. rank 116 of 232 = 50); ties and small groups get the highest possible percentile (in a 2-fund group: 1 and 51).",
+  "key_facts": "Based on total return, not adjusted for sales loads (Morningstar publishes load-adjusted ranks separately). Only funds with a full 3-year history are ranked. Lower = better for returns.",
+  "verdict": "confirms",
+  "correction": "",
+  "source_url": "https://awgmain.morningstar.com/webhelp/glossary_definitions/mutual_fund/mfglossary_PercentileRankCategory.html",
+  "source_type": "Morningstar (help glossary seen via search snippet)"
+ }
+]

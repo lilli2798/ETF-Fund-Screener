@@ -16,3 +16,6 @@ etf_screener/output/*.xlsx
 # Generated reports (screener results, yearly analysis, user-defined runs).
 # GitHub Actions builds its own copies and attaches them to each run.
 /output/
+
+# Excel lock files (created while a workbook is open)
+~$*

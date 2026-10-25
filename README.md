@@ -173,7 +173,7 @@ ETF-Fund-Screener/
 │   │   ├── get_yahoo_dta.py                    # Yahoo metrics for a watchlist (tickers.txt)
 │   │   └── customized_query_returns.py, ...    # Older custom date-range tool
 │   ├── input_files/input_profile_a.yaml
-│   ├── docs/                   # Glossary, Profile A design, database schema
+│   ├── docs/                   # Glossary, column dictionary, Profile A design, database schema
 │   └── data/                   # Your Morningstar exports (not in git)
 ├── .github/workflows/          # Daily, yearly and cleanup jobs
 ├── eTrade/                     # eTrade-specific scripts
@@ -198,5 +198,6 @@ ETF-Fund-Screener/
 ## Documentation
 
 - `etf_screener/docs/column_glossary.md` - definitions and formulas for all metrics
+- `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in Profile A (rebuild with `python docs/build_column_dictionary.py` after changing weights)
 - `etf_screener/docs/profile_a_design.md` - Profile A design
 - `etf_screener/docs/database_schema.md` - local database tables

@@ -1,9 +1,12 @@
 """
-ETF Fund Screener - Configuration File
+ETF Fund Screener - project-wide settings.
 
-This file contains all the default settings, weights, and thresholds used by
-the screener. You typically don't need to edit this file directly - most
-settings can be overridden in your YAML configuration file (e.g., input_files/profile_long_term.yaml).
+Everything that belongs to ONE profile (filters, weights, top_n, folders)
+lives only in that profile's YAML in input_files/ -- see input_file.py.
+This file holds what every profile shares: the eTrade columns to load,
+the Yahoo return caches, benchmark indexes, letter-grade mappings and
+how many reports to keep. (Yahoo download settings are the defaults of
+utils/yahoo_metrics.YahooMetricsConfig.)
 
 IMPORTANT NOTE ABOUT COLUMN NAMES:
   The NEEDED_COLS list below must match the EXACT
@@ -16,30 +19,10 @@ IMPORTANT NOTE ABOUT COLUMN NAMES:
 from pathlib import Path
 from typing import List, Optional
 
-DEFAULT_TOP_N_PER_CATEGORY: int = 5
-# How many funds get Selected Overall Flag = 1 (best across all categories).
-# None = same as top_n_per_category. Set per profile with top_n_overall in the YAML.
-DEFAULT_TOP_N_OVERALL: Optional[int] = None
-
 # Reports kept in the output folder. After each run, older reports (with
 # their used-weights files, _by_category folders and run_recorder entries)
 # are deleted. None = keep everything.
 KEEP_LAST_REPORTS: Optional[int] = 10
-
-# Default input/output paths -- adjust to your environment, or override at
-# runtime via get_paths_from_user() / CLI args.
-DEFAULT_DATA_PATH: str = "data"
-DEFAULT_OUT_PATH: str = "../output/etf_screener"
-
-# Default profile to run when none is specified.
-DEFAULT_PROFILE_NAME: str = "LT"
-
-# Profile YAMLs run_ci.py runs (in this order) and alerts.py reports on,
-# relative to the etf_screener/ folder.
-PROFILE_INPUT_FILES: list = [
-    "input_files/profile_long_term.yaml",
-    "input_files/profile_short_term.yaml",
-]
 
 # Calendar-year returns maintained by yahoo_returns/yearly_cache_manager.py
 # (updated by the yearly GitHub workflow). The most recent N years are
@@ -135,7 +118,7 @@ NEEDED_COLS: List[str] = [
     "Tax Cost Ratio (3Y)", "Tax Cost Ratio (5Y)",
     "Tax Cost Ratio (10Y)",
     "Potential Capital Gains Exposure", "SEC 30-Day Yield",
-    "SEC 7-Day Yield", "Dividend per Share (Trailing Annual)",
+    "Dividend per Share (Trailing Annual)",
     "Dividend per Share (Forward Annual)", "Dividend per Share (1Y Avg)",
     "Dividend per Share (3Y Avg)",
 
@@ -148,195 +131,6 @@ NEEDED_COLS: List[str] = [
     "Maximum Deferred Load", "Maximum Front Load", "Minimum Initial Investment",
     "Redemption Fee",
 ]
-
-# Fallback profile-level weights, used when a profile YAML has no
-# `weights:` section. Exposed here (rather than hardcoded in scoring.py)
-# so profiles can reuse the same knobs with different weightings
-# without touching scoring logic.
-#
-# NOTE: these keys map to scoring.py's per-CONCEPT scores (each already
-# 0-100 and category-relative), not to individual raw metrics anymore.
-# See profiles/weighted_profile.py::compute_score() for the mapping:
-#   long_term_return_performance -> Long_Term_Return_Performance_Score
-#   short_term_return_performance -> Short_Term_Return_Performance_Score
-#   risk_adjusted       -> Risk_Adjusted_Score
-#   volatility          -> Volatility_Score      (steadier is better: lower std dev, drawdown closer to 0)
-#   resilience          -> Resilience_Score      (beat the indexes in calendar years and volatile periods)
-#   tracking            -> Tracking_Score         (lower tracking error is better -- inverted in scoring)
-#   liquidity_size       -> Liquidity_Size_Score
-#   quality_valuation    -> Quality_Valuation_Score
-#   costs               -> Costs_Score            (lower cost is better -- inverted in scoring)
-#   tax_income          -> Tax_Income_Score
-DEFAULT_PROFILE_WEIGHTS = {
-    "long_term_return_performance": 0.25,
-    "short_term_return_performance": 0.10,
-    "risk_adjusted": 0.20,
-    "volatility": 0.15,
-    "resilience": 0.00,
-    "tracking": 0.05,
-    "liquidity_size": 0.05,
-    "quality_valuation": 0.10,
-    "costs": 0.10,
-    "tax_income": 0.00,
-}
-
-# Column-level weights INSIDE each concept function (e.g. how much
-# Total Return 3Y vs 5Y counts within Performance_Score). These are
-# separate from DEFAULT_PROFILE_WEIGHTS above, which controls how much each
-# whole CONCEPT counts relative to the other concepts.
-#
-# This is the canonical default schema for `thresholds.concept_weights`
-# in the profile input YAML -- while you're still learning what each
-# column means and tuning weights, you can override just one or two
-# leaf values in the YAML (e.g. concept_weights.performance.return_3y)
-# and everything else here still applies via deep_merge_dicts().
-DEFAULT_CONCEPT_WEIGHTS = {
-    "long_term_return_performance": {
-        "return_1y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_2y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_3y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_4y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_5y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_6y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_7y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_8y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_9y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_10y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_15y": 0.0833,  # 1/12 ≈ 8.33%
-        "return_20y": 0.0835,  # 1/12 ≈ 8.35% (adjusted to sum to 1.0)
-    },
-    "short_term_return_performance": {
-        "return_1w": 0.125,  # 1/8 = 12.5%
-        "return_1m": 0.125,  # 1/8 = 12.5%
-        "return_2m": 0.125,  # 1/8 = 12.5%
-        "return_qtd": 0.125,  # 1/8 = 12.5%
-        "return_3m": 0.125,  # 1/8 = 12.5%
-        "return_6m": 0.125,  # 1/8 = 12.5%
-        "return_9m": 0.125,  # 1/8 = 12.5%
-        "return_ytd": 0.125,  # 1/8 = 12.5%
-    },
-    "risk_adjusted": {
-        "sharpe_3y": 0.1,
-        "sharpe_1y": 0.1,
-        "upside": 0.15,
-        "downside": 0.15,
-        "yahoo_sharpe_3y": 0.10,
-        "yahoo_sharpe_1y": 0.15,
-        "yahoo_zscore_3y": 0.10,
-        "yahoo_zscore_1y": 0.15,
-        # Other periods (0.0 = not used unless a profile YAML sets them)
-        "sharpe_5y": 0.00,
-        "sharpe_10y": 0.00,
-        "upside_1y": 0.00,
-        "upside_5y": 0.00,
-        "upside_10y": 0.00,
-        "downside_1y": 0.00,
-        "downside_5y": 0.00,
-        "downside_10y": 0.00,
-    },
-    "volatility": {
-        "stdev_3y": 0.45,
-        "drawdown_3y": 0.30,
-        "drawdown_5y": 0.25,
-        "stdev_1y": 0.00,
-        "stdev_5y": 0.00,
-        "stdev_10y": 0.00,
-        "drawdown_1y": 0.00,
-        "drawdown_10y": 0.00,
-    },
-    # Consistency & crash resilience (Resilience_Score). Concept weight is
-    # 0 in DEFAULT_PROFILE_WEIGHTS, so it only counts when a profile YAML
-    # gives `weights.resilience` a value.
-    "resilience": {
-        "yearly_beat_pct": 0.25,          # % of calendar years the fund beat all indexes
-        "yearly_bottom_10_share": 0.15,   # share of years in the bottom 10% (lower is better)
-        "volatile_beat_pct": 0.25,        # % of volatile periods the fund beat all indexes
-        "volatile_bottom_10_share": 0.15, # share of volatile periods in the bottom 10% (lower is better)
-        "worst_3m_return": 0.20,          # Worst Three Month Return (higher is better)
-    },
-    "tracking": {
-        "tracking_error_3y": 0.65,
-        "tracking_error_1y": 0.35,
-    },
-    "liquidity_size": {
-        "fund_size": 0.60,
-        "trading_volume": 0.40,
-    },
-    "quality_valuation": {
-        "growth_grade": 0.20,
-        "financial_health": 0.15,
-        "profitability_grade": 0.15,  # Portfolio profitability grade (A-F)
-        "price_fair_value": 0.15,
-        "medalist": 0.15,  # NEW — raise/lower as you like; use 0.0 to ignore
-        "star_rating": 0.15,  # NEW — Morningstar Rating for Funds (star rating)
-        "economic_moat_wide": 0.05,  # NEW — Portfolio Economic Moat Coverage (Wide)
-    },
-    "costs": {
-        "adjusted_expense_ratio": 1.0,
-    },
-    "tax_income": {
-        "tax_cost_ratio_1y": 0.20,
-        "tax_cost_ratio_2y": 0.15,
-        "dividend_per_share_trailing": 0.10,
-        "dividend_per_share_forward": 0.10,
-        "dividend_per_share_1y_avg": 0.10,
-        "dividend_per_share_3y_avg": 0.10,
-        "sec_yield": 0.25,
-    },
-}
-
-DEFAULT_YAHOO_METRICS = {
-    "batch_size": 200,                 # tickers per price download
-    "rest_delay_seconds": 3.0,         # pause between price downloads
-    "rest_delay_jitter_seconds": 2.0,
-    "subsector_workers": 4,            # parallel sub-sector lookups (lower it if Yahoo rate-limits)
-    "sample_stock_lookups": 10,        # top holdings used for the sub-sector (Yahoo lists at most 10)
-    "max_download_retries": 3,
-    "risk_free_annual": 0.04,
-    "price_history_period": "3y",
-    "log_unmapped_keys": True,
-    "subsector_cache_path": "utils/sector_cache.json",
-    "subsector_cache_max_age_days": 365,  # re-check each fund about once a year (+0-29 days spread)
-    "force_refresh_subsector": False,
-}
-
-# Full default `thresholds` schema for the profile input YAML. Any keys
-# the user omits from their YAML fall back to these values via
-# deep_merge_dicts() in input_file.py, and nested dicts (weights,
-# concept_weights) are merged key-by-key rather than replaced wholesale
-# -- so overriding one leaf value never silently drops its siblings.
-DEFAULT_THRESHOLDS = {
-    "require_category": True,
-    "max_expense_ratio": 0.75,
-    "require_fund_size": True,
-    "require_3y_return": True,
-
-    # Structural/flag exclusions (see scoring.build_structure_flags).
-    "exclude_leveraged_funds": True,
-    "exclude_interval_funds": True,
-    "exclude_tender_offer_funds": True,
-
-    # Load and investment requirement filters
-    "max_deferred_load": 0.0,  # Maximum deferred load (0.0 = no load allowed)
-    "max_front_load": 0.0,      # Maximum front load (0.0 = no load allowed)
-    "min_initial_investment": 50000,  # Remove funds requiring a larger minimum initial investment ($)
-    "max_redemption_fee": 0.0,  # Maximum redemption fee (0.0 = no fee allowed)
-
-    # Benchmark filter (profiles/weighted_profile.apply_filters): keep funds
-    # whose Yearly Beat % is at least min_benchmark_beat_pct (or unknown).
-    "require_benchmark_outperformance": False,
-    "min_benchmark_beat_pct": 50.0,
-
-    # Profile-level concept weights (how much each concept counts).
-    "weights": DEFAULT_PROFILE_WEIGHTS,
-
-    # Column-level weights inside each concept (how much each raw
-    # metric counts within its own concept score).
-    "concept_weights": DEFAULT_CONCEPT_WEIGHTS,
-
-    # Yahoo Finance fetch/runtime settings used by utils.yahoo_metrics.
-    "yahoo_metrics": DEFAULT_YAHOO_METRICS,
-}
 
 # Grade-letter -> numeric mapping, shared by any profile that scores on
 # Morningstar's Growth / Financial Health letter grades.

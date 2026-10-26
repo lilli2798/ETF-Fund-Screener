@@ -29,11 +29,12 @@ from openpyxl.styles import Alignment, Font, PatternFill
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 sys.path.append(str(PROJECT / "yahoo_returns"))
-from config import PROFILE_INPUT_FILES, VOLATILE_CONFIG_PATH  # noqa: E402
-from input_file import load_profile_input  # noqa: E402
+from config import VOLATILE_CONFIG_PATH  # noqa: E402
+from input_file import discover_profiles, load_profile_input  # noqa: E402
 from volatile_periods import load_periods  # noqa: E402
 
-DEFAULT_PROFILE = PROJECT / "input_files/profile_long_term.yaml"
+ALL_PROFILES = discover_profiles()  # every enabled input_files/profile_*.yaml
+DEFAULT_PROFILE = Path(ALL_PROFILES[0].path)  # the report's main profile (LT)
 args = sys.argv[1:]
 yaml_args = [a for a in args if a.endswith((".yaml", ".yml"))]
 report_args = [a for a in args if a.endswith(".xlsx")]
@@ -61,8 +62,7 @@ TOP_N = profile.top_n_per_category
 # Every profile's filter settings, read from its YAML, so the text below always
 # matches what the screener does: {"LT": thresholds, "ST": thresholds}
 SETTINGS = {KEY: profile.thresholds}
-for _file in PROFILE_INPUT_FILES:
-    _other = load_profile_input(str(PROJECT / _file))
+for _other in ALL_PROFILES:
     SETTINGS.setdefault(_other.profile_name, _other.thresholds)
 
 
@@ -360,7 +360,6 @@ D["SEC 30-Day Yield"] = ("Standardized yield from the last 30 days of net invest
                          "SEC Yield = 2 x [ ((a - b) / (c x d) + 1)^6 - 1 ]; a = income, b = expenses, c = avg shares, d = max offering price",
                          "Higher = more income",
                          "Fairest yield comparison between bond funds; usually blank for stock funds.", MS, used("tax_income", [("", "sec_yield")]))
-D["SEC 7-Day Yield"] = ("SEC yield over the last 7 days - used for money market funds.", "Same SEC method on a 7-day window", "Higher = more income", "Money market funds only.", MS, "No")
 D["Dividend per Share"] = ("Dollars of dividends per share: Trailing Annual = paid in the last 12 months; Forward Annual = expected next 12 months; 1Y / 3Y Avg = averages.",
                            "", "Higher = more income",
                            "Depends on the share price - compare yields rather than dollars across funds. Forward / 1Y Avg / 3Y Avg are empty in the current export.",
@@ -495,10 +494,9 @@ def add_profile_rows(key, yaml_name, weights, top_n, top_n_overall):
 
 add_profile_rows(KEY, PROFILE_PATH.name, W, TOP_N, profile.thresholds.get("top_n_overall") or TOP_N)
 # A combined report (results_profile_LT_ST_...) also has the other profiles' columns.
-for other_file in PROFILE_INPUT_FILES:
-    other = load_profile_input(str(PROJECT / other_file))
+for other in ALL_PROFILES:
     if other.profile_name != KEY and f"Profile {other.profile_name} Score" in report_cols:
-        add_profile_rows(other.profile_name, Path(other_file).name, other.thresholds["weights"], other.top_n_per_category,
+        add_profile_rows(other.profile_name, Path(other.path).name, other.thresholds["weights"], other.top_n_per_category,
                          other.thresholds.get("top_n_overall") or other.top_n_per_category)
 D["Missing From Yahoo"] = ("('No Yahoo Data' tab only) Which Yahoo-based results are missing: Sharpe / Z-score, yearly returns, volatile periods.", "", "n/a",
                            "These funds are taken off the overview; all their Morningstar columns are still on that tab.", CALC, "No")

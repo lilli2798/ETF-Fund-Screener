@@ -15,10 +15,9 @@ Design goals:
   - Every per-ticker Yahoo Finance call is wrapped so a single bad/
     delisted/rate-limited ticker never aborts the whole batch -- failures
     are logged and the ticker gets safe NaN/default placeholders instead.
-  - All tunables (batch size, rest delay, retries, sample size) accept
-    overrides so they can be driven from the profile input YAML's
-    thresholds.yahoo_metrics block (see config.py DEFAULT_YAHOO_METRICS
-    and input_file.py's deep-merge), instead of being hardcoded.
+  - All tunables (batch size, rest delay, retries, sample size) are the
+    YahooMetricsConfig defaults below; a profile YAML can override any of
+    them in an optional thresholds.yahoo_metrics block.
 """
 from __future__ import annotations
 
@@ -114,10 +113,10 @@ unmapped_key_log: set = set()
 
 @dataclass
 class YahooMetricsConfig:
-    """Tunables for the Yahoo fetch pipeline. All fields are overridable
-    from thresholds.yahoo_metrics in the profile input YAML (see
-    config.DEFAULT_YAHOO_METRICS + input_file.deep_merge_dicts), so
-    behavior can be tuned per-profile without editing code.
+    """Tunables for the Yahoo fetch pipeline -- the one place their
+    defaults live. Any field can be overridden in an optional
+    thresholds.yahoo_metrics block of a profile YAML (e.g.
+    force_refresh_subsector: true for one run).
     """
     batch_size: int = 200               # tickers per price download
     rest_delay_seconds: float = 3.0     # pause between price downloads
@@ -140,12 +139,15 @@ class YahooMetricsConfig:
     def from_thresholds(cls, thresholds: Optional[dict]) -> "YahooMetricsConfig":
         """Build a config from a profile input YAML's thresholds dict,
         e.g. thresholds["yahoo_metrics"] = {"batch_size": 25, ...}.
-        Unknown/omitted keys fall back to the dataclass defaults above.
+        Omitted keys use the dataclass defaults above; an unknown key
+        (likely a typo) is an error.
         """
         overrides = (thresholds or {}).get("yahoo_metrics", {}) or {}
-        valid_fields = {f for f in cls.__dataclass_fields__}
-        filtered = {k: v for k, v in overrides.items() if k in valid_fields}
-        return cls(**filtered)
+        unknown = sorted(set(overrides) - set(cls.__dataclass_fields__))
+        if unknown:
+            raise ValueError(f"Unknown thresholds.yahoo_metrics key(s) {unknown}; "
+                             f"valid: {sorted(cls.__dataclass_fields__)}")
+        return cls(**overrides)
 
 
 # =========================================================================

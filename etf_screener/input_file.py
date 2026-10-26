@@ -1,49 +1,39 @@
 """
-Loads a single profile's run configuration (paths, profile name, top_n,
-and eligibility thresholds) from a YAML input file, e.g. input_files/profile_long_term.yaml.
+Loads the profile YAML files in input_files/. Each profile_*.yaml is one
+profile (LT, ST, ...), and the YAML is the ONLY place its settings live:
+there are no hidden defaults. A missing or misspelled key stops the run
+with a message naming the file and the key.
 
-Keeping this separate from main.py mirrors the rest of the project: each
-concern (loading, merging, scoring, export, and now input-file parsing)
-lives in its own module, so main.py stays a thin orchestrator.
+To add a profile: copy a profile_*.yaml, give it a new `profile:` key and
+your values. run_ci.py, main.py (Enter), alerts.py and the column
+dictionary pick it up automatically. `enabled: false` keeps a YAML
+without running it.
 """
 
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import yaml
 
-from config import (
-    DEFAULT_DATA_PATH, DEFAULT_OUT_PATH,
-    DEFAULT_PROFILE_NAME, DEFAULT_TOP_N_PER_CATEGORY, DEFAULT_TOP_N_OVERALL,
-    DEFAULT_THRESHOLDS,
+from scoring import REQUIRED_CONCEPT_KEYS
+
+PROFILE_DIR = Path(__file__).resolve().parent / "input_files"
+PROFILE_GLOB = "profile_*.yaml"
+
+# Top-level keys of a profile YAML.
+REQUIRED_TOP_LEVEL = ("profile", "top_n_per_category", "data_path", "out_path", "thresholds")
+OPTIONAL_TOP_LEVEL = ("top_n_overall", "enabled")
+
+# Keys under `thresholds:`. yahoo_metrics is optional (Yahoo download
+# settings, see utils/yahoo_metrics.YahooMetricsConfig).
+REQUIRED_FILTERS = (
+    "require_category", "max_expense_ratio", "require_fund_size", "require_3y_return",
+    "exclude_leveraged_funds", "exclude_interval_funds", "exclude_tender_offer_funds",
+    "max_deferred_load", "max_front_load", "min_initial_investment", "max_redemption_fee",
+    "require_benchmark_outperformance", "min_benchmark_beat_pct",
 )
-
-
-def deep_merge_dicts(defaults: Dict[str, Any], overrides: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Recursively merge `overrides` onto a deep copy of `defaults`.
-
-    Unlike `{**defaults, **overrides}` (which replaces a whole nested
-    dict if the key exists in overrides), this merges nested dicts
-    key-by-key. That matters here because YAML overrides are often
-    partial -- e.g. a user tuning `concept_weights.performance.return_3y`
-    while learning what each column means should NOT silently wipe out
-    the other default `performance` sub-weights (return_5y, return_1y,
-    rank_3y) just because they didn't repeat them in the YAML.
-
-    Only `dict` values are merged recursively; lists, strings, numbers,
-    bools, and None are replaced outright by the override value.
-    """
-    result = deepcopy(defaults)
-    for key, override_value in (overrides or {}).items():
-        default_value = result.get(key)
-        if isinstance(override_value, dict) and isinstance(default_value, dict):
-            result[key] = deep_merge_dicts(default_value, override_value)
-        else:
-            result[key] = override_value
-    return result
+OPTIONAL_THRESHOLDS = ("yahoo_metrics",)
 
 
 @dataclass
@@ -53,58 +43,87 @@ class ProfileInput:
     out_path: str
     top_n_per_category: int
     thresholds: Dict[str, Any]
+    path: str = ""
+
+
+def _check_keys(where: str, given: Dict[str, Any], required, optional=()) -> None:
+    missing = [k for k in required if k not in given]
+    unknown = [k for k in given if k not in required and k not in optional]
+    problems = []
+    if missing:
+        problems.append(f"missing {', '.join(missing)}")
+    if unknown:
+        problems.append(f"unknown {', '.join(unknown)} (typo?)")
+    if problems:
+        raise ValueError(f"{where}: {'; '.join(problems)}")
 
 
 def load_profile_input(input_file: str) -> ProfileInput:
     """
-    Read and validate a profile input YAML file.
-
-    Raises FileNotFoundError if the path doesn't exist, yaml.YAMLError if
-    the file isn't valid YAML, and ValueError if required fields are the
-    wrong type -- all of which the caller (main.py) is expected to catch
-    and retry on, rather than crashing the whole pipeline.
+    Read and validate one profile YAML. Raises FileNotFoundError,
+    yaml.YAMLError or ValueError (with the file and key named) so main.py
+    can ask again instead of crashing.
     """
     path = Path(input_file).expanduser().resolve()
-    if not path.exists():
-        raise FileNotFoundError(f"Input file not found: {path}")
     if not path.is_file():
-        raise ValueError(f"Input path is not a file: {path}")
+        raise FileNotFoundError(f"Input file not found: {path}")
 
     with open(path, "r") as f:
         raw = yaml.safe_load(f) or {}
-
     if not isinstance(raw, dict):
-        raise ValueError(f"Input file {path} must contain a YAML mapping at the top level.")
+        raise ValueError(f"{path.name} must contain a YAML mapping at the top level.")
 
-    profile_name = raw.get("profile", DEFAULT_PROFILE_NAME)
+    _check_keys(path.name, raw, REQUIRED_TOP_LEVEL, OPTIONAL_TOP_LEVEL)
+    profile_name = raw["profile"]
     if not isinstance(profile_name, str) or not profile_name.strip():
-        raise ValueError(f"'profile' must be a non-empty string in {path}")
+        raise ValueError(f"{path.name}: 'profile' must be a non-empty name, e.g. LT")
 
-    raw_thresholds = raw.get("thresholds", {})
-    if not isinstance(raw_thresholds, dict):
-        raise ValueError(f"'thresholds' must be a mapping in {path}")
+    thresholds = raw["thresholds"]
+    if not isinstance(thresholds, dict):
+        raise ValueError(f"{path.name}: 'thresholds' must be a mapping")
+    _check_keys(f"{path.name} thresholds", thresholds,
+                REQUIRED_FILTERS + ("weights", "concept_weights"), OPTIONAL_THRESHOLDS)
 
-    # Deep-merge user thresholds onto the canonical DEFAULT_THRESHOLDS
-    # schema (config.py), so missing keys -- and missing sub-keys inside
-    # nested `weights` / `concept_weights` -- fall back safely instead of
-    # each caller needing its own `.get(key, default)` fallback logic.
-    thresholds = deep_merge_dicts(DEFAULT_THRESHOLDS, raw_thresholds)
+    # weights: one per concept; concept_weights: every input of every concept
+    # (set a weight to 0.0 to leave it out, don't delete the key)
+    concepts = tuple(REQUIRED_CONCEPT_KEYS)
+    _check_keys(f"{path.name} thresholds.weights", thresholds["weights"] or {}, concepts)
+    _check_keys(f"{path.name} thresholds.concept_weights", thresholds["concept_weights"] or {}, concepts)
+    for concept, keys in REQUIRED_CONCEPT_KEYS.items():
+        _check_keys(f"{path.name} thresholds.concept_weights.{concept}",
+                    thresholds["concept_weights"][concept] or {}, keys)
 
-    unknown_keys = set(raw_thresholds) - set(DEFAULT_THRESHOLDS)
-    if unknown_keys:
-        print(f"  Warning: {path} has unrecognized threshold key(s) {sorted(unknown_keys)} "
-              f"-- check for typos. They will be ignored by known logic but are still "
-              f"present in the merged thresholds dict.")
-
-    # Top level like top_n_per_category; stored in thresholds so the scorer,
+    # Top level like top_n_per_category; kept in thresholds so the scorer,
     # run_recorder.yaml and the used-weights report all see it.
-    top_n_overall = raw.get("top_n_overall", DEFAULT_TOP_N_OVERALL)
+    # Left out = same as top_n_per_category.
+    top_n_overall = raw.get("top_n_overall")
     thresholds["top_n_overall"] = None if top_n_overall is None else int(top_n_overall)
 
     return ProfileInput(
         profile_name=profile_name.strip(),
-        data_path=raw.get("data_path") or DEFAULT_DATA_PATH,
-        out_path=raw.get("out_path") or DEFAULT_OUT_PATH,
-        top_n_per_category=int(raw.get("top_n_per_category", DEFAULT_TOP_N_PER_CATEGORY)),
+        data_path=raw["data_path"],
+        out_path=raw["out_path"],
+        top_n_per_category=int(raw["top_n_per_category"]),
         thresholds=thresholds,
+        path=str(path),
     )
+
+
+def discover_profiles(folder: Path = PROFILE_DIR) -> List[ProfileInput]:
+    """Every enabled input_files/profile_*.yaml, in file-name order. The first
+    one sets the report's rows and concept scores (profile_long_term sorts
+    before profile_short_term)."""
+    profiles: List[ProfileInput] = []
+    for path in sorted(folder.glob(PROFILE_GLOB)):
+        with open(path, "r") as f:
+            if (yaml.safe_load(f) or {}).get("enabled", True) is False:
+                print(f"  Skipping {path.name} (enabled: false)")
+                continue
+        profiles.append(load_profile_input(str(path)))
+    names = [p.profile_name for p in profiles]
+    duplicates = sorted({n for n in names if names.count(n) > 1})
+    if duplicates:
+        raise ValueError(f"Two profile YAMLs use the same profile key: {', '.join(duplicates)}")
+    if not profiles:
+        raise FileNotFoundError(f"No enabled {PROFILE_GLOB} in {folder}")
+    return profiles

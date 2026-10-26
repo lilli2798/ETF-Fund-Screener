@@ -19,12 +19,10 @@ HOW IT WORKS:
 ADDING NEW INVESTMENT PROFILES:
   Profiles LT (long term) and ST (short term) share the logic in
   profiles/weighted_profile.py and differ only in their YAML files.
-  To add one that only needs different thresholds or weights:
-  1. Copy a YAML in input_files/ and give it a new `profile:` key
-  2. Add that key to PROFILE_KEYS in profiles/weighted_profile.py
-  3. Add the YAML to config.PROFILE_INPUT_FILES so run_ci.py runs it
-  All profiles in PROFILE_INPUT_FILES go into one report
-  (results_profile_LT_ST_...), each with its own score/rank columns.
+  To add one, copy a profile_*.yaml in input_files/ and give it a new
+  `profile:` key -- nothing else to change. Every enabled profile_*.yaml
+  goes into one report (results_profile_LT_ST_...), each with its own
+  score/rank columns.
 
 CONFIGURATION:
   All settings come from a YAML file (e.g., input_files/profile_long_term.yaml):
@@ -47,17 +45,12 @@ import pandas as pd
 import yaml
 
 from config import (
-    DEFAULT_TOP_N_PER_CATEGORY,
-    DEFAULT_DATA_PATH,
-    DEFAULT_OUT_PATH,
-    DEFAULT_PROFILE_NAME,
     KEEP_LAST_REPORTS,
-    PROFILE_INPUT_FILES,
     YEARLY_RETURN_YEARS,
     YEARLY_RETURNS_CSV,
 )
 from data_loading import load_data
-from input_file import load_profile_input, ProfileInput
+from input_file import discover_profiles, load_profile_input, ProfileInput
 from merging import apply_fund_filter, attach_yearly_returns
 from performance import append_benchmark_rows, attach_volatile_performance, attach_yearly_stats
 from extra_reports import split_no_yahoo_data
@@ -81,9 +74,10 @@ from export import (
 )
 
 
-# Import each profile module once so it self-registers into
-# PROFILE_FILTERS / PROFILE_SCORERS. Add new profile modules here, one line each.
-import profiles.weighted_profile  # noqa: F401  (registers "LT" and "ST")
+# Profiles with their own logic get a module in profiles/ that registers
+# its key when imported; add it here, one line each. Every other profile
+# key uses profiles/weighted_profile.py (see _validate_profile_name).
+import profiles.weighted_profile
 
 # Yahoo results already fetched in this process, keyed by settings.
 _YAHOO_RESULTS: dict = {}
@@ -92,8 +86,8 @@ _YAHOO_RESULTS: dict = {}
 def get_profile_input_interactively() -> List[ProfileInput]:
     """
     Repeatedly prompt for a profile input file path until one loads
-    successfully. Pressing Enter without a path loads every profile in
-    config.PROFILE_INPUT_FILES (one combined report). Mirrors the retry pattern already used elsewhere in
+    successfully. Pressing Enter without a path loads every enabled
+    input_files/profile_*.yaml (one combined report). Mirrors the retry pattern already used elsewhere in
     this project for struct/perf file loading -- catches common errors
     (missing file, bad YAML, invalid contents) and lets the user retype
     the path instead of crashing the whole pipeline.
@@ -104,11 +98,9 @@ def get_profile_input_interactively() -> List[ProfileInput]:
             "or press Enter for all profiles in one report: "
         ).strip()
 
-        if not input_file:
-            here = os.path.dirname(os.path.abspath(__file__))
-            return [load_profile_input(os.path.join(here, f)) for f in PROFILE_INPUT_FILES]
-
         try:
+            if not input_file:
+                return discover_profiles()
             return [load_profile_input(input_file)]
         except FileNotFoundError:
             print(f"  File not found: {input_file}. Please check the path and try again.")
@@ -122,19 +114,12 @@ def get_profile_input_interactively() -> List[ProfileInput]:
 
 def _validate_profile_name(profile_name: str) -> None:
     """
-    Raise a clear, early ValueError if `profile_name` isn't registered in
-    both PROFILE_FILTERS and PROFILE_SCORERS -- e.g. a typo like 'lt'
-    instead of 'LT', or a profile module that was never imported.
+    Make sure `profile_name` has a filter and scorer. A key no profile
+    module registered itself uses profiles/weighted_profile.py, so a new
+    YAML needs no code change.
     """
-    known_filter_names = set(PROFILE_FILTERS)
-    known_scorer_names = set(PROFILE_SCORERS)
-    available: List[str] = sorted(known_filter_names | known_scorer_names)
-
-    if profile_name not in known_filter_names or profile_name not in known_scorer_names:
-        raise ValueError(
-            f"Unknown profile_name '{profile_name}'. "
-            f"Available profiles: {available or '(none registered -- did you forget to import the profile module?)'}"
-        )
+    if profile_name not in PROFILE_FILTERS or profile_name not in PROFILE_SCORERS:
+        profiles.weighted_profile.register(profile_name)
 
 
 def ensure_profile_score_numeric(df: pd.DataFrame, profile_name: str) -> pd.DataFrame:
@@ -252,7 +237,7 @@ def score_profile(
         df = PROFILE_PREFILTERS[profile_name](df, thresholds)
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
-    yahoo_cfg = YahooMetricsConfig.from_thresholds(thresholds)  # ignores unknown/old keys
+    yahoo_cfg = YahooMetricsConfig.from_thresholds(thresholds)
     # run_ci.py runs several profiles in one process. Funds an earlier
     # profile already fetched (with the same settings) are reused; only new
     # ones are downloaded. Z-scores compare each fund with its sub-sector
@@ -322,11 +307,11 @@ def score_profile(
 
 
 def process_data(
-    data_path: str = DEFAULT_DATA_PATH,
-    out_path: str = DEFAULT_OUT_PATH,
-    profile_name: str = DEFAULT_PROFILE_NAME,
-    top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
-    thresholds: dict = None,
+    data_path: str,
+    out_path: str,
+    profile_name: str,
+    top_n: int,
+    thresholds: dict,
     extra_profiles: Sequence[ProfileInput] = (),
 ) -> Tuple[pd.DataFrame, str]:
     """
@@ -339,9 +324,7 @@ def process_data(
     `thresholds` comes from the profile input YAML file (ProfileInput.thresholds)
     and is passed through to both the registered filter and scorer functions
     for `profile_name`, so eligibility gates and weights are configurable
-    without editing code. Defaults to an empty dict if not provided, so
-    each profile module's own `thresholds.get(key, default)` calls fall
-    back safely.
+    without editing code.
 
     `extra_profiles` are scored the same way, each with its own YAML, and
     their score/rank/flag columns are added to this report (e.g. Profile
@@ -351,9 +334,6 @@ def process_data(
     Stage A: ranking/selection logic remains entirely inside PROFILE_SCORERS.
     This function does not add quality/risk gates on qualitative fields.
     """
-    if thresholds is None:
-        thresholds = {}
-
     df_ranked, reports = score_profile(data_path, out_path, profile_name, top_n, thresholds)
 
     all_profiles = [(profile_name, top_n, thresholds)]
@@ -366,7 +346,7 @@ def process_data(
     profile_names = [name for name, _, _ in all_profiles]
 
     print("Formatting column names for export...")
-    df_export: pd.DataFrame = format_column_names_for_export(df_ranked)
+    df_export: pd.DataFrame = format_column_names_for_export(df_ranked, profile_names)
 
     # Re-apply numeric cast after any export renaming (names may change)
     for name in profile_names:

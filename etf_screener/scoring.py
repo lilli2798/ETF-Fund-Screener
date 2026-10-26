@@ -168,12 +168,10 @@ def _weighted_average(df: pd.DataFrame, weight_map: Dict[str, float]) -> pd.Seri
 # Used by _require_weights() to enforce STRICT validation: a concept's
 # weight dict must supply every one of these keys explicitly (no partial
 # overrides silently filled with hardcoded defaults). To intentionally
-# drop/remove one metric from a concept, set its weight to 0.0 in
-# config.DEFAULT_CONCEPT_WEIGHTS / thresholds.concept_weights -- the key
-# must still be present, just zeroed out, so it's clear that was a
+# drop/remove one metric from a concept, set its weight to 0.0 in the
+# profile YAML's thresholds.concept_weights -- the key must still be present, just zeroed out, so it's clear that was a
 # deliberate choice and not a missing/forgotten setting.
 REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
-    "performance": ["return_3y", "return_5y", "return_1y", "rank_3y"],
     "long_term_return_performance": [
         "return_1y", "return_2y", "return_3y", "return_4y", "return_5y",
         "return_6y", "return_7y", "return_8y", "return_9y", "return_10y",
@@ -222,10 +220,9 @@ def _require_weights(weights: Optional[Dict[str, float]], concept_name: str) -> 
     """
     if not weights:
         raise ValueError(
-            f"Missing weights for concept '{concept_name}'. Add a "
-            f"'{concept_name}' entry to config.DEFAULT_CONCEPT_WEIGHTS "
-            f"(or thresholds.concept_weights.{concept_name} in your profile "
-            f"YAML) -- no hardcoded fallback is used, so this must be set explicitly."
+            f"Missing weights for concept '{concept_name}'. Add "
+            f"thresholds.concept_weights.{concept_name} to the profile YAML "
+            f"-- no hardcoded fallback is used, so this must be set explicitly."
         )
 
     required_keys = REQUIRED_CONCEPT_KEYS.get(concept_name, [])
@@ -233,9 +230,8 @@ def _require_weights(weights: Optional[Dict[str, float]], concept_name: str) -> 
     if missing_keys:
         raise ValueError(
             f"Concept '{concept_name}' is missing required weight key(s): "
-            f"{missing_keys}. Every key must be present in "
-            f"config.DEFAULT_CONCEPT_WEIGHTS['{concept_name}'] (or your profile "
-            f"YAML's thresholds.concept_weights.{concept_name}) -- set a key to "
+            f"{missing_keys}. Every key must be present in the profile "
+            f"YAML's thresholds.concept_weights.{concept_name} -- set a key to "
             f"0.0 to intentionally remove that metric, don't just omit it."
         )
     return weights
@@ -853,19 +849,18 @@ def build_concept_scores(
 
     `concept_weights` lets you override the COLUMN-level weights inside
     each concept function (e.g. how much Total Return 3Y vs 5Y counts
-    within Performance_Score), separate from the profile-level weights
-    in config.DEFAULT_PROFILE_WEIGHTS (which control how much each concept counts
-    relative to the other concepts). Pass a dict keyed by concept name,
-    each mapping to that concept function's own weight keys, e.g.:
+    within Long_Term_Return_Performance_Score), separate from the profile's
+    `weights` (which control how much each concept counts relative to the
+    other concepts). Pass a dict keyed by concept name, each mapping to
+    that concept function's own weight keys, e.g.:
 
         concept_weights = {
-            "performance": {"return_3y": 0.40, "return_5y": 0.35, ...},
+            "long_term_return_performance": {"return_3y": 0.10, "return_5y": 0.10, ...},
             "volatility":  {"stdev_3y": 0.45, "drawdown_3y": 0.30, ...},
         }
 
-    Any concept omitted from `concept_weights` falls back to that
-    function's own built-in defaults. This is typically populated from
-    the profile input YAML's `thresholds.concept_weights` block.
+    It comes from the profile YAML's `thresholds.concept_weights` block,
+    which input_file.py checks has every key in REQUIRED_CONCEPT_KEYS.
 
     Adds:
       - Long_Term_Return_Performance_Score (aggregates 1Y-20Y returns)

@@ -10,7 +10,7 @@ import shutil
 import time
 from pathlib import Path
 from typing import Any, Dict
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import pandas as pd
 import yaml
@@ -224,7 +224,7 @@ def add_sheets_to_workbook(path: str, sheets: Dict[str, pd.DataFrame]) -> None:
     print(f"  Added tab(s) {list(sheets)} to: {path}")
 
 
-def format_column_names_for_export(df: pd.DataFrame) -> pd.DataFrame:
+def format_column_names_for_export(df: pd.DataFrame, profile_names: Sequence[str] = ()) -> pd.DataFrame:
     """
     Convert internal snake_case/underscore column names into readable,
     title-cased headers for the exported Excel file. Does not modify the
@@ -234,17 +234,19 @@ def format_column_names_for_export(df: pd.DataFrame) -> pd.DataFrame:
       - Underscores become spaces.
       - Each word is title-cased, except for known acronyms/abbreviations
         (e.g. 'ETF', 'AUM', 'YTD') which are kept fully uppercase.
+      - Profile keys keep their exact spelling:
+        Profile_INC_Rank_Overall -> "Profile INC Rank Overall".
       - Original Morningstar column names (which already contain spaces
         and proper casing, e.g. "Net Expense Ratio") are left untouched.
     """
-    preserve_uppercase = {
-        "etf", "aum", "ytd", "qtd", "sec", "roic", "nav", "cgd",
-        "lt", "st",  # profile keys: Profile_LT_Score -> "Profile LT Score"
-    }
+    preserve_uppercase = {"etf", "aum", "ytd", "qtd", "sec", "roic", "nav", "cgd"}
 
     def humanize(col: str) -> str:
         if "_" not in col:
             return col
+        for name in profile_names:
+            if col.startswith(f"Profile_{name}_"):
+                return f"Profile {name} " + humanize(col[len(f"Profile_{name}_"):])
         words = col.split("_")
         formatted_words = [
             w.upper() if w.lower() in preserve_uppercase else w.capitalize()

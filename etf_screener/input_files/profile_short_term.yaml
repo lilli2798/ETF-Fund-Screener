@@ -11,18 +11,19 @@
 # bottom (highest Profile ST Rank In Category) is the short-term laggards.
 #
 # Run: python main.py   (enter input_files/profile_short_term.yaml when asked)
-#  or: python run_ci.py  (all profiles in config.PROFILE_INPUT_FILES, one report)
+#  or: python run_ci.py  (every profile_*.yaml in input_files/, one report)
 #
 # Starting values below are a first draft -- tune them with
-# docs/report_column_dictionary.xlsx. Any key left out falls back to
-# config.py's default, NOT to 0, so set a weight to 0.0 to turn it off.
+# docs/report_column_dictionary.xlsx. Every setting must be here (no hidden
+# defaults); set a weight to 0.0 to turn it off rather than deleting it.
 # ============================================================================
 
 # Profile key: names its score columns (Profile ST Score, ...) and
 # the report (results_profile_LT_ST_... when run with the other profiles,
-# results_profile_ST_... when run alone). Must be listed in
-# profiles/weighted_profile.py PROFILE_KEYS.
+# results_profile_ST_... when run alone). Must be unique across the
+# profile_*.yaml files.
 profile: ST
+# enabled: false   # uncomment to keep this file without running it
 
 # Selection cutoffs. Top level, NOT under thresholds:.
 top_n_per_category: 5   # funds per Morningstar Category with Selected Flag = 1
@@ -53,6 +54,7 @@ thresholds:
   min_initial_investment: 50000      # dollars
   max_redemption_fee: 0.0            # percent
   require_benchmark_outperformance: false
+  min_benchmark_beat_pct: 50.0       # used only when the line above is true
 
   # ==========================================================================
   # SCORING WEIGHTS (how much each concept counts; sums to 1.00)

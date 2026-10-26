@@ -2,15 +2,15 @@
 Weighted profiles: eligibility filters + composite scoring/ranking logic
 shared by every profile whose behaviour is set entirely by its YAML file.
 
-Registered profiles (see PROFILE_KEYS at the bottom):
+Every input_files/profile_*.yaml uses this module, e.g.
   - "LT"  input_files/profile_long_term.yaml   long-term, low-risk buy list
   - "ST"  input_files/profile_short_term.yaml  short-term momentum buy list
 
-Each key gets its own prefilter, filter and scorer in
-scoring.PROFILE_PREFILTERS / PROFILE_FILTERS / PROFILE_SCORERS when this
-module is imported, plus its own output columns (Profile_LT_Score,
-Profile_ST_Score, ...). Run together, the profiles share one report
-(results_profile_LT_ST_...). The YAML's `profile:` value picks the key.
+register(key) gives a profile key its own prefilter, filter and scorer in
+scoring.PROFILE_PREFILTERS / PROFILE_FILTERS / PROFILE_SCORERS, plus its
+own output columns (Profile_LT_Score, Profile_ST_Score, ...). main.py
+registers each YAML's `profile:` key when it runs it. Run together, the
+profiles share one report (results_profile_LT_ST_...).
 
 The scorer consumes the per-concept score columns produced by
 scoring.build_concept_scores() (Long_Term_Return_Performance_Score,
@@ -29,12 +29,11 @@ Rules:
   - Score / rank columns are forced to plain float64 so Excel
     does not treat them as text.
 
-To add a profile that only needs different thresholds or weights:
-  1. Copy a YAML in input_files/ and set a new `profile:` key (e.g. "INC").
-  2. Add that key to PROFILE_KEYS below.
-  3. Add the YAML to config.PROFILE_INPUT_FILES so run_ci.py runs it.
-A profile that needs different filter logic gets its own module in
-profiles/ instead, imported once in main.py.
+To add a profile that only needs different thresholds or weights, copy a
+profile_*.yaml in input_files/ and set a new `profile:` key (e.g. "INC").
+Nothing else to change. A profile that needs different filter logic gets
+its own module in profiles/ instead, which registers its key itself and is
+imported once in main.py.
 """
 
 from __future__ import annotations
@@ -51,7 +50,6 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
-from config import DEFAULT_PROFILE_WEIGHTS
 from scoring import (
     build_structure_flags,
     register_profile_filter,
@@ -86,7 +84,7 @@ def apply_prefilter(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFram
     The profile's hard rules on raw Morningstar columns, run right after the
     data is loaded so excluded funds are never downloaded from Yahoo and
     never affect the within-category scores of the funds that remain.
-    Missing YAML keys fall back to the defaults below.
+    Every setting comes from the profile YAML (input_file.py checks they exist).
       - require_category, require_fund_size, require_3y_return (bool):
         funds without a category, fund size or full 3-year history are
         excluded, not scored on a shorter history
@@ -102,10 +100,10 @@ def apply_prefilter(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFram
     start_count: int = len(df)
     eligible: pd.DataFrame = build_structure_flags(df)
 
-    require_category = thresholds.get("require_category", True)
-    max_expense_ratio = thresholds.get("max_expense_ratio", 0.75)
-    require_fund_size = thresholds.get("require_fund_size", True)
-    require_3y_return = thresholds.get("require_3y_return", True)
+    require_category = thresholds["require_category"]
+    max_expense_ratio = thresholds["max_expense_ratio"]
+    require_fund_size = thresholds["require_fund_size"]
+    require_3y_return = thresholds["require_3y_return"]
 
     if require_category and "Morningstar Category" in eligible.columns:
         before = len(eligible)
@@ -139,9 +137,9 @@ def apply_prefilter(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFram
     # hard-excluded (when the YAML turns them on) regardless of how well
     # they score on the weighted concepts. Flag columns come from
     # scoring.build_structure_flags().
-    exclude_leveraged_funds = thresholds.get("exclude_leveraged_funds", True)
-    exclude_interval_funds = thresholds.get("exclude_interval_funds", True)
-    exclude_tender_offer_funds = thresholds.get("exclude_tender_offer_funds", True)
+    exclude_leveraged_funds = thresholds["exclude_leveraged_funds"]
+    exclude_interval_funds = thresholds["exclude_interval_funds"]
+    exclude_tender_offer_funds = thresholds["exclude_tender_offer_funds"]
 
     if exclude_leveraged_funds and "Flag_Leveraged_Fund" in eligible.columns:
         before = len(eligible)
@@ -161,9 +159,9 @@ def apply_prefilter(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFram
         eligible = eligible[~flag]
         print(f"  Profile {key} filter - exclude tender-offer funds: {before} -> {len(eligible)}")
 
-    max_deferred_load = thresholds.get("max_deferred_load", 0.0)
-    max_front_load = thresholds.get("max_front_load", 0.0)
-    min_initial_investment = thresholds.get("min_initial_investment", 50000)
+    max_deferred_load = thresholds["max_deferred_load"]
+    max_front_load = thresholds["max_front_load"]
+    min_initial_investment = thresholds["min_initial_investment"]
 
     if max_deferred_load is not None and "Maximum Deferred Load" in eligible.columns:
         before = len(eligible)
@@ -198,7 +196,7 @@ def apply_prefilter(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFram
             f"{before} -> {len(eligible)}"
         )
 
-    max_redemption_fee = thresholds.get("max_redemption_fee", 0.0)
+    max_redemption_fee = thresholds["max_redemption_fee"]
 
     if max_redemption_fee is not None and "Redemption Fee" in eligible.columns:
         before = len(eligible)
@@ -226,8 +224,8 @@ def apply_filters(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFrame:
     eligible: pd.DataFrame = df.copy()
 
     # Historical benchmark performance filter
-    require_benchmark_outperformance = thresholds.get("require_benchmark_outperformance", False)
-    min_benchmark_beat_pct = thresholds.get("min_benchmark_beat_pct", 50.0)
+    require_benchmark_outperformance = thresholds["require_benchmark_outperformance"]
+    min_benchmark_beat_pct = thresholds["min_benchmark_beat_pct"]
 
     if require_benchmark_outperformance and "Yearly Beat %" in eligible.columns:
         before = len(eligible)
@@ -246,8 +244,7 @@ def apply_filters(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFrame:
 
 def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> pd.DataFrame:
     """
-    Weights come from thresholds["weights"] in the input YAML if present,
-    otherwise fall back to config.DEFAULT_PROFILE_WEIGHTS. This blends the
+    Weights come from thresholds["weights"] in the profile YAML. This blends the
     already-category-relative concept scores (each 0-100) into a single
     Profile_<key>_Score, then ranks it within each Morningstar Category
     and overall (1 = best).
@@ -267,7 +264,7 @@ def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> p
     flag_all_col = f"Profile_{key}_Selected_Overall_Flag"
 
     scored: pd.DataFrame = df.copy()
-    weights = thresholds.get("weights", DEFAULT_PROFILE_WEIGHTS) or {}
+    weights = thresholds["weights"]
 
     # Build weight_map: concept_col -> weight
     weight_map: Dict[str, float] = {}
@@ -369,11 +366,9 @@ def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> p
     return scored
 
 
-# Profile keys that use this module's logic. Each YAML's `profile:` value
-# must be one of these.
-PROFILE_KEYS = ("LT", "ST")
-
-for _key in PROFILE_KEYS:
-    register_profile_prefilter(_key)(partial(apply_prefilter, key=_key))
-    register_profile_filter(_key)(partial(apply_filters, key=_key))
-    register_profile_scorer(_key)(partial(compute_score, key=_key))
+def register(key: str) -> None:
+    """Give profile `key` (a YAML's `profile:` value) this module's
+    prefilter, filter and scorer."""
+    register_profile_prefilter(key)(partial(apply_prefilter, key=key))
+    register_profile_filter(key)(partial(apply_filters, key=key))
+    register_profile_scorer(key)(partial(compute_score, key=key))

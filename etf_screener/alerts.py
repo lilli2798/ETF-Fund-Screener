@@ -6,7 +6,7 @@ The screener pipeline (main.py / profiles/weighted_profile.py) exports a
 Selected Flag" (True for rows ranked in the top_n of their category) -- there is no "Decision" column in that output (that
 name only exists in the separate standalone_utils/get_yahoo_dta.py Sharpe/Decision CSV
 workflow). Alert-worthy rows here are therefore rows where the profile's
-Selected Flag column is True. Every profile in config.PROFILE_INPUT_FILES
+Selected Flag column is True. Every enabled input_files/profile_*.yaml
 gets its own section, from the newest report that has its columns
 (normally one combined results_profile_LT_ST_... file).
 
@@ -25,13 +25,12 @@ from pathlib import Path
 import pandas as pd
 import requests
 
-from config import PROFILE_INPUT_FILES
-from input_file import load_profile_input
+from input_file import discover_profiles
 
 # Read each profile's output folder from the same YAMLs run_ci.py uses, so
 # the alert step always looks where the screener actually wrote its results.
 # Set OUTPUT_DIR in the environment to override.
-PROFILE_INPUTS = [load_profile_input(str(Path(__file__).parent / f)) for f in PROFILE_INPUT_FILES]
+PROFILE_INPUTS = discover_profiles()
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
 # --- Email configuration (all optional; email is skipped if EMAIL_TO is unset) ---

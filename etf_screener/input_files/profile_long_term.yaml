@@ -10,15 +10,20 @@
 # 1. Update the file paths below to point to your Morningstar Excel exports
 # 2. Adjust the thresholds and weights to match your preferences
 # 3. Run: python main.py   (enter input_files/profile_long_term.yaml when asked)
-#    or:  python run_ci.py  (all profiles in config.PROFILE_INPUT_FILES, one report)
+#    or:  python run_ci.py  (every profile_*.yaml in input_files/, one report)
+#
+# Every setting must be here: there are no hidden defaults, and a missing or
+# misspelled key stops the run with its name. To add a profile, copy this
+# file to input_files/profile_<name>.yaml and change `profile:`.
 #
 # ============================================================================
 
 # Profile key: names its score columns (Profile LT Score, ...) and
 # the report (results_profile_LT_ST_... when run with the other profiles,
-# results_profile_LT_... when run alone). Must be listed in
-# profiles/weighted_profile.py PROFILE_KEYS.
+# results_profile_LT_... when run alone). Must be unique across the
+# profile_*.yaml files.
 profile: LT
+# enabled: false   # uncomment to keep this file without running it
 
 # Selection cutoffs. Top level, NOT under thresholds:.
 top_n_per_category: 5   # funds per Morningstar Category with Selected Flag = 1
@@ -72,7 +77,7 @@ thresholds:
   # HISTORICAL BENCHMARK PERFORMANCE FILTER
   # Require funds to have beaten benchmarks in at least X% of available years
   require_benchmark_outperformance: false   # Disabled - too strict for most funds
-  # min_benchmark_beat_pct: 50.0            # Minimum % of years beating benchmarks (50% = half the time)
+  min_benchmark_beat_pct: 50.0              # Minimum % of years beating benchmarks (used only when the line above is true)
 
   # ============================================================================
   # SCORING WEIGHTS

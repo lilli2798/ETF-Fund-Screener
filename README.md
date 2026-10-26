@@ -34,7 +34,7 @@ Keep all of them: the screener merges every file in the folder by **Ticker**. In
 ```bash
 cd etf_screener
 python main.py        # asks for a profile file; press Enter to run all profiles into one report
-python run_ci.py      # no prompts; all profiles in config.PROFILE_INPUT_FILES into one report
+python run_ci.py      # no prompts; every input_files/profile_*.yaml into one report
 ```
 
 ### Output (in `output/etf_screener/`, not stored in git)
@@ -46,7 +46,7 @@ python run_ci.py      # no prompts; all profiles in config.PROFILE_INPUT_FILES i
 
 ## Configuration
 
-Each profile has its own YAML in `etf_screener/input_files/`; anything you leave out falls back to the defaults in `etf_screener/config.py`.
+Each profile is one `etf_screener/input_files/profile_*.yaml`, and the YAML is the only place its settings live. Every key must be there: a missing or misspelled one stops the run with the file and key named, instead of quietly using a hidden default. `config.py` holds only project-wide settings (the eTrade columns to load, benchmark indexes, grade mappings, `KEEP_LAST_REPORTS`).
 
 | Profile | YAML | Ranks funds by |
 |---|---|---|
@@ -54,6 +54,8 @@ Each profile has its own YAML in `etf_screener/input_files/`; anything you leave
 | `ST` | `profile_short_term.yaml` | Short-term momentum (1M-6M returns, 1Y risk-adjusted return) |
 
 Both share the filter and scoring code in `profiles/weighted_profile.py`; only their YAML settings differ. Every eligible fund is ranked, so the highest rank numbers in a profile's columns are its weakest funds.
+
+**Adding a profile:** copy a YAML to `input_files/profile_<name>.yaml` and change `profile:` (e.g. `INC`). `run_ci.py`, `main.py` (Enter), the alerts and the column dictionary pick it up, and the report gets `Profile INC ...` columns; no code changes. Add `enabled: false` to keep a YAML without running it. Profiles run in file-name order, and the first (`profile_long_term`) decides the report's rows.
 
 ```yaml
 profile: LT
@@ -82,7 +84,6 @@ thresholds:
 
 - **Concepts** (all scored 0-100 *within* each Morningstar Category): long-term returns (1Y-20Y), short-term returns (1W-YTD), risk-adjusted (Sharpe, capture ratios, Yahoo Sharpe/Z-scores), volatility (std dev, drawdowns), tracking error, liquidity & size, quality & valuation (grades, Medalist, stars, price/fair value, moat), costs, tax & income.
 - **`concept_weights` must list every metric of a concept.** To drop one, set it to `0.0` rather than deleting it - a missing key stops the run with a clear error.
-- **Morningstar's long-term preset** is available as `MORNINGSTAR_LONG_TERM_WEIGHTS` / `MORNINGSTAR_CONCEPT_WEIGHTS` in `config.py`, and as commented examples in the YAML.
 - **Missing data doesn't penalize a fund**: scores are averaged over the metrics it has.
 
 ## Reading the Report
@@ -171,12 +172,12 @@ ETF-Fund-Screener/
 │   ├── main.py                 # Entry point (asks for the profile YAML)
 │   ├── run_ci.py               # Same pipeline without prompts (GitHub)
 │   ├── alerts.py               # Email / Slack of selected funds (GitHub)
-│   ├── config.py               # Defaults, weights, paths
+│   ├── config.py               # Project-wide settings (columns, benchmarks, grade maps)
 │   ├── input_file.py           # Loads the profile YAML
 │   ├── data_loading.py         # Reads and merges the Morningstar exports
 │   ├── merging.py              # Fund filter, yearly return columns
 │   ├── scoring.py              # Concept scores
-│   ├── profiles/weighted_profile.py  # Profile filters and final score (LT, ST)
+│   ├── profiles/weighted_profile.py  # Profile filters and final score (every profile YAML)
 │   ├── performance.py          # Yearly stats, volatile periods, benchmark rows
 │   ├── export.py               # Excel output and run_recorder.yaml
 │   ├── utils/

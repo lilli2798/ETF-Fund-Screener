@@ -29,7 +29,7 @@ from openpyxl.styles import Alignment, Font, PatternFill
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 sys.path.append(str(PROJECT / "yahoo_returns"))
-from config import VOLATILE_CONFIG_PATH  # noqa: E402
+from config import PURCHASE_RULES, VOLATILE_CONFIG_PATH  # noqa: E402
 from input_file import discover_profiles, load_profile_input  # noqa: E402
 from volatile_periods import load_periods  # noqa: E402
 
@@ -59,23 +59,10 @@ W = profile.thresholds["weights"]
 CW = profile.thresholds["concept_weights"]
 TOP_N = profile.top_n_per_category
 
-# Every profile's filter settings, read from its YAML, so the text below always
-# matches what the screener does: {"LT": thresholds, "ST": thresholds}
-SETTINGS = {KEY: profile.thresholds}
-for _other in ALL_PROFILES:
-    SETTINGS.setdefault(_other.profile_name, _other.thresholds)
-
-
-def setting(key: str, fmt=lambda v: f"{v:g}" if isinstance(v, (int, float)) else str(v)) -> str:
-    """'max_expense_ratio = 1.25' when all profiles agree, else '... = LT 1.25, ST 1.75'."""
-    def show(v):
-        if isinstance(v, bool):
-            return "ON" if v else "OFF"
-        return "no limit" if v is None else fmt(v)
-    values = {name: t.get(key) for name, t in SETTINGS.items()}
-    if len(set(map(repr, values.values()))) == 1:
-        return f"{key} = {show(next(iter(values.values())))}"
-    return f"{key} = " + ", ".join(f"{name} {show(v)}" for name, v in values.items())
+def rule(key: str, fmt) -> str:
+    """A shared purchase rule from config.PURCHASE_RULES, e.g. 'max_front_load = 0%'."""
+    v = PURCHASE_RULES.get(key)
+    return f"{key} = {'no limit' if v is None else fmt(v)}"
 
 
 def pct(v):
@@ -175,7 +162,6 @@ D["Ticker"] = ("Trading symbol of the ETF or mutual fund share class.", "", "n/a
 D["Name"] = ("Full name of the fund / share class.", "", "n/a",
              "The same fund can appear several times as different share classes (Investor, Admiral, Institutional...) with different costs and minimums.", ET, "No")
 D["Morningstar Category"] = ("Morningstar's peer group for the fund, based on what it actually held over the last 3 years (e.g. Large Blend, Intermediate Core Bond, Technology).", "", "n/a (grouping)",
-                             f"Filter {setting('require_category')} (ON = drop funds with no category). "
                              "Every score and in-category rank compares a fund ONLY with funds in the same category. 132 categories in this report (a few appear twice under ETF vs mutual-fund naming, e.g. 'Mid-Cap Blend' / 'Mid Blend'). "
                              "Sector caveat: categories are coarse - e.g. 'Technology' mixes semiconductor-heavy and software-heavy funds, which behave very differently; see the Yahoo Subsector column and the 'Scoring Concepts' tab.", MS, "Used as the peer group for all scores")
 D["Asset Class"] = ("Broad asset class Morningstar assigns: US Equity, International Equity, Sector Equity, Taxable Bond, Municipal Bond, Allocation, Alternative, Commodities, Money Market, ...", "", "n/a (grouping)",
@@ -196,7 +182,7 @@ D["Total Return"] = ("Total return (price change + reinvested dividends/interest
                      "Compare within category - a 5% year is great for a bond fund and poor for a tech fund. Blank when the fund is younger than the period. "
                      "Sector caveat: multi-year returns are strongly driven by sub-sector timing (e.g. AI semiconductors vs software), which within-category ranking does not correct for. "
                      "'Since Inception' is not comparable across funds with different start dates. "
-                     f"Filter {setting('require_3y_return')} (ON = drop funds with a blank 3Y return, i.e. under 3 years old).",
+                     "A fund younger than a period has that return blank, and it simply drops out of the fund's score.",
                      MS, used("short_term_return_performance", [(p, f"return_{p.lower()}") for p in ["1W", "1M", "2M", "QTD", "3M", "6M", "9M", "YTD"]]) + "  |  " +
                      used("long_term_return_performance", [(p, f"return_{p.lower()}") for p in ["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "8Y", "9Y", "10Y", "15Y", "20Y"]]))
 D["Yearly Return"] = ("The fund's total return for one calendar year (Jan 1 - Dec 31), in percent, from Yahoo adjusted prices.",
@@ -290,7 +276,7 @@ D["Net Expense Ratio"] = ("Annual fee charged by the fund after fee waivers, in 
                           "Net Expense Ratio = total annual operating expenses (after waivers) / average net assets",
                           "Lower is better",
                           "Waivers can expire. Index ETFs are often < 0.10%, active funds 0.5-1%. "
-                          f"Filter {setting('max_expense_ratio', pct)}: funds above it are dropped (a blank ratio is kept). Sector-neutral: driven by passive vs active, not holdings.", MS, "No (used as the max_expense_ratio filter)")
+                          "Sector-neutral: driven by passive vs active, not holdings. Expense counts in the score through the Costs concept (Adjusted Expense Ratio).", MS, "No (Costs uses Adjusted Expense Ratio)")
 D["Adjusted Expense Ratio"] = ("Morningstar's expense ratio excluding some costs that aren't true management fees (e.g. interest / dividend expense on short sales) - the 'real' ongoing cost.",
                                "Reported by Morningstar; not derived in this project", "Lower is better",
                                "Costs score = inverted within-category rank (cheapest in category = 100).", MS, used("costs", [("", "adjusted_expense_ratio")]))
@@ -299,8 +285,7 @@ D["Total Net Assets for Share Class"] = ("Assets in this share class only, in US
 D["Fund Size"] = ("Total assets of the whole fund (all share classes), in US dollars.",
                   "Liquidity/Size score (fixed cutoffs, not within category): ≤ $10M → 0, $500M → target, ≥ $5B → 100, linear in between",
                   "Higher is better up to a point",
-                  f"Popularity / age driven; little sector link. 'Trading Volume' (YAML weight {CW['liquidity_size']['trading_volume']:g}) is not in the data, so Fund Size is effectively the whole Liquidity/Size score. "
-                  f"Filter {setting('require_fund_size')} (ON = drop funds with a blank Fund Size).",
+                  f"Popularity / age driven; little sector link. 'Trading Volume' (YAML weight {CW['liquidity_size']['trading_volume']:g}) is not in the data, so Fund Size is effectively the whole Liquidity/Size score.",
                   MS, used("liquidity_size", [("", "fund_size")]))
 D["Premium/Discount"] = ("ETFs / closed-end funds: how far the market price is above (+) or below (-) the value of the holdings (NAV), in percent. '1Y Avg' = average over the last year.",
                          "Premium/Discount = (Market Price - NAV) / NAV x 100", "Close to 0",
@@ -367,21 +352,21 @@ D["Dividend per Share"] = ("Dollars of dividends per share: Trailing Annual = pa
                                                     ("1Y Avg", "dividend_per_share_1y_avg"), ("3Y Avg", "dividend_per_share_3y_avg")]))
 D["Leveraged Fund"] = ("Yes if the fund uses borrowing / derivatives to multiply daily returns (2x, 3x, -1x).", "", "No for long-term holding",
                        "Leveraged funds reset daily and lose value in choppy markets ('volatility decay'). "
-                       f"Filter {setting('exclude_leveraged_funds')} (ON = these funds are dropped).", MS, "No (optional filter)")
-D["Interval Fund"] = ("Yes if the fund only lets you sell at scheduled intervals (e.g. quarterly).", "", "No (more liquid)", f"Filter {setting('exclude_interval_funds')} (ON = these funds are dropped).", MS, "No (optional filter)")
+                       "Kept in every profile (no leveraged filter); compare them with care.", MS, "No")
+D["Interval Fund"] = ("Yes if the fund only lets you sell at scheduled intervals (e.g. quarterly).", "", "No (more liquid)", "Kept and scored like other funds; check liquidity before buying.", MS, "No")
 D["Fund of Funds"] = ("Yes if the fund invests in other funds (e.g. target-date funds).", "", "Neutral", "Check the total cost including the underlying funds' fees.", MS, "No")
 D["Investment Status"] = ("Open, Limited (closed to most new investors) or Closed.", "", "Open", "You may not be able to buy a Closed / Limited fund.", MS, "No")
 D["Strategic Beta Group"] = ("For 'smart beta' index funds: the factor they tilt to (Value, Dividend, Multi-Factor, ...).", "", "n/a", "'Not Applicable' or blank for regular funds.", MS, "No")
 D["Share Class Type"] = ("The sales channel / fee structure of the share class: No Load, Front Load (A), Level Load (C), Deferred Load (B), Institutional, Retirement, Investor, Advisor; this export also uses 'ETF'.", "", "ETF / No Load / Institutional are usually cheapest",
                          "Retirement and Institutional classes may only be available through employer plans or at high minimums.", MS, "No")
-D["Tender Offer"] = ("Yes if the fund only buys back shares through periodic tender offers (limited liquidity).", "", "No", f"Filter {setting('exclude_tender_offer_funds')} (ON = these funds are dropped).", MS, "No (optional filter)")
+D["Tender Offer"] = ("Yes if the fund only buys back shares through periodic tender offers (limited liquidity).", "", "No", "Kept and scored like other funds; check liquidity before buying.", MS, "No")
 D["Index Fund"] = ("Yes if the fund tracks an index (passive); No = actively managed.", "", "Neutral (index funds are usually cheaper)", "", MS, "No")
 D["Maximum Deferred Load"] = ("Maximum back-end sales charge (CDSC) when selling, in percent.", "", "0",
-                              f"Hard filter {setting('max_deferred_load', pct)}: funds above it are removed before scoring.", MS, "No (hard filter)")
-D["Maximum Front Load"] = ("Maximum sales charge when buying, in percent.", "", "0", f"Hard filter {setting('max_front_load', pct)}: funds above it are removed before scoring.", MS, "No (hard filter)")
+                              f"Purchase rule for every profile ({rule('max_deferred_load', pct)}, config.PURCHASE_RULES): funds above it are removed before scoring.", MS, "No (hard filter)")
+D["Maximum Front Load"] = ("Maximum sales charge when buying, in percent.", "", "0", f"Purchase rule for every profile ({rule('max_front_load', pct)}, config.PURCHASE_RULES): funds above it are removed before scoring.", MS, "No (hard filter)")
 D["Minimum Initial Investment"] = ("Minimum dollars needed for the first purchase.", "", "Lower is better (must fit your budget)",
-                                   f"Hard filter {setting('min_initial_investment', dollars)}: funds whose minimum is above it are removed. Blank = no minimum reported (ETFs: one share). Brokers may waive minimums.", MS, "No (hard filter)")
-D["Redemption Fee"] = ("Fee charged when selling within a short holding period, in percent.", "", "0", f"Hard filter {setting('max_redemption_fee', pct)}: funds above it are removed before scoring.", MS, "No (hard filter)")
+                                   f"Purchase rule for every profile ({rule('min_initial_investment', dollars)}, config.PURCHASE_RULES): funds whose minimum is above it are removed. Blank = no minimum reported (ETFs: one share). Brokers may waive minimums.", MS, "No (hard filter)")
+D["Redemption Fee"] = ("Fee charged when selling within a short holding period, in percent.", "", "0", f"Purchase rule for every profile ({rule('max_redemption_fee', pct)}, config.PURCHASE_RULES): funds above it are removed before scoring.", MS, "No (hard filter)")
 D["Risk Label"] = ("Label part of 'Portfolio Risk Score': Conservative, Moderate, Aggressive, Very Aggressive or Extreme Risk.", "Text before the '(' in Portfolio Risk Score", "Lower risk for low-risk investing", "", CALC, "No")
 D["Risk Score Numeric"] = ("Number part of 'Portfolio Risk Score' (about 100 = as risky as a diversified all-stock portfolio).", "Number inside the '( )' in Portfolio Risk Score", "Lower = less risky",
                            "Above 100 ('Extreme Risk') = riskier than an all-stock portfolio, e.g. leveraged, single-sector or crypto funds (361 funds in this report).", CALC, "No")

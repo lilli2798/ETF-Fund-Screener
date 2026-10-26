@@ -1,13 +1,14 @@
 """
-Weighted profiles: eligibility filters + composite scoring/ranking logic
-shared by every profile whose behaviour is set entirely by its YAML file.
+Weighted profiles: composite scoring/ranking logic shared by every profile
+whose behaviour is set entirely by its YAML file. It scores every fund and
+never removes one (rules for all profiles are config.PURCHASE_RULES).
 
 Every input_files/profile_*.yaml uses this module, e.g.
   - "LT"  input_files/profile_long_term.yaml   long-term, low-risk buy list
   - "ST"  input_files/profile_short_term.yaml  short-term momentum buy list
 
-register(key) gives a profile key its own prefilter, filter and scorer in
-scoring.PROFILE_PREFILTERS / PROFILE_FILTERS / PROFILE_SCORERS, plus its
+register(key) gives a profile key its own scorer in
+scoring.PROFILE_SCORERS, plus its
 own output columns (Profile_LT_Score, Profile_ST_Score, ...). main.py
 registers each YAML's `profile:` key when it runs it. Run together, the
 profiles share one report (results_profile_LT_ST_...).
@@ -51,9 +52,6 @@ import numpy as np
 import pandas as pd
 
 from scoring import (
-    build_structure_flags,
-    register_profile_filter,
-    register_profile_prefilter,
     register_profile_scorer,
 )
 
@@ -77,169 +75,6 @@ CONCEPT_WEIGHT_KEYS: Dict[str, str] = {
 def _as_float_series(s: pd.Series) -> pd.Series:
     """Coerce to float64; invalid values -> NaN. Never leave object/str."""
     return pd.to_numeric(s, errors="coerce").astype("float64")
-
-
-def apply_prefilter(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFrame:
-    """
-    The profile's hard rules on raw Morningstar columns, run right after the
-    data is loaded so excluded funds are never downloaded from Yahoo and
-    never affect the within-category scores of the funds that remain.
-    Every setting comes from the profile YAML (input_file.py checks they exist).
-      - require_category, require_fund_size, require_3y_return (bool):
-        funds without a category, fund size or full 3-year history are
-        excluded, not scored on a shorter history
-      - max_expense_ratio (percent)
-      - exclude_leveraged_funds / exclude_interval_funds /
-        exclude_tender_offer_funds (bool)
-      - max_deferred_load, max_front_load (percent)
-      - min_initial_investment (dollars): the HIGHEST minimum allowed;
-        funds that require more are removed
-      - max_redemption_fee (percent)
-    Blank values pass (e.g. ETFs have no minimum initial investment).
-    """
-    start_count: int = len(df)
-    eligible: pd.DataFrame = build_structure_flags(df)
-
-    require_category = thresholds["require_category"]
-    max_expense_ratio = thresholds["max_expense_ratio"]
-    require_fund_size = thresholds["require_fund_size"]
-    require_3y_return = thresholds["require_3y_return"]
-
-    if require_category and "Morningstar Category" in eligible.columns:
-        before = len(eligible)
-        eligible = eligible[eligible["Morningstar Category"].notna()]
-        print(f"  Profile {key} filter - valid category: {before} -> {len(eligible)}")
-
-    if max_expense_ratio is not None and "Net Expense Ratio" in eligible.columns:
-        before = len(eligible)
-        # Ensure comparison is numeric even if loader left strings
-        expense = _as_float_series(eligible["Net Expense Ratio"])
-        # Only filter out funds with non-null expense ratio that exceeds threshold
-        # Allow funds with NaN expense ratio to pass through
-        eligible = eligible[expense.isna() | (expense <= float(max_expense_ratio))]
-        print(
-            f"  Profile {key} filter - expense ratio <= {max_expense_ratio}% (or NaN): "
-            f"{before} -> {len(eligible)}"
-        )
-
-    if require_fund_size and "Fund Size" in eligible.columns:
-        before = len(eligible)
-        eligible = eligible[eligible["Fund Size"].notna()]
-        print(f"  Profile {key} filter - fund size present: {before} -> {len(eligible)}")
-
-    if require_3y_return and "Total Return (3Y)" in eligible.columns:
-        before = len(eligible)
-        ret3 = _as_float_series(eligible["Total Return (3Y)"])
-        eligible = eligible[ret3.notna()]
-        print(f"  Profile {key} filter - has 3Y track record: {before} -> {len(eligible)}")
-
-    # Structural exclusions -- leveraged/interval/tender-offer funds are
-    # hard-excluded (when the YAML turns them on) regardless of how well
-    # they score on the weighted concepts. Flag columns come from
-    # scoring.build_structure_flags().
-    exclude_leveraged_funds = thresholds["exclude_leveraged_funds"]
-    exclude_interval_funds = thresholds["exclude_interval_funds"]
-    exclude_tender_offer_funds = thresholds["exclude_tender_offer_funds"]
-
-    if exclude_leveraged_funds and "Flag_Leveraged_Fund" in eligible.columns:
-        before = len(eligible)
-        flag = eligible["Flag_Leveraged_Fund"].fillna(False).astype(bool)
-        eligible = eligible[~flag]
-        print(f"  Profile {key} filter - exclude leveraged funds: {before} -> {len(eligible)}")
-
-    if exclude_interval_funds and "Flag_Interval_Fund" in eligible.columns:
-        before = len(eligible)
-        flag = eligible["Flag_Interval_Fund"].fillna(False).astype(bool)
-        eligible = eligible[~flag]
-        print(f"  Profile {key} filter - exclude interval funds: {before} -> {len(eligible)}")
-
-    if exclude_tender_offer_funds and "Flag_Tender_Offer" in eligible.columns:
-        before = len(eligible)
-        flag = eligible["Flag_Tender_Offer"].fillna(False).astype(bool)
-        eligible = eligible[~flag]
-        print(f"  Profile {key} filter - exclude tender-offer funds: {before} -> {len(eligible)}")
-
-    max_deferred_load = thresholds["max_deferred_load"]
-    max_front_load = thresholds["max_front_load"]
-    min_initial_investment = thresholds["min_initial_investment"]
-
-    if max_deferred_load is not None and "Maximum Deferred Load" in eligible.columns:
-        before = len(eligible)
-        deferred_load = _as_float_series(eligible["Maximum Deferred Load"])
-        # Only filter out funds with non-null deferred load that exceeds threshold
-        # Allow funds with NaN deferred load to pass through
-        eligible = eligible[deferred_load.isna() | (deferred_load <= float(max_deferred_load))]
-        print(
-            f"  Profile {key} filter - deferred load <= {max_deferred_load}% (or NaN): "
-            f"{before} -> {len(eligible)}"
-        )
-
-    if max_front_load is not None and "Maximum Front Load" in eligible.columns:
-        before = len(eligible)
-        front_load = _as_float_series(eligible["Maximum Front Load"])
-        # Only filter out funds with non-null front load that exceeds threshold
-        # Allow funds with NaN front load to pass through
-        eligible = eligible[front_load.isna() | (front_load <= float(max_front_load))]
-        print(
-            f"  Profile {key} filter - front load <= {max_front_load}% (or NaN): "
-            f"{before} -> {len(eligible)}"
-        )
-
-    if min_initial_investment is not None and "Minimum Initial Investment" in eligible.columns:
-        before = len(eligible)
-        initial_inv = _as_float_series(eligible["Minimum Initial Investment"])
-        # Only filter out funds with non-null initial investment that exceeds threshold
-        # Allow funds with NaN initial investment to pass through
-        eligible = eligible[initial_inv.isna() | (initial_inv <= float(min_initial_investment))]
-        print(
-            f"  Profile {key} filter - initial investment <= ${min_initial_investment:,} (or NaN): "
-            f"{before} -> {len(eligible)}"
-        )
-
-    max_redemption_fee = thresholds["max_redemption_fee"]
-
-    if max_redemption_fee is not None and "Redemption Fee" in eligible.columns:
-        before = len(eligible)
-        redemption_fee = _as_float_series(eligible["Redemption Fee"])
-        # Only filter out funds with non-null redemption fee that exceeds threshold
-        # Allow funds with NaN redemption fee to pass through
-        eligible = eligible[redemption_fee.isna() | (redemption_fee <= float(max_redemption_fee))]
-        print(
-            f"  Profile {key} filter - redemption fee <= {max_redemption_fee}% (or NaN): "
-            f"{before} -> {len(eligible)}"
-        )
-
-    print(f"Profile {key} eligibility filter (Morningstar rules): {start_count} -> {len(eligible)} rows remain.")
-    return eligible.copy()
-
-
-def apply_filters(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFrame:
-    """
-    Profile rules that need data added during the run (yearly benchmark
-    stats). Everything that only reads raw Morningstar columns runs earlier
-    in apply_prefilter(), before the Yahoo downloads.
-      - require_benchmark_outperformance / min_benchmark_beat_pct
-    """
-    start_count: int = len(df)
-    eligible: pd.DataFrame = df.copy()
-
-    # Historical benchmark performance filter
-    require_benchmark_outperformance = thresholds["require_benchmark_outperformance"]
-    min_benchmark_beat_pct = thresholds["min_benchmark_beat_pct"]
-
-    if require_benchmark_outperformance and "Yearly Beat %" in eligible.columns:
-        before = len(eligible)
-        better_pct = _as_float_series(eligible["Yearly Beat %"])
-        # Require funds to beat benchmarks in at least X% of available years
-        # Allow funds with NaN benchmark data to pass through
-        eligible = eligible[better_pct.isna() | (better_pct >= float(min_benchmark_beat_pct))]
-        print(
-            f"  Profile {key} filter - benchmark outperformance >= {min_benchmark_beat_pct}% (or NaN): "
-            f"{before} -> {len(eligible)}"
-        )
-
-    print(f"Profile {key} eligibility filter: {start_count} -> {len(eligible)} rows remain.")
-    return eligible
 
 
 def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> pd.DataFrame:
@@ -367,8 +202,5 @@ def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> p
 
 
 def register(key: str) -> None:
-    """Give profile `key` (a YAML's `profile:` value) this module's
-    prefilter, filter and scorer."""
-    register_profile_prefilter(key)(partial(apply_prefilter, key=key))
-    register_profile_filter(key)(partial(apply_filters, key=key))
+    """Give profile `key` (a YAML's `profile:` value) this module's scorer."""
     register_profile_scorer(key)(partial(compute_score, key=key))

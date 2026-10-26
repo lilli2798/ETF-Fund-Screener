@@ -36,75 +36,15 @@ data_path: data/   # Contains all Morningstar data files (performance + structur
 out_path: ../output/etf_screener
 
 # ============================================================================
-# FILTERS & THRESHOLDS
-# ============================================================================
-# These settings control which ETFs are eligible for analysis.
-# Funds that don't meet these criteria are excluded before scoring.
+# SCORING
 # ============================================================================
 
 thresholds:
-  # CATEGORY FILTER
-  require_category: false            # Only include funds with a Morningstar Category assigned
+  # This profile only SCORES funds; it never removes one. Rules for every
+  # profile (no loads or redemption fee, minimum investment <= $50,000) are
+  # PURCHASE_RULES in config.py. To make something not count, set its weight
+  # to 0.0 below (e.g. expense ratio counts through weights.costs).
 
-  # COST FILTERS
-  max_expense_ratio: 1.25           # Maximum expense ratio, in percent (1.25 = 1.25%)
-                                    # Set lower to only consider very low-cost funds
-
-  # SIZE FILTERS
-  require_fund_size: false          # true = drop funds whose Fund Size is blank
-
-  # PERFORMANCE FILTERS
-  require_3y_return: true           # true = drop funds with a blank Total Return (3Y), i.e. under 3 years old
-                                    # (to filter on the return's size, use SQL: db_access/query.py)
-
-  # STRUCTURAL EXCLUSIONS (Hard filters - these funds are dropped entirely)
-  # Leveraged funds use debt to amplify returns (e.g., 2x, 3x funds) - higher risk
-  exclude_leveraged_funds: false     # Exclude leveraged/inverse ETFs
-
-  # Interval funds only allow redemptions at scheduled intervals - less liquid
-  exclude_interval_funds: false       # Exclude interval funds
-
-  # Tender offer funds have limited redemption options - less liquid
-  exclude_tender_offer_funds: false  # Exclude funds with active tender offers
-
-  # LOAD AND INVESTMENT REQUIREMENT FILTERS
-  # These filters screen out funds with high sales loads or high minimum investments
-  max_deferred_load: 0.0            # Maximum deferred load (0.0 = no load allowed, set higher to allow some load)
-  max_front_load: 0.0               # Maximum front load (0.0 = no load allowed, set higher to allow some load)
-  min_initial_investment: 50000    # Remove funds whose minimum initial investment is above this many dollars (null = no limit)
-  max_redemption_fee: 0.0          # Maximum redemption fee (0.0 = no fee allowed, set higher to allow some fee)
-
-  # HISTORICAL BENCHMARK PERFORMANCE FILTER
-  # Require funds to have beaten benchmarks in at least X% of available years
-  require_benchmark_outperformance: false   # Disabled - too strict for most funds
-  min_benchmark_beat_pct: 50.0              # Minimum % of years beating benchmarks (used only when the line above is true)
-
-  # ============================================================================
-  # SCORING WEIGHTS
-  # ============================================================================
-  # These control how much each scoring dimension counts in the final score.
-  # Higher values = that dimension is more important to you.
-  # All weights should sum to approximately 1.0 (100%).
-  #
-  # You can omit any section here - it will use the default values from config.py
-  #
-  # MORNINGSTAR LONG-TERM CRITERIA (same values as
-  # config.MORNINGSTAR_LONG_TERM_WEIGHTS). To use them, replace the weights
-  # section below with:
-  #
-  #   weights:
-  #     long_term_return_performance: 0.45  # Combined 5Y (25%) + 10Y (20%) returns
-  #     short_term_return_performance: 0.00 # Not used
-  #     risk_adjusted: 0.20                 # 3Y Sharpe ratio
-  #     volatility: 0.15                    # Drawdown (3Y and 5Y)
-  #     tracking: 0.00                      # Not used
-  #     liquidity_size: 0.00                # Not used
-  #     quality_valuation: 0.10             # Quality metrics
-  #     costs: 0.10                         # Expense ratio
-  #     tax_income: 0.00                    # Not used
-  #
-  # And update concept_weights (see below) to match Morningstar's emphasis.
-  # ============================================================================
 
   weights:
     # How much historical returns matter (split into long-term and short-term)
@@ -139,54 +79,13 @@ thresholds:
   # These fine-tune how individual metrics are combined within each dimension.
   # Each section should sum to approximately 1.0.
   #
-  # TIP: You can override just ONE value (e.g., only return_3y) and all other
-  # values in that section will use their defaults. This makes it easy to
-  # experiment with small adjustments without changing everything.
+  # Every key must be listed; set one to 0.0 to leave that metric out.
   #
-  # MORNINGSTAR LONG-TERM CONCEPT WEIGHTS (same values as
-  # config.MORNINGSTAR_CONCEPT_WEIGHTS). To use them, replace the matching
-  # blocks in concept_weights below. Every key is listed because a key you
-  # leave out falls back to config.py's default, NOT to 0. Blocks whose
+  # MORNINGSTAR LONG-TERM CONCEPT WEIGHTS. To use them, replace the matching
+  # blocks in concept_weights below. Blocks whose
   # concept weight is 0 above (short-term, tracking, liquidity, tax) don't
   # affect the score, so they can stay as they are.
   #
-  #   concept_weights:
-  #     long_term_return_performance:
-  #       return_5y: 0.56      # 5Y returns (55.6% of long-term return weight)
-  #       return_10y: 0.44     # 10Y returns (44.4% of long-term return weight)
-  #       return_1y: 0.00
-  #       return_2y: 0.00
-  #       return_3y: 0.00
-  #       return_4y: 0.00
-  #       return_6y: 0.00
-  #       return_7y: 0.00
-  #       return_8y: 0.00
-  #       return_9y: 0.00
-  #       return_15y: 0.00
-  #       return_20y: 0.00
-  #     risk_adjusted:
-  #       sharpe_3y: 1.00      # 100% on 3Y Sharpe
-  #       sharpe_1y: 0.00
-  #       upside: 0.00
-  #       downside: 0.00
-  #       yahoo_sharpe_3y: 0.00
-  #       yahoo_sharpe_1y: 0.00
-  #       yahoo_zscore_3y: 0.00
-  #       yahoo_zscore_1y: 0.00
-  #     volatility:
-  #       stdev_3y: 0.00       # Drawdown is the key metric
-  #       drawdown_3y: 0.50
-  #       drawdown_5y: 0.50
-  #     quality_valuation:
-  #       growth_grade: 0.25
-  #       financial_health: 0.15
-  #       profitability_grade: 0.15
-  #       price_fair_value: 0.15
-  #       medalist: 0.15
-  #       star_rating: 0.00
-  #       economic_moat_wide: 0.15
-  #     costs:
-  #       adjusted_expense_ratio: 1.00
   # ============================================================================
 
   concept_weights:

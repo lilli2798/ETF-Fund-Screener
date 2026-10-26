@@ -46,12 +46,13 @@ import yaml
 
 from config import (
     KEEP_LAST_REPORTS,
+    PURCHASE_RULES,
     YEARLY_RETURN_YEARS,
     YEARLY_RETURNS_CSV,
 )
 from data_loading import load_data
 from input_file import discover_profiles, load_profile_input, ProfileInput
-from merging import apply_fund_filter, attach_yearly_returns
+from merging import apply_fund_filter, apply_purchase_rules, attach_yearly_returns
 from performance import append_benchmark_rows, attach_volatile_performance, attach_yearly_stats
 from extra_reports import split_no_yahoo_data
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_PREFILTERS, PROFILE_SCORERS
@@ -118,7 +119,7 @@ def _validate_profile_name(profile_name: str) -> None:
     module registered itself uses profiles/weighted_profile.py, so a new
     YAML needs no code change.
     """
-    if profile_name not in PROFILE_FILTERS or profile_name not in PROFILE_SCORERS:
+    if profile_name not in PROFILE_SCORERS:
         profiles.weighted_profile.register(profile_name)
 
 
@@ -193,20 +194,30 @@ def profile_columns(profile_name: str) -> List[str]:
 
 def add_profile_columns(df_ranked: pd.DataFrame, df_other: pd.DataFrame, profile_name: str) -> pd.DataFrame:
     """
-    Merge another profile's score/rank/flag columns onto `df_ranked` by
-    Ticker. Funds the other profile filtered out (e.g. leveraged funds in
-    ST) get a blank score and False flags.
+    Add another profile's score/rank/flag columns to `df_ranked` by Ticker.
+    The report keeps every fund that passed ANY profile's own rules, so one
+    profile's filters never hide another profile's picks:
+      - a fund this profile filtered out gets a blank score and 0 flags here
+      - a fund only this profile kept is added as a new row, with blank
+        columns for the earlier profiles and blank concept scores (the
+        concept-score columns are the first profile's)
     """
     cols = [c for c in profile_columns(profile_name) if c in df_other.columns]
-    other = df_other[["Ticker", *cols]].drop_duplicates("Ticker")
-    not_in_base = len(set(other["Ticker"]) - set(df_ranked["Ticker"]))
-    if not_in_base:
-        print(f"  Note: {not_in_base} fund(s) passed Profile {profile_name} but not the base "
-              f"profile's filters, so they are not in the combined report.")
-    merged = df_ranked.merge(other, on="Ticker", how="left")
-    for col in cols:
-        if col.endswith("_Flag"):
-            merged[col] = merged[col].fillna(False).astype(bool)
+    other = df_other.drop_duplicates("Ticker")
+    merged = df_ranked.merge(other[["Ticker", *cols]], on="Ticker", how="left")
+
+    new_rows = other[~other["Ticker"].isin(df_ranked["Ticker"])].copy()
+    if len(new_rows):
+        print(f"  {len(new_rows)} fund(s) passed only Profile {profile_name}'s rules; "
+              f"added to the report with blank scores for the other profiles.")
+        concept_cols = [c for c in profiles.weighted_profile.CONCEPT_WEIGHT_KEYS if c in new_rows.columns]
+        new_rows[concept_cols] = float("nan")
+        new_rows = new_rows[[c for c in merged.columns if c in new_rows.columns]]
+        merged = pd.concat([merged, new_rows], ignore_index=True)
+
+    for col in merged.columns:  # every profile's flags: blank -> 0
+        if col.startswith("Profile_") and col.endswith("_Flag"):
+            merged[col] = merged[col].astype("boolean").fillna(False).astype(bool)
     return merged
 
 
@@ -232,8 +243,11 @@ def score_profile(
     df = apply_fund_filter(df)
     print(f"After fund filter: {len(df)} rows")
 
+    print("Applying purchase rules (config.PURCHASE_RULES, every profile)...")
+    df = apply_purchase_rules(df)
+
     if profile_name in PROFILE_PREFILTERS:
-        print(f"Applying Profile {profile_name} eligibility filters (Morningstar rules)...")
+        print(f"Applying Profile {profile_name} prefilter...")
         df = PROFILE_PREFILTERS[profile_name](df, thresholds)
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
@@ -291,8 +305,12 @@ def score_profile(
     from scoring import calculate_return_rankings
     df = calculate_return_rankings(df)
 
-    print(f"Applying Profile {profile_name} benchmark filter...")
-    df_eligible: pd.DataFrame = PROFILE_FILTERS[profile_name](df, thresholds)
+    # Profile YAMLs only score: every fund is scored. A profile module with its
+    # own rules can still register a filter (scoring.register_profile_filter).
+    df_eligible: pd.DataFrame = df
+    if profile_name in PROFILE_FILTERS:
+        print(f"Applying Profile {profile_name} filter...")
+        df_eligible = PROFILE_FILTERS[profile_name](df, thresholds)
 
     print(f"Computing Profile {profile_name} composite score and rankings...")
     df_ranked: pd.DataFrame = PROFILE_SCORERS[profile_name](df_eligible, top_n, thresholds)
@@ -328,8 +346,9 @@ def process_data(
 
     `extra_profiles` are scored the same way, each with its own YAML, and
     their score/rank/flag columns are added to this report (e.g. Profile
-    ST next to Profile LT). The rows, concept scores and other columns
-    come from the first profile (`profile_name`).
+    ST next to Profile LT). The rows are every fund that passed any
+    profile's own rules, so the order of the profiles doesn't change which
+    funds appear; the concept-score columns are the first profile's.
 
     Stage A: ranking/selection logic remains entirely inside PROFILE_SCORERS.
     This function does not add quality/risk gates on qualitative fields.
@@ -388,8 +407,9 @@ def process_data(
         output_filename=os.path.basename(final_out_path),
         thresholds={"top_n_per_category": top_n, **thresholds},
         # a combined report also records the other profiles' settings
-        extra={**reports, **({"other_profiles": {name: {"top_n_per_category": n, **t} for name, n, t in all_profiles[1:]}}
-                             if len(all_profiles) > 1 else {})},
+        extra={**reports, "purchase_rules": dict(PURCHASE_RULES),
+               **({"other_profiles": {name: {"top_n_per_category": n, **t} for name, n, t in all_profiles[1:]}}
+                  if len(all_profiles) > 1 else {})},
     )
 
     print("Writing used-weights report for this run...")

@@ -25,14 +25,11 @@ PROFILE_GLOB = "profile_*.yaml"
 REQUIRED_TOP_LEVEL = ("profile", "top_n_per_category", "data_path", "out_path", "thresholds")
 OPTIONAL_TOP_LEVEL = ("top_n_overall", "enabled")
 
-# Keys under `thresholds:`. yahoo_metrics is optional (Yahoo download
-# settings, see utils/yahoo_metrics.YahooMetricsConfig).
-REQUIRED_FILTERS = (
-    "require_category", "max_expense_ratio", "require_fund_size", "require_3y_return",
-    "exclude_leveraged_funds", "exclude_interval_funds", "exclude_tender_offer_funds",
-    "max_deferred_load", "max_front_load", "min_initial_investment", "max_redemption_fee",
-    "require_benchmark_outperformance", "min_benchmark_beat_pct",
-)
+# Keys under `thresholds:`. A profile YAML only SCORES funds -- it never
+# removes one (rules for every profile are config.PURCHASE_RULES); to make
+# something not count, set its weight to 0.0. yahoo_metrics is optional
+# (Yahoo download settings, see utils/yahoo_metrics.YahooMetricsConfig).
+REQUIRED_THRESHOLDS = ("weights", "concept_weights")
 OPTIONAL_THRESHOLDS = ("yahoo_metrics",)
 
 
@@ -81,8 +78,7 @@ def load_profile_input(input_file: str) -> ProfileInput:
     thresholds = raw["thresholds"]
     if not isinstance(thresholds, dict):
         raise ValueError(f"{path.name}: 'thresholds' must be a mapping")
-    _check_keys(f"{path.name} thresholds", thresholds,
-                REQUIRED_FILTERS + ("weights", "concept_weights"), OPTIONAL_THRESHOLDS)
+    _check_keys(f"{path.name} thresholds", thresholds, REQUIRED_THRESHOLDS, OPTIONAL_THRESHOLDS)
 
     # weights: one per concept; concept_weights: every input of every concept
     # (set a weight to 0.0 to leave it out, don't delete the key)
@@ -110,9 +106,9 @@ def load_profile_input(input_file: str) -> ProfileInput:
 
 
 def discover_profiles(folder: Path = PROFILE_DIR) -> List[ProfileInput]:
-    """Every enabled input_files/profile_*.yaml, in file-name order. The first
-    one sets the report's rows and concept scores (profile_long_term sorts
-    before profile_short_term)."""
+    """Every enabled input_files/profile_*.yaml, in file-name order. The order
+    doesn't change which funds are in the report; the first profile's concept
+    scores fill the concept-score columns (profile_long_term sorts first)."""
     profiles: List[ProfileInput] = []
     for path in sorted(folder.glob(PROFILE_GLOB)):
         with open(path, "r") as f:

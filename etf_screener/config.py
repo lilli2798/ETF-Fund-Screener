@@ -24,6 +24,17 @@ from typing import List, Optional
 # are deleted. None = keep everything.
 KEEP_LAST_REPORTS: Optional[int] = 10
 
+# Purchase rules for EVERY profile: funds that break one are removed right
+# after loading (before Yahoo downloads and scoring), so no profile sees
+# them. A blank value passes (e.g. ETFs have no minimum investment).
+# None = no limit for that rule.
+PURCHASE_RULES = {
+    "max_front_load": 0.0,             # percent: sales charge when buying ("Maximum Front Load")
+    "max_deferred_load": 0.0,          # percent: sales charge when selling ("Maximum Deferred Load")
+    "max_redemption_fee": 0.0,         # percent: fee for selling soon after buying ("Redemption Fee")
+    "min_initial_investment": 50_000,  # dollars: funds needing MORE to start are removed ("Minimum Initial Investment")
+}
+
 # Calendar-year returns maintained by yahoo_returns/yearly_cache_manager.py
 # (updated by the yearly GitHub workflow). The most recent N years are
 # attached to the screener output as "Yearly Return (YYYY)" columns, in

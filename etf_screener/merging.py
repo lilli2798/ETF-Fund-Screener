@@ -8,6 +8,8 @@ from typing import Any, Dict, List, Tuple
 
 import pandas as pd
 
+from config import PURCHASE_RULES
+
 
 def apply_fund_filter(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -58,6 +60,30 @@ def apply_fund_filter(df: pd.DataFrame) -> pd.DataFrame:
 
     print(f"Fund filter: {start_count} -> {len(filtered)} fund rows remain.")
     return filtered
+
+
+# Purchase rule -> (column it checks, how the limit is shown)
+PURCHASE_RULE_COLUMNS = {
+    "max_front_load": ("Maximum Front Load", "{:g}%"),
+    "max_deferred_load": ("Maximum Deferred Load", "{:g}%"),
+    "max_redemption_fee": ("Redemption Fee", "{:g}%"),
+    "min_initial_investment": ("Minimum Initial Investment", "${:,.0f}"),
+}
+
+
+def apply_purchase_rules(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove funds that break config.PURCHASE_RULES (loads, redemption fee,
+    minimum initial investment). Shared by every profile; a blank value passes."""
+    kept = df
+    for rule, (col, fmt) in PURCHASE_RULE_COLUMNS.items():
+        limit = PURCHASE_RULES.get(rule)
+        if limit is None or col not in kept.columns:
+            continue
+        before = len(kept)
+        values = pd.to_numeric(kept[col], errors="coerce")
+        kept = kept[values.isna() | (values <= float(limit))]
+        print(f"  Purchase rule - {col} <= {fmt.format(limit)} (or blank): {before} -> {len(kept)}")
+    return kept.copy()
 
 
 def attach_yearly_returns(

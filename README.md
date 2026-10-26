@@ -38,7 +38,7 @@ python run_ci.py      # no prompts; every input_files/profile_*.yaml into one re
 ```
 
 ### Output (in `output/etf_screener/`, not stored in git)
-- `results_profile_LT_ST_<date-time>.xlsx` - one row per fund (benchmark rows at the bottom) with both `Profile LT ...` and `Profile ST ...` score/rank columns. The rows and concept scores come from LT; funds ST filters out (leveraged funds) have a blank ST score. Running a single YAML in `main.py` gives `results_profile_<LT|ST>_...` with just that profile.
+- `results_profile_LT_ST_<date-time>.xlsx` - one row per fund (benchmark rows at the bottom) with both `Profile LT ...` and `Profile ST ...` score/rank columns. Every fund gets a score from every profile; the concept-score columns are LT's. Running a single YAML in `main.py` gives `results_profile_<LT|ST>_...` with just that profile.
 - `results_profile_LT_ST_<date-time>_by_category/` - one subfolder each for Asset Class, Morningstar Category, Yahoo sub-sector and Style Box, with one file per group
 - `results_profile_LT_ST_<date-time>_used_weights_<LT|ST>.yaml` - the exact weights each profile used
 - `run_recorder.yaml` - settings of every run, the funds missing yearly data, and how many funds have volatile-period data
@@ -46,25 +46,22 @@ python run_ci.py      # no prompts; every input_files/profile_*.yaml into one re
 
 ## Configuration
 
-Each profile is one `etf_screener/input_files/profile_*.yaml`, and the YAML is the only place its settings live. Every key must be there: a missing or misspelled one stops the run with the file and key named, instead of quietly using a hidden default. `config.py` holds only project-wide settings (the eTrade columns to load, benchmark indexes, grade mappings, `KEEP_LAST_REPORTS`).
+Each profile is one `etf_screener/input_files/profile_*.yaml`, and the YAML is the only place its settings live. Every key must be there: a missing or misspelled one stops the run with the file and key named, instead of quietly using a hidden default. `config.py` holds only project-wide settings (the eTrade columns to load, benchmark indexes, grade mappings, `KEEP_LAST_REPORTS`), including `PURCHASE_RULES`: no front or deferred load, no redemption fee, and at most a $50,000 minimum initial investment. Those apply to every profile and remove funds before any scoring. Leveraged funds are kept and scored.
 
 | Profile | YAML | Ranks funds by |
 |---|---|---|
 | `LT` | `profile_long_term.yaml` | Long-term, low-risk, steady returns |
 | `ST` | `profile_short_term.yaml` | Short-term momentum (1M-6M returns, 1Y risk-adjusted return) |
 
-Both share the filter and scoring code in `profiles/weighted_profile.py`; only their YAML settings differ. Every eligible fund is ranked, so the highest rank numbers in a profile's columns are its weakest funds.
+Both share the scoring code in `profiles/weighted_profile.py`; only their YAML weights differ. Every fund is ranked, so the highest rank numbers in a profile's columns are its weakest funds.
 
-**Adding a profile:** copy a YAML to `input_files/profile_<name>.yaml` and change `profile:` (e.g. `INC`). `run_ci.py`, `main.py` (Enter), the alerts and the column dictionary pick it up, and the report gets `Profile INC ...` columns; no code changes. Add `enabled: false` to keep a YAML without running it. Profiles run in file-name order, and the first (`profile_long_term`) decides the report's rows.
+**Adding a profile:** copy a YAML to `input_files/profile_<name>.yaml` and change `profile:` (e.g. `INC`). `run_ci.py`, `main.py` (Enter), the alerts and the column dictionary pick it up, and the report gets `Profile INC ...` columns; no code changes. Add `enabled: false` to keep a YAML without running it. Profile YAMLs only **score** funds; they never remove one, so every fund in the report has a score from every profile and the order of the files doesn't matter. To make something not count, set its weight to `0.0` (the expense ratio, for example, counts through `weights: costs`). The concept-score columns (Volatility Score, ...) are the first profile's (`profile_long_term`, by file name).
 
 ```yaml
 profile: LT
 data_path: data/                 # Morningstar exports
 out_path: ../output/etf_screener # where results go
 thresholds:
-  max_expense_ratio: 1.75
-  exclude_leveraged_funds: false
-  min_initial_investment: 50000
   weights:                       # how much each concept counts (should sum to ~1.0)
     long_term_return_performance: 0.25
     short_term_return_performance: 0.05
@@ -175,9 +172,9 @@ ETF-Fund-Screener/
 │   ├── config.py               # Project-wide settings (columns, benchmarks, grade maps)
 │   ├── input_file.py           # Loads the profile YAML
 │   ├── data_loading.py         # Reads and merges the Morningstar exports
-│   ├── merging.py              # Fund filter, yearly return columns
+│   ├── merging.py              # Fund filter, purchase rules, yearly return columns
 │   ├── scoring.py              # Concept scores
-│   ├── profiles/weighted_profile.py  # Profile filters and final score (every profile YAML)
+│   ├── profiles/weighted_profile.py  # Final score and ranks (every profile YAML)
 │   ├── performance.py          # Yearly stats, volatile periods, benchmark rows
 │   ├── export.py               # Excel output and run_recorder.yaml
 │   ├── utils/
@@ -216,7 +213,7 @@ ETF-Fund-Screener/
 - **Indexes are price-only, funds include dividends**, so funds look about 1-2 points/year better than the indexes in the yearly and crisis comparisons (e.g. 2025: SPY 18.9% vs ^GSPC 17.5%).
 - **Yearly returns for 2006-2025 end on Dec 30** instead of Dec 31 (an old download bug, since fixed); 2026 onward is correct. A full rebuild of the yearly CSV would correct the older years.
 - **Yahoo sub-sectors come from a fund's top 10 holdings** (the most Yahoo lists) and are re-checked about once a year; new funds are looked up the night they appear. Set `force_refresh_subsector: true` in `yahoo_metrics` for one run to refresh them all. Broad funds can change sub-sector between lookups, which moves their Z-scores.
-- **Two profiles share one set of filters**: LT and ST differ only in their YAML settings. A profile that needs a new kind of rule needs its own module in `profiles/`.
+- **Profiles only score, they never filter**: LT and ST differ only in their YAML weights. Rules for every profile are `PURCHASE_RULES` in `config.py`; a profile that needs its own filter needs its own module in `profiles/`.
 - **The GitHub job screens its cached copy of your exports**, not your latest local files.
 
 ## Documentation

@@ -33,28 +33,15 @@ data_path: data/
 out_path: ../output/etf_screener
 
 # ============================================================================
-# FILTERS & THRESHOLDS
+# SCORING
 # ============================================================================
-# Same eligibility rules as the long-term profile, except leveraged funds
-# are excluded. run_ci.py runs the long-term profile first and reuses its
-# Yahoo download for every fund it already fetched, so stricter filters
-# here cost nothing; looser ones download only the extra funds.
+# This profile only SCORES funds; it never removes one. Rules for every
+# profile (no loads or redemption fee, minimum investment <= $50,000) are
+# PURCHASE_RULES in config.py. To make something not count, set its weight
+# to 0.0. run_ci.py reuses the Yahoo download of the profile before it.
 # ============================================================================
 
 thresholds:
-  require_category: false
-  max_expense_ratio: 1.75            # percent
-  require_fund_size: false
-  require_3y_return: false           # short-term picks don't need a 3-year history
-  exclude_leveraged_funds: true      # 2x/3x funds top every momentum list but lose value when held
-  exclude_interval_funds: false
-  exclude_tender_offer_funds: false
-  max_deferred_load: 0.0
-  max_front_load: 0.0
-  min_initial_investment: 50000      # dollars
-  max_redemption_fee: 0.0            # percent
-  require_benchmark_outperformance: false
-  min_benchmark_beat_pct: 50.0       # used only when the line above is true
 
   # ==========================================================================
   # SCORING WEIGHTS (how much each concept counts; sums to 1.00)
@@ -73,7 +60,7 @@ thresholds:
 
   # ==========================================================================
   # DETAILED WEIGHTS WITHIN EACH CONCEPT (each block sums to 1.0)
-  # Every key is listed, because a missing key falls back to config.py.
+  # Every key must be listed; set one to 0.0 to leave that metric out.
   # ==========================================================================
   concept_weights:
     short_term_return_performance:

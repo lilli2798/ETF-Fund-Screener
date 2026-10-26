@@ -603,8 +603,8 @@ def calculate_liquidity_size_score(
     age, popularity, and provider scale -- not by sector/sub-industry
     composition -- so a global "liquid enough" bar is more accurate
     than comparing a fund only to peers that happen to share its
-    Morningstar Category. See docs/column_glossary.md, "Category
-    Dependence of the 8 Scored Concepts", for the full rationale.
+    Morningstar Category. See the "Scoring Concepts" tab of
+    docs/report_column_dictionary.xlsx for each concept's category dependence.
 
     Default thresholds (override via `thresholds` if needed):
       - Fund Size ($):        floor=$10M, target=$500M, ceiling=$5B

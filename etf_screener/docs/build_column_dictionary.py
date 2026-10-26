@@ -469,17 +469,12 @@ for other_file in PROFILE_INPUT_FILES:
 D["Missing From Yahoo"] = ("('No Yahoo Data' tab only) Which Yahoo-based results are missing: Sharpe / Z-score, yearly returns, volatile periods.", "", "n/a",
                            "These funds are taken off the overview; all their Morningstar columns are still on that tab.", CALC, "No")
 
-# Columns described in column_glossary.md that are not in the current data
+# Columns the YAML weights mention that are not in the current data
 NOT_IN_DATA = "Morningstar (not in current data)"
 D["Trading Volume"] = ("Average number of shares traded per day (ETFs).", "Reported directly (exchange data)", "Higher = easier to trade at a fair price",
                        "Not in the current eTrade export. The YAML still gives it weight 0.4 in Liquidity/Size; since the column is missing, Fund Size gets the whole Liquidity/Size weight. Add it to the export to use it.",
                        NOT_IN_DATA, "No effect: weighted 0.4 in the YAML, but the column is missing")
-D["Management Style"] = ("Whether the fund is run by a single manager, a team, or a committee.", "", "n/a",
-                         "Mentioned in column_glossary.md; not in the current export and not used in scoring.", NOT_IN_DATA, "No")
-D["3Y Return Rank in Category"] = ("Morningstar's percentile rank of the fund's 3-year return within its category (1 = best).", "Morningstar computes this; lower rank = better", "Lower is better",
-                                   "Used by the old single 'Performance' concept, which has since been split into Long-term and Short-term Return. Not in the current export.", NOT_IN_DATA, "No")
-for name in ("Trading Volume", "Management Style", "3Y Return Rank in Category"):
-    groups.setdefault(name, [])
+groups.setdefault("Trading Volume", [])
 
 # Per-column score usage for the All Report Columns tab: {base: {variant: (concept, key)}}
 VARIANT_KEYS = {
@@ -567,7 +562,7 @@ vp = pd.DataFrame([{
     "Peak 21-day volatility %": p["peak_21d_vol_pct"], "Trading days": p["trading_days"],
 } for p in PERIODS.values()])
 
-# Concept tab (merged from column_glossary.md, weights from the current YAML)
+# Concept tab (weights from the current YAML)
 concepts = pd.DataFrame([
     ("Long-term Return", W["long_term_return_performance"], "Total Return 1Y-20Y", "Medium-High", "Yes / Medium-High", "Multi-year returns diverge a lot by sub-sector timing."),
     ("Short-term Return", W["short_term_return_performance"], "Total Return 1W-YTD", "Medium-High", "Yes / Medium-High", "Short windows are dominated by what's in favour this month."),
@@ -608,6 +603,23 @@ for ws in wb.worksheets:
             cell.alignment = Alignment(wrap_text=True, vertical="top")
     ws.freeze_panes = "B2"
     ws.auto_filter.ref = ws.dimensions
+
+# Notes under the concept table on why within-category ranking has limits
+SECTOR_NOTES = [
+    "Why sector mix matters: every score is ranked WITHIN Morningstar Category, but categories are coarse. "
+    "Morningstar's 'Technology' bundles software (operating systems, applications) with hardware, storage, networking "
+    "and semiconductors. Two funds in the same category can be semiconductor-heavy (cyclical, capital-intensive) or "
+    "software-heavy (higher margins, recurring revenue) and still be ranked as direct peers on every score.",
+    "Practical takeaway: before trusting a ranking or tuning the Volatility, Quality/Valuation or Return weights in a "
+    "sector-heavy category like Technology, check the Yahoo Subsector column (or the fund's factsheet holdings) "
+    "of the top funds. Costs and Liquidity/Size are the least affected; Volatility and Quality/Valuation the most.",
+]
+ws = wb["Scoring Concepts"]
+for offset, note in enumerate(SECTOR_NOTES):
+    row = ws.max_row + 2 if offset == 0 else ws.max_row + 1
+    ws.cell(row=row, column=1, value=note).alignment = Alignment(wrap_text=True, vertical="top")
+    ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=7)
+    ws.row_dimensions[row].height = 75
 wb.save(OUT)
 print(f"{len(dictionary)} column names, {len(all_columns)} report columns -> {OUT}")
 print(dictionary["Source"].value_counts().to_string())

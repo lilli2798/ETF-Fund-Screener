@@ -6,7 +6,7 @@ the screener. You typically don't need to edit this file directly - most
 settings can be overridden in your YAML configuration file (e.g., input_files/profile_long_term.yaml).
 
 IMPORTANT NOTE ABOUT COLUMN NAMES:
-  The STRUCT_NEEDED_COLS and PERF_NEEDED_COLS lists below must match the EXACT
+  The NEEDED_COLS list below must match the EXACT
   column headers in your Morningstar Excel files. Any mismatch (extra spaces,
   (R)/(TM) symbols, different capitalization) will cause those columns to be
   silently dropped. If you see warnings about missing columns at runtime,

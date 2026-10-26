@@ -220,6 +220,4 @@ ETF-Fund-Screener/
 
 ## Documentation
 
-- `etf_screener/docs/column_glossary.md` - definitions and formulas for all metrics
 - `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in the long-term profile (rebuild with `python docs/build_column_dictionary.py` after changing weights; add `input_files/profile_short_term.yaml` for the short-term weights)
-- `etf_screener/docs/profile_a_design.md` - Profile A design

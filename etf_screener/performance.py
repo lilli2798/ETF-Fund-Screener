@@ -34,7 +34,7 @@ from config import (
 )
 
 # Shared code in yahoo_returns/ (appended, not prepended, so a same-named
-# module there never shadows one in this folder, e.g. database.py).
+# module there never shadows one in this folder).
 if YAHOO_RETURNS_DIR not in sys.path:
     sys.path.append(YAHOO_RETURNS_DIR)
 

@@ -25,7 +25,7 @@ from typing import Dict, List, Tuple
 import pandas as pd
 import yfinance as yf
 
-from yahoo_config import DEFAULT_CONFIG, SOURCES_DIR
+from yahoo_config import DEFAULT_CONFIG
 
 
 # =========================================================================
@@ -269,112 +269,6 @@ def load_tickers_from_file(tickers_file: str) -> List[str]:
 # =========================================================================
 # CACHE UPDATE FUNCTIONS
 # =========================================================================
-
-def update_cache_for_new_tickers(new_tickers: List[str], config: Dict = None) -> Tuple[pd.DataFrame, List[str]]:
-    """Update CSV cache with new tickers by downloading their historical data.
-    
-    Args:
-        new_tickers: List of ticker symbols to add to the cache
-        config: Configuration dictionary containing caching settings
-    
-    Returns:
-        Tuple of (updated_cache_df, list_of_failed_tickers)
-        - updated_cache_df: DataFrame with all tickers (existing + new) and their yearly returns
-        - failed_tickers: List of tickers that failed to download or had no data
-    """
-    if config is None:
-        config = DEFAULT_CONFIG
-    
-    cache_config = config.get("caching", {})
-    enable_cache = cache_config.get("enable_cache", True)
-    cache_path = cache_config.get("yearly_returns_cache_path", "sources/etf_yearly_history.csv")
-    history_start_date = cache_config.get("history_start_date", "2006-01-01")
-    
-    if not enable_cache:
-        print("  Cache is disabled, skipping update.")
-        return pd.DataFrame(), []
-    
-    # Load existing CSV cache
-    cached_df = load_yearly_history_csv(cache_path)
-    
-    # Filter out tickers that are already in cache
-    tickers_to_add = [t for t in new_tickers if cached_df.empty or t not in cached_df.index]
-    
-    if not tickers_to_add:
-        print("  All tickers already in cache, no update needed.")
-        return cached_df, []
-    
-    print(f"  Adding {len(tickers_to_add)} new tickers to cache...")
-    
-    # Always use history start date to previous year 12-31
-    beginning_date = history_start_date
-    current_year = datetime.now().year
-    previous_year = current_year - 1
-    ending_date = f"{previous_year}-12-31"
-    
-    # Download price data for new tickers
-    failed_tickers = []
-    try:
-        adj = download_adj_close(tickers_to_add, beginning_date, ending_date, config)
-        
-        if adj.empty:
-            print("  No data downloaded for new tickers.")
-            return cached_df, tickers_to_add
-        
-        # Calculate yearly returns for new tickers
-        beginning_date_dt = to_date(beginning_date)
-        ending_date_dt = to_date(ending_date)
-        
-        yearly_data = {}
-        
-        for ticker in tickers_to_add:
-            if ticker not in adj.columns:
-                failed_tickers.append(ticker)
-                continue
-            
-            yearly_data[ticker] = {}
-            ticker_has_data = False
-            
-            for year in range(beginning_date_dt.year, current_year):
-                year_start = pd.Timestamp(f"{year}-01-01")
-                year_end = pd.Timestamp(f"{year}-12-31")
-                
-                if year_end <= year_start:
-                    continue
-                
-                try:
-                    ticker_adj = adj[[ticker]]
-                    year_return = make_return_series(ticker_adj, year_start, year_end)
-                    
-                    if not year_return.empty and ticker in year_return.index:
-                        yearly_data[ticker][str(year)] = year_return[ticker]
-                        ticker_has_data = True
-                except Exception as e:
-                    print(f"    Warning: Failed to calculate {year} return for {ticker}: {e}")
-            
-            if not ticker_has_data:
-                failed_tickers.append(ticker)
-                del yearly_data[ticker]
-        
-        # Convert to DataFrame and merge with existing cache
-        new_df = pd.DataFrame.from_dict(yearly_data, orient='index')
-        merged_df = cached_df  # Initialize with existing cache
-        
-        if not new_df.empty:
-            if not cached_df.empty:
-                merged_df = pd.concat([cached_df, new_df]).groupby(level=0).last()
-            else:
-                merged_df = new_df
-            
-            save_yearly_history_csv(cache_path, merged_df)
-            print(f"  Cache updated with {len(tickers_to_add) - len(failed_tickers)} new tickers")
-        
-        return merged_df, failed_tickers
-        
-    except Exception as e:
-        print(f"  Error updating cache for new tickers: {e}")
-        return cached_df, tickers_to_add
-
 
 # =========================================================================
 # YEARLY UPDATE FUNCTION

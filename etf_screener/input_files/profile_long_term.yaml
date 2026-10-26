@@ -20,6 +20,10 @@
 # profiles/weighted_profile.py PROFILE_KEYS.
 profile: LT
 
+# Selection cutoffs. Top level, NOT under thresholds:.
+top_n_per_category: 5   # funds per Morningstar Category with Selected Flag = 1
+top_n_overall: 100        # funds across ALL categories with Selected Overall Flag = 1
+
 # INPUT FILES: Point this to your Morningstar Excel export directory
 data_path: data/   # Contains all Morningstar data files (performance + structural combined)
 

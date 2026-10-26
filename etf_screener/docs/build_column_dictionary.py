@@ -111,8 +111,7 @@ def used(concept, keys):
 # Group report columns by base name
 # --------------------------------------------------------------------------
 report_cols = list(pd.read_excel(REPORT, nrows=0).columns)
-extra_cols = ["Missing From Yahoo", "Top K Cutoff (rows needed)", "Top Position 1W", "Top Position 1M",
-              "Bottom K Cutoff (rows needed)", "Bottom Position 1W", "Bottom Position 1M"]
+extra_cols = ["Missing From Yahoo"]
 
 
 def base_of(col):
@@ -125,11 +124,8 @@ def base_of(col):
     m = re.match(r"^(Sharpe|Z Score) (\dy)$", col)
     if m:
         return m.group(1), m.group(2).upper()
-    m = re.match(r"^(Top|Bottom) (Position) (1W|1M)$", col)
-    if m:
-        return f"{m.group(1)} Position", m.group(3)
     m = re.match(r"^(.+?) \((.+)\)$", col)
-    if m and m.group(1) not in ("Equity Style Box", "Top K Cutoff", "Bottom K Cutoff"):
+    if m and m.group(1) != "Equity Style Box":
         return m.group(1), m.group(2).replace(" Monthly", "")
     return col, ""
 
@@ -169,7 +165,7 @@ D["TTM Yield"] = ("Trailing 12-month yield: income paid over the last 12 months 
 D["Total Return"] = ("Total return (price change + reinvested dividends/interest, after fees), in percent. 1W-1Y are cumulative; 2Y and longer are annualized (average per year). 'Since Inception' is annualized from the start date.",
                      "Cumulative: (Ending value + distributions) / Beginning value - 1.  Annualized (n years): (1 + cumulative)^(1/n) - 1",
                      "Higher is better",
-                     "Compare within category - a 5% year is great for a bond fund and poor for a tech fund. Blank when the fund is younger than the period. 1W/1M feed the Top/Bottom 50 momentum tabs. "
+                     "Compare within category - a 5% year is great for a bond fund and poor for a tech fund. Blank when the fund is younger than the period. "
                      "Sector caveat: multi-year returns are strongly driven by sub-sector timing (e.g. AI semiconductors vs software), which within-category ranking does not correct for. "
                      "'Since Inception' is not comparable across funds with different start dates.",
                      MS, used("short_term_return_performance", [(p, f"return_{p.lower()}") for p in ["1W", "1M", "2M", "QTD", "3M", "6M", "9M", "YTD"]]) + "  |  " +
@@ -443,8 +439,8 @@ for name, concept, note in concept_rows:
 D["Return Rank"] = ("Rank of the matching 'Total Return' column across ALL funds in the report (1 = highest return).",
                     "Rank = position when all funds are sorted by that period's return, highest first (ties share the lowest rank)",
                     "Lower is better (1 = best)",
-                    "Across all categories, not within category - leveraged / sector funds dominate both ends. Used for the 1W & 1M momentum tabs.", CALC, "No")
-def add_profile_rows(key, yaml_name, weights, top_n):
+                    "Across all categories, not within category - leveraged / sector funds dominate both ends. For momentum lists use python db_access/query.py momentum_top / momentum_bottom.", CALC, "No")
+def add_profile_rows(key, yaml_name, weights, top_n, top_n_overall):
     """The five score/rank/flag columns one profile adds to the report."""
     pa, total = f"Profile {key}", sum(v for v in weights.values() if v)
     D[f"{pa} Score"] = (f"Final 0-100 score combining the concept scores with the weights in {yaml_name}.",
@@ -459,21 +455,19 @@ def add_profile_rows(key, yaml_name, weights, top_n):
                                 f"top_n_per_category is set in {yaml_name}.", CALC, "No")
     D[f"{pa} Rank Overall"] = (f"Rank of the {pa} Score across all funds (1 = best).", "", "Lower is better",
                                "Mixes categories; a top bond fund and a top stock fund can both rank high.", CALC, "No")
-    D[f"{pa} Selected Overall Flag"] = (f"1 if the fund is in the top {top_n} overall.", f"Rank Overall ≤ {top_n}", "1 = selected", "", CALC, "No")
+    D[f"{pa} Selected Overall Flag"] = (f"1 if the fund is in the top {top_n_overall} overall.", f"Rank Overall ≤ top_n_overall ({top_n_overall})", "1 = selected",
+                                        f"top_n_overall is set in {yaml_name} (if left out, top_n_per_category is used).", CALC, "No")
 
 
-add_profile_rows(KEY, PROFILE_PATH.name, W, TOP_N)
+add_profile_rows(KEY, PROFILE_PATH.name, W, TOP_N, profile.thresholds.get("top_n_overall") or TOP_N)
 # A combined report (results_profile_LT_ST_...) also has the other profiles' columns.
 for other_file in PROFILE_INPUT_FILES:
     other = load_profile_input(str(PROJECT / other_file))
     if other.profile_name != KEY and f"Profile {other.profile_name} Score" in report_cols:
-        add_profile_rows(other.profile_name, Path(other_file).name, other.thresholds["weights"], other.top_n_per_category)
+        add_profile_rows(other.profile_name, Path(other_file).name, other.thresholds["weights"], other.top_n_per_category,
+                         other.thresholds.get("top_n_overall") or other.top_n_per_category)
 D["Missing From Yahoo"] = ("('No Yahoo Data' tab only) Which Yahoo-based results are missing: Sharpe / Z-score, yearly returns, volatile periods.", "", "n/a",
                            "These funds are taken off the overview; all their Morningstar columns are still on that tab.", CALC, "No")
-for side, best in (("Top", "best"), ("Bottom", "worst")):
-    D[f"{side} K Cutoff (rows needed)"] = (f"(Momentum tab) Smallest K such that at least 50 funds are within the {best} K funds for BOTH 1W and 1M return.",
-                                           f"K = smallest number with ≥ 50 funds having 1W position ≤ K AND 1M position ≤ K", "n/a", "Same value on every row.", CALC, "No")
-    D[f"{side} Position"] = (f"(Momentum tab) Fund's position counted from the {best} 1-week (1W) or 1-month (1M) return (1 = {best}).", "", "Lower = stronger signal", "", CALC, "No")
 
 # Columns described in column_glossary.md that are not in the current data
 NOT_IN_DATA = "Morningstar (not in current data)"
@@ -513,9 +507,7 @@ VARIANT_KEYS = {
 def tab_of(col):
     if col == "Missing From Yahoo":
         return "No Yahoo Data"
-    if col.startswith(("Top ", "Bottom ")) and ("Position" in col or "Cutoff" in col):
-        return "Top 50 / Bottom 50 momentum"
-    return "Overview (also on the extra tabs)"
+    return "Overview"
 
 
 all_rows = []

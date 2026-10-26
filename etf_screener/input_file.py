@@ -16,7 +16,7 @@ import yaml
 
 from config import (
     DEFAULT_DATA_PATH, DEFAULT_OUT_PATH,
-    DEFAULT_PROFILE_NAME, DEFAULT_TOP_N_PER_CATEGORY,
+    DEFAULT_PROFILE_NAME, DEFAULT_TOP_N_PER_CATEGORY, DEFAULT_TOP_N_OVERALL,
     DEFAULT_THRESHOLDS,
 )
 
@@ -95,6 +95,11 @@ def load_profile_input(input_file: str) -> ProfileInput:
         print(f"  Warning: {path} has unrecognized threshold key(s) {sorted(unknown_keys)} "
               f"-- check for typos. They will be ignored by known logic but are still "
               f"present in the merged thresholds dict.")
+
+    # Top level like top_n_per_category; stored in thresholds so the scorer,
+    # run_recorder.yaml and the used-weights report all see it.
+    top_n_overall = raw.get("top_n_overall", DEFAULT_TOP_N_OVERALL)
+    thresholds["top_n_overall"] = None if top_n_overall is None else int(top_n_overall)
 
     return ProfileInput(
         profile_name=profile_name.strip(),

@@ -349,8 +349,11 @@ def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> p
     )
     scored[rank_all_col] = _as_float_series(scored[rank_all_col])
 
+    # top_n_overall (YAML, top level) sets the overall cutoff separately;
+    # if it's not set, the per-category top_n is used for both.
+    top_n_overall = thresholds.get("top_n_overall") or top_n
     scored[flag_all_col] = (
-        scored[rank_all_col].le(float(top_n)).fillna(False).astype(bool)
+        scored[rank_all_col].le(float(top_n_overall)).fillna(False).astype(bool)
     )
 
     # Console proof (helps catch str regression early)

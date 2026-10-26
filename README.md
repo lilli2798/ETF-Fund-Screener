@@ -42,7 +42,7 @@ python run_ci.py      # no prompts; all profiles in config.PROFILE_INPUT_FILES i
 - `results_profile_LT_ST_<date-time>_by_category/` - one subfolder each for Asset Class, Morningstar Category, Yahoo sub-sector and Style Box, with one file per group
 - `results_profile_LT_ST_<date-time>_used_weights_<LT|ST>.yaml` - the exact weights each profile used
 - `run_recorder.yaml` - settings of every run, the funds missing yearly data, and how many funds have volatile-period data
-- Local runs also save results to the SQLite database `data/etf_screener.db` (kept on your computer only)
+- Keep the reports you want history for: `db_access/query.py` reads every report in this folder as the `reports` table
 
 ## Configuration
 
@@ -91,7 +91,8 @@ thresholds:
 |---|---|
 | Morningstar data | Everything from your exports |
 | `... Score` concept columns | Each concept, 0-100 within category |
-| `Profile LT Score` / `Profile ST Score`, `Rank In Category`, `Rank Overall`, `Selected Flag` | Final score; selected = top N (default 5) in its category |
+| `Profile LT Score` / `Profile ST Score`, `Rank In Category`, `Rank Overall`, `Selected Flag` | Final score; selected = top `top_n_per_category` in its category, or top `top_n_overall` overall |
+| `Return Rank (1W)` ... `(20Y)` | Rank of each period's return across all funds (1 = highest) |
 | `Yahoo SubSector`, `Sharpe 1Y/3Y`, `Z Score 1Y/3Y` | Yahoo metrics; Z-scores compare Sharpe within the same sub-sector |
 | `Yearly Return (2016)` ... `(2025)` | Calendar-year returns, in percent |
 | `Yearly Beat All Indexes`, `Yearly Trailed All Indexes`, `Yearly Beat %`, ... | Years the fund beat the **best** / trailed the **worst** of ^GSPC, ^DJI, ^IXIC |
@@ -135,6 +136,21 @@ python etf_screener/yahoo_returns/user_defined_by_date_yahoo_analize.py
 - Pick a volatile period from the list, or type your own start / end dates.
 - Choose year / month / week breakdowns; results go to `output/yahoo_screen/`.
 
+## Querying the Data with SQL
+
+`etf_screener/db_access/query.py` runs SQL (DuckDB) directly on the newest report, the eTrade exports, the yearly and volatile-period returns, and the score history of past runs. Nothing needs importing, and new columns show up automatically.
+
+```bash
+cd etf_screener
+python db_access/query.py                       # interactive prompt; .help, .tables, .find TEXT
+python db_access/query.py --find sharpe         # which columns mention "sharpe", and how to write them in SQL
+python db_access/query.py top_both              # saved query in db_access/queries/
+python db_access/query.py ticker_history ticker=VOO --xlsx
+python db_access/query.py "SELECT Ticker, \"Profile LT Score\" FROM report ORDER BY 2 DESC LIMIT 10"
+```
+
+Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_returns`, `reports` (every saved report, with `run_time`). Spreadsheets are cached in `output/query_cache/` and re-read only when they change; Excel results go to `output/queries/`. Saved queries: `top_both`, `sell_candidates`, `category_top`, `ticker_history`, `steady_yearly`, `momentum_top` / `momentum_bottom` (the 50 funds strongest / weakest over both 1 week and 1 month, which used to be report tabs); save your own with `.save NAME` at the prompt.
+
 ## Automation (GitHub Actions)
 
 | Workflow | When | What it does |
@@ -144,7 +160,7 @@ python etf_screener/yahoo_returns/user_defined_by_date_yahoo_analize.py
 | **Cleanup Workflow Runs** | 1st of each month | Keeps the last 10 runs of each workflow |
 
 - Email / Slack settings are GitHub secrets: `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME`, `EMAIL_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO`, `SLACK_WEBHOOK_URL`.
-- GitHub starts from an empty machine each run, so the **caches it needs are committed to git**: `utils/sector_cache.json`, `yahoo_returns/sources/etf_yearly_history.csv` and `etf_volatile_history.csv`. Reports and databases are not.
+- GitHub starts from an empty machine each run, so the **caches it needs are committed to git**: `utils/sector_cache.json`, `yahoo_returns/sources/etf_yearly_history.csv` and `etf_volatile_history.csv`. Reports are not.
 - The Morningstar exports are **not** in git; the daily job uses a copy saved in the GitHub Actions cache.
 
 ## Project Structure
@@ -163,7 +179,6 @@ ETF-Fund-Screener/
 │   ├── profiles/weighted_profile.py  # Profile filters and final score (LT, ST)
 │   ├── performance.py          # Yearly stats, volatile periods, benchmark rows
 │   ├── export.py               # Excel output and run_recorder.yaml
-│   ├── database.py             # Local SQLite results database
 │   ├── utils/
 │   │   ├── yahoo_metrics.py    # Yahoo sub-sector, Sharpe, Z-scores
 │   │   └── sector_cache.json   # Cached sub-sectors (about 1 year)
@@ -175,18 +190,18 @@ ETF-Fund-Screener/
 │   │   ├── yahoo_config.py           # Settings for this folder
 │   │   ├── user_defined_by_date_yahoo_analize.py  # Interactive date-range analysis
 │   │   └── sources/                  # tickers.txt, etf_yearly_history.csv, etf_volatile_history.csv
+│   ├── db_access/              # SQL on reports, eTrade data and score history
+│   │   └── query.py, queries/*.sql             # DuckDB queries, no import needed
 │   ├── standalone_utils/       # Hand-run tools, not used by the screener
-│   │   ├── query_results.py, import_excel.py   # Search / import into the local database
 │   │   ├── compare_results.py                  # Compare selections across result files
 │   │   ├── get_yahoo_dta.py                    # Yahoo metrics for a watchlist (tickers.txt)
-│   │   └── customized_query_returns.py, ...    # Older custom date-range tool
+│   │   └── yahoo_get_top_return.py, ...        # Helpers for the tools above
 │   ├── input_files/            # profile_long_term.yaml, profile_short_term.yaml
-│   ├── docs/                   # Glossary, column dictionary, Profile A design, database schema
+│   ├── docs/                   # Glossary, column dictionary, Profile A design
 │   └── data/                   # Your Morningstar exports (not in git)
 ├── .github/workflows/          # Daily, yearly and cleanup jobs
 ├── eTrade/                     # eTrade-specific scripts
 ├── output/                     # Reports (not in git)
-├── data/etf_screener.db        # Local results database (not in git)
 └── requirements.txt
 ```
 
@@ -208,4 +223,3 @@ ETF-Fund-Screener/
 - `etf_screener/docs/column_glossary.md` - definitions and formulas for all metrics
 - `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in the long-term profile (rebuild with `python docs/build_column_dictionary.py` after changing weights; add `input_files/profile_short_term.yaml` for the short-term weights)
 - `etf_screener/docs/profile_a_design.md` - Profile A design
-- `etf_screener/docs/database_schema.md` - local database tables

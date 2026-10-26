@@ -14,9 +14,12 @@ IMPORTANT NOTE ABOUT COLUMN NAMES:
 """
 
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 DEFAULT_TOP_N_PER_CATEGORY: int = 5
+# How many funds get Selected Overall Flag = 1 (best across all categories).
+# None = same as top_n_per_category. Set per profile with top_n_overall in the YAML.
+DEFAULT_TOP_N_OVERALL: Optional[int] = None
 
 # Default input/output paths -- adjust to your environment, or override at
 # runtime via get_paths_from_user() / CLI args.
@@ -77,13 +80,6 @@ NEEDED_COLS: List[str] = [
     "Total Return (7Y)", "Total Return (8Y)", "Total Return (9Y)",
     "Total Return (10Y)", "Total Return (15Y)", "Total Return (20Y)",
     "Total Return (Since Inception)",
-    "1W Return Rank in Category", "1M Return Rank in Category", "2M Return Rank in Category",
-    "QTD Return Rank in Category", "3M Return Rank in Category", "6M Return Rank in Category",
-    "9M Return Rank in Category", "YTD Return Rank in Category",
-    "1Y Return Rank in Category", "2Y Return Rank in Category", "3Y Return Rank in Category",
-    "4Y Return Rank in Category", "5Y Return Rank in Category", "6Y Return Rank in Category",
-    "7Y Return Rank in Category", "8Y Return Rank in Category", "9Y Return Rank in Category",
-    "10Y Return Rank in Category", "15Y Return Rank in Category", "20Y Return Rank in Category",
 
     # Risk metrics
     "Sharpe Ratio (1Y Monthly)", "Sharpe Ratio (3Y Monthly)",
@@ -112,12 +108,12 @@ NEEDED_COLS: List[str] = [
     "Portfolio Return on Invested Capital", "Portfolio Price/Earnings",
     "Portfolio Price/Book", "Portfolio Price/Sales",
     "Portfolio Price/Free Cash Flow", "Portfolio Price/Fair Value",
-    "ETF Fair Value", "Yield to Maturity",
+    "ETF Fair Value",
     "Tracking Error (1Y Monthly)", "Tracking Error (3Y Monthly)",
     "Tracking Error (5Y Monthly)", "Tracking Error (10Y Monthly)",
 
     # Fund management and ratings
-    "Fund Managers", "Management Style",
+    "Fund Managers",
     "Medalist Rating (Overall)", "Medalist Rating (Parent)",
     "Medalist Rating (People)", "Medalist Rating (Process)",
     "Morningstar Rating for Funds (Overall)",
@@ -177,27 +173,6 @@ DEFAULT_PROFILE_WEIGHTS = {
     "quality_valuation": 0.10,
     "costs": 0.10,
     "tax_income": 0.00,
-}
-
-# Morningstar's recommended long-term investment criteria weights.
-# Based on Morningstar's guidance for long-term ETF selection:
-# - 5Y Return: 25%
-# - 10Y Return: 20%
-# - 3Y Sharpe: 20%
-# - Drawdown: 15%
-# - Expense: 10%
-# - Quality: 10%
-MORNINGSTAR_LONG_TERM_WEIGHTS = {
-    "long_term_return_performance": 0.45,  # Combined 5Y (25%) + 10Y (20%) = 45%
-    "short_term_return_performance": 0.00,  # Not used in Morningstar's criteria
-    "risk_adjusted": 0.20,  # 3Y Sharpe: 20%
-    "volatility": 0.15,  # Drawdown: 15%
-    "resilience": 0.00,  # Not used in Morningstar's criteria
-    "tracking": 0.00,  # Not used in Morningstar's criteria
-    "liquidity_size": 0.00,  # Not used in Morningstar's criteria
-    "quality_valuation": 0.10,  # Quality: 10%
-    "costs": 0.10,  # Expense: 10%
-    "tax_income": 0.00,  # Not used in Morningstar's criteria
 }
 
 # Column-level weights INSIDE each concept function (e.g. how much
@@ -302,102 +277,6 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "dividend_per_share_1y_avg": 0.10,
         "dividend_per_share_3y_avg": 0.10,
         "sec_yield": 0.25,
-    },
-}
-
-# Morningstar's recommended concept weights for long-term investing.
-# Emphasizes 5Y/10Y returns, 3Y Sharpe, drawdown, expense ratio, and quality.
-MORNINGSTAR_CONCEPT_WEIGHTS = {
-    "long_term_return_performance": {
-        "return_5y": 0.56,  # 25% / 45% = 55.6% of long-term return weight
-        "return_10y": 0.44,  # 20% / 45% = 44.4% of long-term return weight
-        "return_1y": 0.00,  # Not emphasized for long-term
-        "return_2y": 0.00,
-        "return_3y": 0.00,  # Not emphasized in Morningstar's criteria
-        "return_4y": 0.00,
-        "return_6y": 0.00,
-        "return_7y": 0.00,
-        "return_8y": 0.00,
-        "return_9y": 0.00,
-        "return_15y": 0.00,
-        "return_20y": 0.00,
-    },
-    "short_term_return_performance": {
-        # Concept weight is 0 in MORNINGSTAR_LONG_TERM_WEIGHTS; keys kept
-        # (all 0.0) because every required key must be present.
-        "return_1w": 0.00,
-        "return_1m": 0.00,
-        "return_2m": 0.00,
-        "return_qtd": 0.00,
-        "return_3m": 0.00,
-        "return_6m": 0.00,
-        "return_9m": 0.00,
-        "return_ytd": 0.00,
-    },
-    "risk_adjusted": {
-        "sharpe_3y": 1.00,  # 100% on 3Y Sharpe per Morningstar's criteria
-        "sharpe_1y": 0.00,  # Not used
-        "upside": 0.00,  # Not used
-        "downside": 0.00,  # Not used
-        "yahoo_sharpe_3y": 0.00,  # Not used
-        "yahoo_sharpe_1y": 0.00,  # Not used
-        "yahoo_zscore_3y": 0.00,  # Not used
-        "yahoo_zscore_1y": 0.00,  # Not used
-        # Other periods (0.0 = not used unless a profile YAML sets them)
-        "sharpe_5y": 0.00,
-        "sharpe_10y": 0.00,
-        "upside_1y": 0.00,
-        "upside_5y": 0.00,
-        "upside_10y": 0.00,
-        "downside_1y": 0.00,
-        "downside_5y": 0.00,
-        "downside_10y": 0.00,
-    },
-    "volatility": {
-        "stdev_3y": 0.00,  # Not used - drawdown is the key metric
-        "drawdown_3y": 0.50,  # 3Y drawdown (50% of volatility weight)
-        "drawdown_5y": 0.50,  # 5Y drawdown (50% of volatility weight)
-        "stdev_1y": 0.00,
-        "stdev_5y": 0.00,
-        "stdev_10y": 0.00,
-        "drawdown_1y": 0.00,
-        "drawdown_10y": 0.00,
-    },
-    "resilience": {
-        "yearly_beat_pct": 0.00,  # Not used
-        "yearly_bottom_10_share": 0.00,
-        "volatile_beat_pct": 0.00,
-        "volatile_bottom_10_share": 0.00,
-        "worst_3m_return": 0.00,
-    },
-    "tracking": {
-        "tracking_error_3y": 0.00,  # Not used in Morningstar's criteria
-        "tracking_error_1y": 0.00,  # Not used
-    },
-    "liquidity_size": {
-        "fund_size": 0.00,  # Not used
-        "trading_volume": 0.00,  # Not used
-    },
-    "quality_valuation": {
-        "growth_grade": 0.25,  # Portfolio growth grade (A-F)
-        "financial_health": 0.15,  # Portfolio financial health grade (A-F)
-        "profitability_grade": 0.15,  # Portfolio profitability grade (A-F)
-        "price_fair_value": 0.15,  # Price vs fair value
-        "medalist": 0.15,  # Not explicitly mentioned
-        "star_rating": 0.00,  # Not explicitly mentioned
-        "economic_moat_wide": 0.15,  # Not explicitly mentioned
-    },
-    "costs": {
-        "adjusted_expense_ratio": 1.00,  # 100% on adjusted expense ratio (comprehensive fee measure)
-    },
-    "tax_income": {
-        "tax_cost_ratio_1y": 0.00,  # Not used
-        "tax_cost_ratio_2y": 0.00,  # Not used
-        "dividend_per_share_trailing": 0.00,  # Not used
-        "dividend_per_share_forward": 0.00,  # Not used
-        "dividend_per_share_1y_avg": 0.00,  # Not used
-        "dividend_per_share_3y_avg": 0.00,  # Not used
-        "sec_yield": 0.00,  # Not used
     },
 }
 

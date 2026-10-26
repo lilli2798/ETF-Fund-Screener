@@ -59,7 +59,7 @@ from data_loading import load_data
 from input_file import load_profile_input, ProfileInput
 from merging import apply_fund_filter, attach_yearly_returns
 from performance import append_benchmark_rows, attach_volatile_performance, attach_yearly_stats
-from extra_reports import build_momentum_tabs, split_no_yahoo_data
+from extra_reports import split_no_yahoo_data
 from scoring import build_concept_scores, PROFILE_FILTERS, PROFILE_PREFILTERS, PROFILE_SCORERS
 from utils import yahoo_metrics
 
@@ -77,7 +77,6 @@ from export import (
     write_used_weights_report,
     create_sheets_by_category,
 )
-from database import ETFScreenerDatabase
 
 
 # Import each profile module once so it self-registers into
@@ -326,7 +325,6 @@ def process_data(
     profile_name: str = DEFAULT_PROFILE_NAME,
     top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
     thresholds: dict = None,
-    save_to_db: bool = True,
     extra_profiles: Sequence[ProfileInput] = (),
 ) -> Tuple[pd.DataFrame, str]:
     """
@@ -392,13 +390,12 @@ def process_data(
 
     print("Saving results...")
     # Benchmark index rows (^GSPC, ^DJI, ^IXIC) go at the bottom of the main
-    # report only -- not into the database or the per-category files.
+    # report only -- not into the per-category files.
     # Funds Yahoo has no price history for get their own tab instead.
     df_overview, no_yahoo_tab = split_no_yahoo_data(df_export)
     write_excel_with_retry(append_benchmark_rows(df_overview, YEARLY_RETURNS_CSV), final_out_path, sheet_name=sheet_name)
 
-    print("Adding momentum tabs (top / bottom 50 for both 1W and 1M)...")
-    add_sheets_to_workbook(final_out_path, {**build_momentum_tabs(df_overview), **no_yahoo_tab})
+    add_sheets_to_workbook(final_out_path, no_yahoo_tab)
 
     print("Formatting header row...")
     apply_header_formatting(final_out_path)
@@ -407,8 +404,10 @@ def process_data(
     append_to_recorder(
         output_dir=out_path,
         output_filename=os.path.basename(final_out_path),
-        thresholds=thresholds,
-        extra=reports,
+        thresholds={"top_n_per_category": top_n, **thresholds},
+        # a combined report also records the other profiles' settings
+        extra={**reports, **({"other_profiles": {name: {"top_n_per_category": n, **t} for name, n, t in all_profiles[1:]}}
+                             if len(all_profiles) > 1 else {})},
     )
 
     print("Writing used-weights report for this run...")
@@ -445,26 +444,10 @@ def process_data(
             os.makedirs(split_dir, exist_ok=True)
             create_sheets_by_category(df_export, category_col, split_dir, sheet_name=sheet_name)
 
-    # Save results to SQLite database (local runs only -- CI passes
-    # save_to_db=False so the database stays on the local machine)
-    if save_to_db:
-        print("Saving results to SQLite database...")
-        db = ETFScreenerDatabase()
-        for name, _, profile_thresholds in all_profiles:
-            run_id = db.save_results(
-                df=df_export,
-                profile_name=name,
-                weights=profile_thresholds
-            )
-            print(f"Profile {name} results saved to database with run_id: {run_id}")
-        db.close()
-    else:
-        print("Skipping SQLite database save (save_to_db=False).")
-
     return df_ranked, final_out_path
 
 
-def print_summary(df_ranked: pd.DataFrame, profile_name: str, top_n: int) -> None:
+def print_summary(df_ranked: pd.DataFrame, profile_name: str, top_n: int, top_n_overall: int = None) -> None:
     """
     Print the per-category and overall top selections for quick review
     in the console. Uses the internal (pre-export) column names, since
@@ -498,8 +481,9 @@ def print_summary(df_ranked: pd.DataFrame, profile_name: str, top_n: int) -> Non
         selected_overall = df_ranked[df_ranked[selected_overall_col]].sort_values(
             rank_overall_col
         )
-        print(f"\nTop {top_n} ETFs overall (regardless of category):")
-        print(selected_overall[display_cols].head(top_n).to_string(index=False))
+        top_n_overall = top_n_overall or top_n
+        print(f"\nTop {top_n_overall} ETFs overall (regardless of category):")
+        print(selected_overall[display_cols].head(top_n_overall).to_string(index=False))
     else:
         print(f"\n(Skipping overall summary -- '{selected_overall_col}' or "
               f"'{rank_overall_col}' not found on ranked results.)")
@@ -519,7 +503,8 @@ def main() -> None:
 
     for p in (profile_input, *extra_profiles):
         print(f"\n===== Profile {p.profile_name} summary =====")
-        print_summary(df_ranked, profile_name=p.profile_name, top_n=p.top_n_per_category)
+        print_summary(df_ranked, profile_name=p.profile_name, top_n=p.top_n_per_category,
+                      top_n_overall=p.thresholds.get("top_n_overall"))
 
 
 if __name__ == "__main__":

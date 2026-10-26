@@ -635,29 +635,6 @@ def calculate_liquidity_size_score(
     return _weighted_average(out, weight_map)
 
 
-def calculate_liquidity_size_score_category_normalized(
-    df: pd.DataFrame,
-    category_col: str = DEFAULT_CATEGORY_COL,
-    weights: Optional[Dict[str, float]] = None,
-) -> pd.Series:
-    """
-    LEGACY VERSION (kept for comparison/rollback only -- not called by
-    any profile). Original category-relative percentile implementation
-    of Liquidity & Size, prior to the non-normalized rewrite above.
-    """
-    weights = _require_weights(weights, "liquidity_size")
-
-    out = pd.DataFrame(index=df.index)
-    out["Norm_Fund_Size"] = normalize_within_category(df, "Fund Size", category_col)
-    out["Norm_Trading_Volume"] = normalize_within_category(df, "Trading Volume", category_col)
-
-    weight_map = {
-        "Norm_Fund_Size": weights["fund_size"],
-        "Norm_Trading_Volume": weights["trading_volume"],
-    }
-    return _weighted_average(out, weight_map)
-
-
 # --- 6. Quality, valuation & portfolio characteristics -------------------
 
 def calculate_quality_valuation_score(

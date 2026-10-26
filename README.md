@@ -138,7 +138,7 @@ python etf_screener/yahoo_returns/user_defined_by_date_yahoo_analize.py
 
 ## Querying the Data with SQL
 
-`etf_screener/db_access/query.py` runs SQL (DuckDB) directly on the newest report, the eTrade exports, the yearly and volatile-period returns, and the score history of past runs. Nothing needs importing, and new columns show up automatically.
+`etf_screener/db_access/query.py` runs SQL (DuckDB) directly on the newest report, the eTrade exports, the yearly and volatile-period returns, and every kept report. Nothing needs importing, and new columns show up automatically. **Full guide: [`etf_screener/db_access/README.md`](etf_screener/db_access/README.md)** (picking runs by time stamp, and things to watch out for).
 
 ```bash
 cd etf_screener
@@ -149,7 +149,7 @@ python db_access/query.py ticker_history ticker=VOO --xlsx
 python db_access/query.py "SELECT Ticker, \"Profile LT Score\" FROM report ORDER BY 2 DESC LIMIT 10"
 ```
 
-Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_returns`, `reports` (every saved report, with `run_time`). Spreadsheets are cached in `output/query_cache/` and re-read only when they change; Excel results go to `output/queries/`. Saved queries: `top_both`, `sell_candidates`, `category_top`, `ticker_history`, `steady_yearly`, `momentum_top` / `momentum_bottom` (the 50 funds strongest / weakest over both 1 week and 1 month, which used to be report tabs), `zscore_matrix` (funds whose 1Y and 3Y Z-scores mark them as Core, Momentum or Value dip); save your own with `.save NAME` at the prompt.
+Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_returns`, `reports` (every saved report, with `run_time`). Spreadsheets are cached in `output/query_cache/` and re-read only when they change; Excel results go to `output/queries/`. Saved queries: `top_both`, `sell_candidates`, `category_top`, `ticker_history`, `steady_yearly`, `momentum_top` / `momentum_bottom` (the 50 funds strongest / weakest over both 1 week and 1 month, which used to be report tabs), `zscore_matrix` (funds whose 1Y and 3Y Z-scores mark them as Core, Momentum or Value dip), `beat_trail` (high Yearly Beat-Trail Diff, with the 10% bands to judge how volatile); save your own with `.save NAME` at the prompt.
 
 ## Automation (GitHub Actions)
 

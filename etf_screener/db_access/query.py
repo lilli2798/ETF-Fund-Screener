@@ -224,13 +224,16 @@ def describe_query(path: Path) -> str:
     return first.lstrip("- ").strip()
 
 
+PARAMETER = re.compile(r"\{(\w+)(?:=([^}]*))?\}")  # {name} or {name=default}
+
+
 def fill_parameters(sql: str, params: list) -> str:
-    """Replace {name} in a saved query with name=value arguments."""
+    """Replace {name} / {name=default} in a saved query with name=value arguments."""
     values = dict(p.split("=", 1) for p in params if "=" in p)
-    missing = sorted(set(re.findall(r"\{(\w+)\}", sql)) - set(values))
+    missing = sorted({m.group(1) for m in PARAMETER.finditer(sql) if m.group(2) is None} - set(values))
     if missing:
         raise ValueError(f"This query needs: {', '.join(f'{m}=...' for m in missing)}")
-    return re.sub(r"\{(\w+)\}", lambda m: values[m.group(1)].replace("'", "''"), sql)
+    return PARAMETER.sub(lambda m: values.get(m.group(1), m.group(2)).replace("'", "''"), sql)
 
 
 def query_text(name_or_sql: str, params: list) -> tuple:

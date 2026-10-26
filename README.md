@@ -149,7 +149,7 @@ python db_access/query.py ticker_history ticker=VOO --xlsx
 python db_access/query.py "SELECT Ticker, \"Profile LT Score\" FROM report ORDER BY 2 DESC LIMIT 10"
 ```
 
-Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_returns`, `reports` (every saved report, with `run_time`). Spreadsheets are cached in `output/query_cache/` and re-read only when they change; Excel results go to `output/queries/`. Saved queries: `top_both`, `sell_candidates`, `category_top`, `ticker_history`, `steady_yearly`, `momentum_top` / `momentum_bottom` (the 50 funds strongest / weakest over both 1 week and 1 month, which used to be report tabs); save your own with `.save NAME` at the prompt.
+Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_returns`, `reports` (every saved report, with `run_time`). Spreadsheets are cached in `output/query_cache/` and re-read only when they change; Excel results go to `output/queries/`. Saved queries: `top_both`, `sell_candidates`, `category_top`, `ticker_history`, `steady_yearly`, `momentum_top` / `momentum_bottom` (the 50 funds strongest / weakest over both 1 week and 1 month, which used to be report tabs), `zscore_matrix` (funds whose 1Y and 3Y Z-scores mark them as Core, Momentum or Value dip); save your own with `.save NAME` at the prompt.
 
 ## Automation (GitHub Actions)
 
@@ -220,4 +220,4 @@ ETF-Fund-Screener/
 
 ## Documentation
 
-- `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in the long-term profile (rebuild with `python docs/build_column_dictionary.py` after changing weights; add `input_files/profile_short_term.yaml` for the short-term weights)
+- `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in the long-term profile; also a sector reference tab (rebuild with `python docs/build_column_dictionary.py` after changing weights; add `input_files/profile_short_term.yaml` for the short-term weights)

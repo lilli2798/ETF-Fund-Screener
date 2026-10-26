@@ -367,7 +367,9 @@ D["Sharpe"] = ("Sharpe ratio computed by the screener from Yahoo daily prices ov
 D["Z Score"] = ("How many standard deviations the fund's Yahoo Sharpe is above (+) or below (-) the average of all funds with the same Yahoo Subsector.",
                 "Z = (fund Sharpe - mean Sharpe of its sub-sector) / std of Sharpe in its sub-sector; 0 if the sub-sector has no spread",
                 "Higher is better (> +1 clearly above peers, < -1 clearly below)",
-                "Peer group = Yahoo Subsector (not Morningstar Category), so a bond fund labelled 'Broad Market Equity' is compared with stock funds.", CALC,
+                "Peer group = Yahoo Subsector (not Morningstar Category), so a bond fund labelled 'Broad Market Equity' is compared with stock funds. "
+                "Read 1Y and 3Y together: both >= +1 = Core (long-term leader still leading); 1Y >= +1 but 3Y < 0 = Momentum (recent surge, tactical trade, not an anchor); "
+                "1Y < 0 but 3Y >= +1 = Value (strong record in a temporary slump, possible buy-the-dip). List them with: python db_access/query.py zscore_matrix", CALC,
                 used("risk_adjusted", [("3Y", "yahoo_zscore_3y"), ("1Y", "yahoo_zscore_1y")]))
 D["Yahoo Fetch Error"] = ("Message when Yahoo returned no data for the fund.", "", "Blank", "Funds with no Yahoo prices are moved to the 'No Yahoo Data' tab.", CALC, "No")
 D["Yahoo Data Suspect"] = ("1 if the fund is older than 3 years (per Morningstar) but has no Yahoo 3Y Sharpe / Z-score.", "Inception Date ≤ today - 3 years AND (Sharpe 3Y or Z Score 3Y blank)", "0",
@@ -578,11 +580,38 @@ concepts = pd.DataFrame([
             "Depends on Morningstar Category / on dominant industry", "Why"])
 concepts.insert(2, f"Effective share of {PA}", concepts["YAML weight"].map(lambda v: f"{v / TOTAL_CW:.1%}"))
 
+# Sector reference: the 11 GICS-style sectors and the sub-sectors that behave differently inside them
+sectors = pd.DataFrame([
+    ("Technology", "Growth anchor", "Highest internal dispersion; separating sub-sectors matters most here.",
+     "Semiconductors & Equipment (NVDA, AMD, TSM); Software & Services (MSFT, ORCL, CRM); Hardware, Storage & Peripherals (AAPL, HPQ); IT Services & Consulting (ACN, INFY)"),
+    ("Healthcare", "Defensive growth", "Defensive stability mixed with volatile, speculative biotech research.",
+     "Pharmaceuticals (LLY, JNJ, PFE); Biotechnology (AMGN, VRTX); Equipment & Supplies (MDT, ABT); Providers & Services (UNH, ELV)"),
+    ("Financials", "Interest-rate cyclical", "Sensitive to central-bank rates, credit expansion and the yield curve.",
+     "Banks (JPM, BAC, WFC); Financial Services / Capital Markets (V, MA, MS, GS); Insurance (BRK.B, PGR, MET)"),
+    ("Communication Services", "Modern media", "Classic telecom combined with digital advertising and entertainment.",
+     "Interactive Media (GOOGL, META); Entertainment & Streaming (NFLX, DIS); Telecom Services (T, VZ)"),
+    ("Consumer Cyclical", "Economic pulse", "Relies on disposable income: thrives in expansions, contracts sharply in recessions.",
+     "Automobiles (TSLA, F, GM); Broadline Retail & E-Commerce (AMZN); Hotels, Restaurants & Leisure (MCD, SBUX, BKNG); Durables & Apparel (NKE, HD)"),
+    ("Consumer Defensive", "Recession guard", "Essentials bought in any economy: low volatility, steady dividends.",
+     "Beverages & Tobacco (KO, PEP, PM); Food & Staples Retailing (WMT, COST); Household & Personal Products (PG, CL)"),
+    ("Energy", "Commodity cycle", "Tied to oil and gas prices and alternative power.",
+     "Oil, Gas & Fuels (XOM, CVX); Equipment & Services (SLB, HAL)"),
+    ("Industrials", "Capital expenditure", "Machinery, manufacturing, construction and logistics.",
+     "Aerospace & Defense (LMT, RTX); Transportation & Logistics (UPS, FDX, UNP); Machinery & Electrical Equipment (CAT, GE)"),
+    ("Materials", "Raw base", "Front of the supply chain: turns raw elements into materials for manufacturers.",
+     "Chemicals (LIN, DD); Metals & Mining (FCX, NUE, NEM); Containers & Packaging (IP)"),
+    ("Utilities", "Regulated income bond", "Heavily regulated and debt-financed, so they trade like a bond proxy.",
+     "Electric, Gas & Water (NEE, DUK, SO); Independent Power & Renewables (CEG)"),
+    ("Real Estate", "Hard-asset yield", "Owners and managers of income-producing property.",
+     "Equity REITs (PLD, AMT, O); Management & Development (CBRE)"),
+], columns=["Sector", "Character", "Behaviour", "Sub-sectors (example tickers)"])
+
 with pd.ExcelWriter(OUT, engine="openpyxl") as xw:
     dictionary.to_excel(xw, index=False, sheet_name="Column Dictionary")
     all_columns.to_excel(xw, index=False, sheet_name="All Report Columns")
     concepts.to_excel(xw, index=False, sheet_name="Scoring Concepts")
     vp.to_excel(xw, index=False, sheet_name="Volatile Periods")
+    sectors.to_excel(xw, index=False, sheet_name="Sectors")
 
 wb = load_workbook(OUT)
 fill = PatternFill("solid", fgColor="DDEBF7")
@@ -591,6 +620,7 @@ widths = {
     "All Report Columns": [55, 28, 32, 30, 32, 22, 60],
     "Scoring Concepts": [20, 10, 14, 40, 18, 24, 60],
     "Volatile Periods": [55, 16, 14, 12, 16, 12, 14, 10],
+    "Sectors": [24, 22, 55, 110],
 }
 for ws in wb.worksheets:
     for i, w in enumerate(widths[ws.title]):

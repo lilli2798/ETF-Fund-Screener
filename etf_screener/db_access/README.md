@@ -162,6 +162,13 @@ the description shown by `.queries`.
 value you must pass in when running it (`name=value`), or `{name=default}` for an
 optional one (`beat_trail` uses `{min_diff=20}`); quotes inside values are handled.
 
+Running a saved query by name (`beat_trail`, `.run beat_trail`) is easiest. You can
+also paste a saved query's SQL at the prompt or on the command line: `{name=default}`
+values are filled with their defaults, but a required `{name}` (like `{ticker}`)
+must be replaced with a value by hand. Running the `.sql` file directly from PyCharm
+or another SQL tool won't work: the tables only exist inside `query.py`, and the
+`{...}` placeholders aren't SQL.
+
 ## 6. When the data changes
 
 There is no database to update. Every run of `query.py` reads the current files:

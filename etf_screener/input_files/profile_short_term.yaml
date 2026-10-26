@@ -44,9 +44,7 @@ thresholds:
   require_category: false
   max_expense_ratio: 1.75            # percent
   require_fund_size: false
-  min_fund_size: null
   require_3y_return: false           # short-term picks don't need a 3-year history
-  min_3y_return: null
   exclude_leveraged_funds: true      # 2x/3x funds top every momentum list but lose value when held
   exclude_interval_funds: false
   exclude_tender_offer_funds: false

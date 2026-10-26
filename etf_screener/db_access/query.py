@@ -232,7 +232,9 @@ def fill_parameters(sql: str, params: list) -> str:
     values = dict(p.split("=", 1) for p in params if "=" in p)
     missing = sorted({m.group(1) for m in PARAMETER.finditer(sql) if m.group(2) is None} - set(values))
     if missing:
-        raise ValueError(f"This query needs: {', '.join(f'{m}=...' for m in missing)}")
+        raise ValueError(f"This query needs: {', '.join(f'{m}=...' for m in missing)} "
+                         f"(run it by name with those values, e.g. .run NAME {missing[0]}=..., "
+                         f"or replace {{{missing[0]}}} in the SQL with a value)")
     return PARAMETER.sub(lambda m: values.get(m.group(1), m.group(2)).replace("'", "''"), sql)
 
 
@@ -241,7 +243,7 @@ def query_text(name_or_sql: str, params: list) -> tuple:
     queries = saved_queries()
     if name_or_sql in queries:
         return name_or_sql, fill_parameters(queries[name_or_sql].read_text(), params)
-    return "query", name_or_sql
+    return "query", fill_parameters(name_or_sql, params)  # pasted saved-query text works too
 
 
 # ---------------------------------------------------------------------------
@@ -327,7 +329,7 @@ def interactive(session: Session) -> None:
         if stripped.endswith(";"):
             sql, buffer, label = "\n".join(buffer), [], "query"
             try:
-                show(session.run(sql))
+                show(session.run(fill_parameters(sql, [])))  # {name=default} -> default
             except Exception as exc:  # noqa: BLE001
                 print(f"Error: {exc}")
                 hint_columns(session, str(exc))

@@ -309,9 +309,7 @@ DEFAULT_THRESHOLDS = {
     "require_category": True,
     "max_expense_ratio": 0.75,
     "require_fund_size": True,
-    "min_fund_size": None,
     "require_3y_return": True,
-    "min_3y_return": None,
 
     # Structural/flag exclusions (see scoring.build_structure_flags).
     "exclude_leveraged_funds": True,

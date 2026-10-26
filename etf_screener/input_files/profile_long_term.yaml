@@ -42,18 +42,15 @@ thresholds:
   require_category: false            # Only include funds with a Morningstar Category assigned
 
   # COST FILTERS
-  max_expense_ratio: 1.75           # Maximum expense ratio (0.75% = 0.0075 as decimal)
+  max_expense_ratio: 1.25           # Maximum expense ratio, in percent (1.25 = 1.25%)
                                     # Set lower to only consider very low-cost funds
 
   # SIZE FILTERS
-  require_fund_size: false           # Require funds to meet minimum size threshold
-  min_fund_size: null               # Minimum fund size in dollars (null = no minimum)
-                                    # Example: 100000000 for $100M minimum
+  require_fund_size: false          # true = drop funds whose Fund Size is blank
 
   # PERFORMANCE FILTERS
-  require_3y_return: false           # Only include funds with 3-year return history
-  min_3y_return: null               # Minimum 3-year annualized return (null = no minimum)
-                                    # Example: 0.05 for 5% minimum annual return
+  require_3y_return: true           # true = drop funds with a blank Total Return (3Y), i.e. under 3 years old
+                                    # (to filter on the return's size, use SQL: db_access/query.py)
 
   # STRUCTURAL EXCLUSIONS (Hard filters - these funds are dropped entirely)
   # Leveraged funds use debt to amplify returns (e.g., 2x, 3x funds) - higher risk

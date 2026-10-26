@@ -19,3 +19,7 @@ etf_screener/output/*.xlsx
 
 # Excel lock files (created while a workbook is open)
 ~$*
+
+# PyCharm AI-assistant files
+.claude/
+.ai/

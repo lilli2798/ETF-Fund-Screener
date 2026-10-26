@@ -14,13 +14,19 @@ Updated after the scoring.py refactor:
     the .xlsx file. The old version of this script filtered on
     underscore-style names, which never matched the actual exported
     headers (a pre-existing bug, independent of the scoring refactor).
-  - Profile A now also produces an overall (cross-category) rank and
+  - Profiles now also produce an overall (cross-category) rank and
     selected-flag, in addition to the per-category ones -- both are
     now captured here too.
+  - Profile columns carry the profile key ("Profile LT Score",
+    "Profile ST Score", older reports "Profile A Score"). The key is
+    dropped on load ("Profile Score"), so reports from any profile can
+    be compared with each other. A combined report (LT and ST columns)
+    is compared on its first profile, LT.
 """
 
 import argparse
 import os
+import re
 from datetime import datetime
 from itertools import combinations
 from typing import Dict, Any, List
@@ -38,23 +44,29 @@ SCORE_AND_RANK_PREFIXES = (
     "Short Term Return Performance Score",
     "Risk Adjusted Score",
     "Volatility Score",
+    "Resilience Score",
     "Tracking Score",
     "Liquidity Size Score",
     "Quality Valuation Score",
     "Costs Score",
     "Tax Income Score",
-    # Profile A composite score, ranks, and selection flags
-    "Profile A Score",
-    "Profile A Rank In Category",
-    "Profile A Selected Flag",
-    "Profile A Rank Overall",
-    "Profile A Selected Overall Flag",
+    # Profile composite score, ranks, and selection flags (key dropped,
+    # see PROFILE_COLUMN)
+    "Profile Score",
+    "Profile Rank In Category",
+    "Profile Selected Flag",
+    "Profile Rank Overall",
+    "Profile Selected Overall Flag",
     # Additional comparison metrics
     "Better Worst Diff",
     "Better %",
     "Worst %",
     "Worst Three Month Return",
 )
+
+
+# "Profile LT Score" -> "Profile Score" (any profile key)
+PROFILE_COLUMN = re.compile(r"^Profile \w+ (Score|Rank In Category|Selected Flag|Rank Overall|Selected Overall Flag)$")
 
 
 def load_recorder(output_dir: str) -> dict:
@@ -65,6 +77,10 @@ def load_recorder(output_dir: str) -> dict:
 
 def build_file_ticker_map(output_dir: str, filename: str, recorder: dict, ticker_col: str = "Ticker") -> Dict[str, Any]:
     df = pd.read_excel(os.path.join(output_dir, filename))
+    # A combined report has several profiles; keep the first one's columns.
+    keys = [c.split()[1] for c in df.columns if isinstance(c, str) and PROFILE_COLUMN.match(c)]
+    df = df.rename(columns=lambda c: PROFILE_COLUMN.sub(r"Profile \1", c)
+                   if isinstance(c, str) and PROFILE_COLUMN.match(c) and c.split()[1] == keys[0] else c)
     relevant_cols = [c for c in df.columns if c in SCORE_AND_RANK_PREFIXES]
     tickers = {}
     for _, row in df.iterrows():
@@ -89,10 +105,10 @@ def find_flag_differences_pair(comparison_map: Dict[str, Any], file_a: str, file
     all_tickers = sorted(set(tickers_a) | set(tickers_b))
     rows = []
     for ticker in all_tickers:
-        flag_a = tickers_a.get(ticker, {}).get("Profile A Selected Flag")
-        flag_b = tickers_b.get(ticker, {}).get("Profile A Selected Flag")
-        overall_flag_a = tickers_a.get(ticker, {}).get("Profile A Selected Overall Flag")
-        overall_flag_b = tickers_b.get(ticker, {}).get("Profile A Selected Overall Flag")
+        flag_a = tickers_a.get(ticker, {}).get("Profile Selected Flag")
+        flag_b = tickers_b.get(ticker, {}).get("Profile Selected Flag")
+        overall_flag_a = tickers_a.get(ticker, {}).get("Profile Selected Overall Flag")
+        overall_flag_b = tickers_b.get(ticker, {}).get("Profile Selected Overall Flag")
         if flag_a != flag_b or overall_flag_a != overall_flag_b:
             rows.append({
                 "Ticker": ticker,
@@ -102,12 +118,12 @@ def find_flag_differences_pair(comparison_map: Dict[str, Any], file_a: str, file
                 "Flag_In_Category_file_b": flag_b,
                 "Flag_Overall_file_a": overall_flag_a,
                 "Flag_Overall_file_b": overall_flag_b,
-                "Score_file_a": tickers_a.get(ticker, {}).get("Profile A Score"),
-                "Score_file_b": tickers_b.get(ticker, {}).get("Profile A Score"),
-                "Rank_In_Category_file_a": tickers_a.get(ticker, {}).get("Profile A Rank In Category"),
-                "Rank_In_Category_file_b": tickers_b.get(ticker, {}).get("Profile A Rank In Category"),
-                "Rank_Overall_file_a": tickers_a.get(ticker, {}).get("Profile A Rank Overall"),
-                "Rank_Overall_file_b": tickers_b.get(ticker, {}).get("Profile A Rank Overall"),
+                "Score_file_a": tickers_a.get(ticker, {}).get("Profile Score"),
+                "Score_file_b": tickers_b.get(ticker, {}).get("Profile Score"),
+                "Rank_In_Category_file_a": tickers_a.get(ticker, {}).get("Profile Rank In Category"),
+                "Rank_In_Category_file_b": tickers_b.get(ticker, {}).get("Profile Rank In Category"),
+                "Rank_Overall_file_a": tickers_a.get(ticker, {}).get("Profile Rank Overall"),
+                "Rank_Overall_file_b": tickers_b.get(ticker, {}).get("Profile Rank Overall"),
             })
     return pd.DataFrame(rows)
 
@@ -174,7 +190,7 @@ def main():
         print("  concept_weights (column-level):", comparison_map[fn]["concept_weights"])
 
     flag_diff_df = find_all_flag_differences(comparison_map, filenames)
-    print("\n=== All pairwise Profile A Selected Flag differences (category + overall) ===")
+    print("\n=== All pairwise Profile Selected Flag differences (category + overall) ===")
     print(flag_diff_df.to_string(index=False) if not flag_diff_df.empty else "No differences across any pair.")
 
     matrix_df = build_ticker_matrix(comparison_map, filenames)

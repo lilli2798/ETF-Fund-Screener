@@ -3,7 +3,7 @@ ETF Fund Screener - Configuration File
 
 This file contains all the default settings, weights, and thresholds used by
 the screener. You typically don't need to edit this file directly - most
-settings can be overridden in your YAML configuration file (e.g., input_profile_a.yaml).
+settings can be overridden in your YAML configuration file (e.g., input_files/profile_long_term.yaml).
 
 IMPORTANT NOTE ABOUT COLUMN NAMES:
   The STRUCT_NEEDED_COLS and PERF_NEEDED_COLS lists below must match the EXACT
@@ -24,7 +24,14 @@ DEFAULT_DATA_PATH: str = "data"
 DEFAULT_OUT_PATH: str = "../output/etf_screener"
 
 # Default profile to run when none is specified.
-DEFAULT_PROFILE_NAME: str = "A"
+DEFAULT_PROFILE_NAME: str = "LT"
+
+# Profile YAMLs run_ci.py runs (in this order) and alerts.py reports on,
+# relative to the etf_screener/ folder.
+PROFILE_INPUT_FILES: list = [
+    "input_files/profile_long_term.yaml",
+    "input_files/profile_short_term.yaml",
+]
 
 # Calendar-year returns maintained by yahoo_returns/yearly_cache_manager.py
 # (updated by the yearly GitHub workflow). The most recent N years are
@@ -141,28 +148,30 @@ NEEDED_COLS: List[str] = [
     "Redemption Fee",
 ]
 
-# Weights used by Profile A's composite score. Exposed here (rather than
-# hardcoded in scoring.py) so future profiles can reuse the same knobs
-# with different weightings, and so you can tune Profile A without
-# touching scoring logic.
+# Fallback profile-level weights, used when a profile YAML has no
+# `weights:` section. Exposed here (rather than hardcoded in scoring.py)
+# so profiles can reuse the same knobs with different weightings
+# without touching scoring logic.
 #
 # NOTE: these keys map to scoring.py's per-CONCEPT scores (each already
 # 0-100 and category-relative), not to individual raw metrics anymore.
-# See profiles/profile_a.py::compute_profile_A_score() for the mapping:
+# See profiles/weighted_profile.py::compute_score() for the mapping:
 #   long_term_return_performance -> Long_Term_Return_Performance_Score
 #   short_term_return_performance -> Short_Term_Return_Performance_Score
 #   risk_adjusted       -> Risk_Adjusted_Score
-#   volatility          -> Volatility_Score      (lower vol/drawdown is better -- inverted in scoring)
+#   volatility          -> Volatility_Score      (steadier is better: lower std dev, drawdown closer to 0)
+#   resilience          -> Resilience_Score      (beat the indexes in calendar years and volatile periods)
 #   tracking            -> Tracking_Score         (lower tracking error is better -- inverted in scoring)
 #   liquidity_size       -> Liquidity_Size_Score
 #   quality_valuation    -> Quality_Valuation_Score
 #   costs               -> Costs_Score            (lower cost is better -- inverted in scoring)
 #   tax_income          -> Tax_Income_Score
-PROFILE_A_WEIGHTS = {
+DEFAULT_PROFILE_WEIGHTS = {
     "long_term_return_performance": 0.25,
     "short_term_return_performance": 0.10,
     "risk_adjusted": 0.20,
     "volatility": 0.15,
+    "resilience": 0.00,
     "tracking": 0.05,
     "liquidity_size": 0.05,
     "quality_valuation": 0.10,
@@ -183,6 +192,7 @@ MORNINGSTAR_LONG_TERM_WEIGHTS = {
     "short_term_return_performance": 0.00,  # Not used in Morningstar's criteria
     "risk_adjusted": 0.20,  # 3Y Sharpe: 20%
     "volatility": 0.15,  # Drawdown: 15%
+    "resilience": 0.00,  # Not used in Morningstar's criteria
     "tracking": 0.00,  # Not used in Morningstar's criteria
     "liquidity_size": 0.00,  # Not used in Morningstar's criteria
     "quality_valuation": 0.10,  # Quality: 10%
@@ -192,7 +202,7 @@ MORNINGSTAR_LONG_TERM_WEIGHTS = {
 
 # Column-level weights INSIDE each concept function (e.g. how much
 # Total Return 3Y vs 5Y counts within Performance_Score). These are
-# separate from PROFILE_A_WEIGHTS above, which controls how much each
+# separate from DEFAULT_PROFILE_WEIGHTS above, which controls how much each
 # whole CONCEPT counts relative to the other concepts.
 #
 # This is the canonical default schema for `thresholds.concept_weights`
@@ -234,11 +244,35 @@ DEFAULT_CONCEPT_WEIGHTS = {
         "yahoo_sharpe_1y": 0.15,
         "yahoo_zscore_3y": 0.10,
         "yahoo_zscore_1y": 0.15,
+        # Other periods (0.0 = not used unless a profile YAML sets them)
+        "sharpe_5y": 0.00,
+        "sharpe_10y": 0.00,
+        "upside_1y": 0.00,
+        "upside_5y": 0.00,
+        "upside_10y": 0.00,
+        "downside_1y": 0.00,
+        "downside_5y": 0.00,
+        "downside_10y": 0.00,
     },
     "volatility": {
         "stdev_3y": 0.45,
         "drawdown_3y": 0.30,
         "drawdown_5y": 0.25,
+        "stdev_1y": 0.00,
+        "stdev_5y": 0.00,
+        "stdev_10y": 0.00,
+        "drawdown_1y": 0.00,
+        "drawdown_10y": 0.00,
+    },
+    # Consistency & crash resilience (Resilience_Score). Concept weight is
+    # 0 in DEFAULT_PROFILE_WEIGHTS, so it only counts when a profile YAML
+    # gives `weights.resilience` a value.
+    "resilience": {
+        "yearly_beat_pct": 0.25,          # % of calendar years the fund beat all indexes
+        "yearly_bottom_10_share": 0.15,   # share of years in the bottom 10% (lower is better)
+        "volatile_beat_pct": 0.25,        # % of volatile periods the fund beat all indexes
+        "volatile_bottom_10_share": 0.15, # share of volatile periods in the bottom 10% (lower is better)
+        "worst_3m_return": 0.20,          # Worst Three Month Return (higher is better)
     },
     "tracking": {
         "tracking_error_3y": 0.65,
@@ -309,11 +343,32 @@ MORNINGSTAR_CONCEPT_WEIGHTS = {
         "yahoo_sharpe_1y": 0.00,  # Not used
         "yahoo_zscore_3y": 0.00,  # Not used
         "yahoo_zscore_1y": 0.00,  # Not used
+        # Other periods (0.0 = not used unless a profile YAML sets them)
+        "sharpe_5y": 0.00,
+        "sharpe_10y": 0.00,
+        "upside_1y": 0.00,
+        "upside_5y": 0.00,
+        "upside_10y": 0.00,
+        "downside_1y": 0.00,
+        "downside_5y": 0.00,
+        "downside_10y": 0.00,
     },
     "volatility": {
         "stdev_3y": 0.00,  # Not used - drawdown is the key metric
         "drawdown_3y": 0.50,  # 3Y drawdown (50% of volatility weight)
         "drawdown_5y": 0.50,  # 5Y drawdown (50% of volatility weight)
+        "stdev_1y": 0.00,
+        "stdev_5y": 0.00,
+        "stdev_10y": 0.00,
+        "drawdown_1y": 0.00,
+        "drawdown_10y": 0.00,
+    },
+    "resilience": {
+        "yearly_beat_pct": 0.00,  # Not used
+        "yearly_bottom_10_share": 0.00,
+        "volatile_beat_pct": 0.00,
+        "volatile_bottom_10_share": 0.00,
+        "worst_3m_return": 0.00,
     },
     "tracking": {
         "tracking_error_3y": 0.00,  # Not used in Morningstar's criteria
@@ -385,8 +440,13 @@ DEFAULT_THRESHOLDS = {
     "min_initial_investment": 50000,  # Remove funds requiring a larger minimum initial investment ($)
     "max_redemption_fee": 0.0,  # Maximum redemption fee (0.0 = no fee allowed)
 
+    # Benchmark filter (profiles/weighted_profile.apply_filters): keep funds
+    # whose Yearly Beat % is at least min_benchmark_beat_pct (or unknown).
+    "require_benchmark_outperformance": False,
+    "min_benchmark_beat_pct": 50.0,
+
     # Profile-level concept weights (how much each concept counts).
-    "weights": PROFILE_A_WEIGHTS,
+    "weights": DEFAULT_PROFILE_WEIGHTS,
 
     # Column-level weights inside each concept (how much each raw
     # metric counts within its own concept score).

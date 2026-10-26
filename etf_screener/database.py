@@ -108,6 +108,7 @@ class ETFScreenerDatabase:
                 short_term_return_performance_score REAL,
                 risk_adjusted_score REAL,
                 volatility_score REAL,
+                resilience_score REAL,
                 tracking_score REAL,
                 liquidity_size_score REAL,
                 quality_valuation_score REAL,
@@ -118,6 +119,13 @@ class ETFScreenerDatabase:
                 FOREIGN KEY (ticker) REFERENCES funds(ticker)
             )
         """)
+
+        # Resilience score was added later; add the column to existing databases
+        try:
+            cursor.execute("ALTER TABLE concept_scores ADD COLUMN resilience_score REAL")
+        except sqlite3.OperationalError:
+            # Column already exists, ignore error
+            pass
 
         # Additional metrics table - additional metrics per fund per run
         cursor.execute("""
@@ -197,7 +205,7 @@ class ETFScreenerDatabase:
             json.dumps(weights_dict),
             json.dumps(concept_weights_dict),
             len(df),
-            len(df[df.get("Profile A Selected Flag", pd.Series([False] * len(df))) == True])
+            len(df[df.get(f"Profile {profile_name} Selected Flag", pd.Series([False] * len(df))) == True])
         ))
 
         # Save/update funds table (static fund information with ratings)
@@ -257,11 +265,11 @@ class ETFScreenerDatabase:
 
         # Save to fund_scores table
         fund_score_columns = {
-            'profile_score': 'Profile A Score',
-            'rank_in_category': 'Profile A Rank In Category',
-            'rank_overall': 'Profile A Rank Overall',
-            'selected_flag_category': 'Profile A Selected Flag',
-            'selected_flag_overall': 'Profile A Selected Overall Flag'
+            'profile_score': f'Profile {profile_name} Score',
+            'rank_in_category': f'Profile {profile_name} Rank In Category',
+            'rank_overall': f'Profile {profile_name} Rank Overall',
+            'selected_flag_category': f'Profile {profile_name} Selected Flag',
+            'selected_flag_overall': f'Profile {profile_name} Selected Overall Flag'
         }
 
         for _, row in df.iterrows():
@@ -292,6 +300,7 @@ class ETFScreenerDatabase:
             'short_term_return_performance_score': 'Short Term Return Performance Score',
             'risk_adjusted_score': 'Risk Adjusted Score',
             'volatility_score': 'Volatility Score',
+            'resilience_score': 'Resilience Score',
             'tracking_score': 'Tracking Score',
             'liquidity_size_score': 'Liquidity Size Score',
             'quality_valuation_score': 'Quality Valuation Score',
@@ -311,8 +320,8 @@ class ETFScreenerDatabase:
                     INSERT OR REPLACE INTO concept_scores 
                     (run_id, ticker, long_term_return_performance_score, short_term_return_performance_score,
                      risk_adjusted_score, volatility_score, tracking_score, liquidity_size_score,
-                     quality_valuation_score, costs_score, tax_income_score)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     quality_valuation_score, costs_score, tax_income_score, resilience_score)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     run_id,
                     ticker,
@@ -324,7 +333,8 @@ class ETFScreenerDatabase:
                     concept_data.get('liquidity_size_score'),
                     concept_data.get('quality_valuation_score'),
                     concept_data.get('costs_score'),
-                    concept_data.get('tax_income_score')
+                    concept_data.get('tax_income_score'),
+                    concept_data.get('resilience_score')
                 ))
 
         # Save to additional_metrics table
@@ -432,6 +442,7 @@ class ETFScreenerDatabase:
                 cs.short_term_return_performance_score,
                 cs.risk_adjusted_score,
                 cs.volatility_score,
+                cs.resilience_score,
                 cs.tracking_score,
                 cs.liquidity_size_score,
                 cs.quality_valuation_score,
@@ -559,7 +570,7 @@ class ETFScreenerDatabase:
         if metric in ['better_worst_diff', 'better_pct', 'worst_pct', 'worst_three_month_return']:
             table = 'additional_metrics'
         elif metric in ['long_term_return_performance_score', 'short_term_return_performance_score', 
-                       'risk_adjusted_score', 'volatility_score', 'tracking_score', 
+                       'risk_adjusted_score', 'volatility_score', 'resilience_score', 'tracking_score', 
                        'liquidity_size_score', 'quality_valuation_score', 'costs_score', 'tax_income_score']:
             table = 'concept_scores'
         elif metric in ['profile_score', 'rank_in_category', 'rank_overall']:
@@ -637,6 +648,7 @@ class ETFScreenerDatabase:
                 cs.short_term_return_performance_score,
                 cs.risk_adjusted_score,
                 cs.volatility_score,
+                cs.resilience_score,
                 cs.tracking_score,
                 cs.liquidity_size_score,
                 cs.quality_valuation_score,

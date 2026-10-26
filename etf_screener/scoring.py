@@ -23,7 +23,7 @@ import pandas as pd
 from config import GRADE_TO_NUMERIC, MEDALIST_TO_NUMERIC, STAR_RATING_TO_NUMERIC
 
 # --- Profile registry -------------------------------------------------
-# Each profile module (e.g. profiles/profile_a.py) registers its own
+# Each profile module (e.g. profiles/weighted_profile.py) registers its own
 # eligibility-filter function and scoring function here via the
 # decorators below. main.py never needs to know how many profiles exist
 # or what their names are -- it just looks them up by profile_name.
@@ -186,8 +186,18 @@ REQUIRED_CONCEPT_KEYS: Dict[str, List[str]] = {
     "risk_adjusted": [
         "sharpe_3y", "sharpe_1y", "upside", "downside",
         "yahoo_sharpe_3y", "yahoo_sharpe_1y", "yahoo_zscore_3y", "yahoo_zscore_1y",
+        "sharpe_5y", "sharpe_10y",
+        "upside_1y", "upside_5y", "upside_10y",
+        "downside_1y", "downside_5y", "downside_10y",
     ],
-    "volatility": ["stdev_3y", "drawdown_3y", "drawdown_5y"],
+    "volatility": [
+        "stdev_3y", "drawdown_3y", "drawdown_5y",
+        "stdev_1y", "stdev_5y", "stdev_10y", "drawdown_1y", "drawdown_10y",
+    ],
+    "resilience": [
+        "yearly_beat_pct", "yearly_bottom_10_share",
+        "volatile_beat_pct", "volatile_bottom_10_share", "worst_3m_return",
+    ],
     "tracking": ["tracking_error_3y", "tracking_error_1y"],
     "liquidity_size": ["fund_size", "trading_volume"],
     "quality_valuation": ["growth_grade", "financial_health", "profitability_grade", "price_fair_value", "medalist", "star_rating", "economic_moat_wide"],
@@ -367,6 +377,8 @@ def calculate_risk_adjusted_score(
     Risk-adjusted score blending Morningstar Sharpe/upside/downside with
     Yahoo-derived Sharpe and sector-relative Z-scores when available.
     Downside capture is inverted (lower downside capture = better).
+    `upside` / `downside` are the 3Y capture ratios; the other periods
+    have their own keys (upside_1y, downside_10y, ...).
     Missing Yahoo data simply drops out of the row-wise weighted average
     instead of penalizing the fund.
     """
@@ -383,6 +395,13 @@ def calculate_risk_adjusted_score(
     out["Norm_Yahoo_Sharpe_1Y"] = normalize_within_category(df, "Sharpe_1Y", category_col)
     out["Norm_Yahoo_ZScore_3Y"] = normalize_within_category(df, "Z_Score_3Y", category_col)
     out["Norm_Yahoo_ZScore_1Y"] = normalize_within_category(df, "Z_Score_1Y", category_col)
+    for period in ("5Y", "10Y"):
+        out[f"Norm_Sharpe_{period}"] = normalize_within_category(df, f"Sharpe Ratio ({period} Monthly)", category_col)
+    for period in ("1Y", "5Y", "10Y"):
+        out[f"Norm_Upside_Capture_{period}"] = normalize_within_category(df, f"Upside Capture Ratio ({period})", category_col)
+        out[f"Norm_Downside_Capture_{period}"] = normalize_within_category(
+            df, f"Downside Capture Ratio ({period})", category_col, invert=True
+        )
 
     weight_map = {
         "Norm_Sharpe_3Y": weights["sharpe_3y"],
@@ -393,6 +412,14 @@ def calculate_risk_adjusted_score(
         "Norm_Yahoo_Sharpe_1Y": weights["yahoo_sharpe_1y"],
         "Norm_Yahoo_ZScore_3Y": weights["yahoo_zscore_3y"],
         "Norm_Yahoo_ZScore_1Y": weights["yahoo_zscore_1y"],
+        "Norm_Sharpe_5Y": weights["sharpe_5y"],
+        "Norm_Sharpe_10Y": weights["sharpe_10y"],
+        "Norm_Upside_Capture_1Y": weights["upside_1y"],
+        "Norm_Upside_Capture_5Y": weights["upside_5y"],
+        "Norm_Upside_Capture_10Y": weights["upside_10y"],
+        "Norm_Downside_Capture_1Y": weights["downside_1y"],
+        "Norm_Downside_Capture_5Y": weights["downside_5y"],
+        "Norm_Downside_Capture_10Y": weights["downside_10y"],
     }
     return _weighted_average(out, weight_map)
 
@@ -405,27 +432,77 @@ def calculate_volatility_score(
     weights: Optional[Dict[str, float]] = None,
 ) -> pd.Series:
     """
-    Standard Deviation (3Y) and Max Drawdown (3Y/5Y), all inverted
-    (lower volatility/drawdown = higher score) and normalized within
-    category.
+    Standard Deviation (1Y/3Y/5Y/10Y) and Max Drawdown (1Y/3Y/5Y/10Y),
+    normalized within category so steadier funds score higher. Standard
+    deviation is inverted (lower = better). Max drawdown is NOT inverted:
+    Morningstar reports it as a negative percent (-35 = a 35% loss), so
+    the higher (closer to 0) value is already the better one.
     """
     weights = _require_weights(weights, "volatility")
 
     out = pd.DataFrame(index=df.index)
-    out["Norm_Stdev_3Y"] = normalize_within_category(
-        df, "Standard Deviation (3Y Monthly)", category_col, invert=True
-    )
-    out["Norm_Drawdown_3Y"] = normalize_within_category(
-        df, "Maximum Drawdown (3Y)", category_col, invert=True
-    )
-    out["Norm_Drawdown_5Y"] = normalize_within_category(
-        df, "Maximum Drawdown (5Y)", category_col, invert=True
-    )
+    for period in ("1Y", "3Y", "5Y", "10Y"):
+        out[f"Norm_Stdev_{period}"] = normalize_within_category(
+            df, f"Standard Deviation ({period} Monthly)", category_col, invert=True
+        )
+        out[f"Norm_Drawdown_{period}"] = normalize_within_category(
+            df, f"Maximum Drawdown ({period})", category_col
+        )
 
     weight_map = {
+        "Norm_Stdev_1Y": weights["stdev_1y"],
         "Norm_Stdev_3Y": weights["stdev_3y"],
+        "Norm_Stdev_5Y": weights["stdev_5y"],
+        "Norm_Stdev_10Y": weights["stdev_10y"],
+        "Norm_Drawdown_1Y": weights["drawdown_1y"],
         "Norm_Drawdown_3Y": weights["drawdown_3y"],
         "Norm_Drawdown_5Y": weights["drawdown_5y"],
+        "Norm_Drawdown_10Y": weights["drawdown_10y"],
+    }
+    return _weighted_average(out, weight_map)
+
+
+# --- 3b. Consistency & crash resilience ----------------------------------
+
+def calculate_resilience_score(
+    df: pd.DataFrame,
+    category_col: str = DEFAULT_CATEGORY_COL,
+    weights: Optional[Dict[str, float]] = None,
+) -> pd.Series:
+    """
+    How a fund held up year after year and in the S&P 500's volatile
+    periods (crashes and recoveries), from the columns added by
+    performance.attach_yearly_stats() / attach_volatile_performance():
+      - Yearly Beat % / Volatile Beat %: share of years / periods the fund
+        beat all the indexes (higher = better)
+      - Bottom 10% share: Bottom 10% Count / Periods With Data, so funds
+        with longer histories aren't penalized for having more periods
+        (lower = better)
+      - Worst Three Month Return (negative percent; higher = better)
+    Funds with no yearly or volatile-period data get NaN for those inputs,
+    which drop out of the weighted average.
+    """
+    weights = _require_weights(weights, "resilience")
+
+    out = pd.DataFrame(index=df.index)
+    for prefix in ("Yearly", "Volatile"):
+        count_col = f"{prefix} Bottom 10% Count"
+        periods_col = f"{prefix} Periods With Data"
+        if count_col in df.columns and periods_col in df.columns:
+            periods = pd.to_numeric(df[periods_col], errors="coerce")
+            share = pd.to_numeric(df[count_col], errors="coerce") / periods.where(periods > 0)
+            out[f"Norm_{prefix}_Bottom_10_Share"] = normalize_within_category(
+                df.assign(_bottom_10_share=share), "_bottom_10_share", category_col, invert=True
+            )
+        out[f"Norm_{prefix}_Beat_Pct"] = normalize_within_category(df, f"{prefix} Beat %", category_col)
+    out["Norm_Worst_3M_Return"] = normalize_within_category(df, "Worst Three Month Return", category_col)
+
+    weight_map = {
+        "Norm_Yearly_Beat_Pct": weights["yearly_beat_pct"],
+        "Norm_Yearly_Bottom_10_Share": weights["yearly_bottom_10_share"],
+        "Norm_Volatile_Beat_Pct": weights["volatile_beat_pct"],
+        "Norm_Volatile_Bottom_10_Share": weights["volatile_bottom_10_share"],
+        "Norm_Worst_3M_Return": weights["worst_3m_return"],
     }
     return _weighted_average(out, weight_map)
 
@@ -800,7 +877,7 @@ def build_concept_scores(
     `concept_weights` lets you override the COLUMN-level weights inside
     each concept function (e.g. how much Total Return 3Y vs 5Y counts
     within Performance_Score), separate from the profile-level weights
-    in PROFILE_A_WEIGHTS (which control how much each concept counts
+    in config.DEFAULT_PROFILE_WEIGHTS (which control how much each concept counts
     relative to the other concepts). Pass a dict keyed by concept name,
     each mapping to that concept function's own weight keys, e.g.:
 
@@ -818,6 +895,7 @@ def build_concept_scores(
       - Short_Term_Return_Performance_Score (aggregates 1W-YTD returns)
       - Risk_Adjusted_Score
       - Volatility_Score
+      - Resilience_Score (yearly consistency + volatile-period results)
       - Tracking_Score
       - Liquidity_Size_Score
       - Quality_Valuation_Score
@@ -843,6 +921,9 @@ def build_concept_scores(
     )
     out["Volatility_Score"] = calculate_volatility_score(
         out, category_col, weights=cw.get("volatility")
+    )
+    out["Resilience_Score"] = calculate_resilience_score(
+        out, category_col, weights=cw.get("resilience")
     )
     out["Tracking_Score"] = calculate_tracking_score(
         out, category_col, weights=cw.get("tracking")

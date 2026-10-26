@@ -1,20 +1,24 @@
 # ============================================================================
-# ETF Fund Screener - Profile A Configuration
+# ETF Fund Screener - Long-Term Profile (LT)
 # ============================================================================
 #
 # This file controls how the screener analyzes and ranks ETFs.
-# Profile A is designed for long-term, low-risk, steady-return investing.
+# The long-term profile is designed for long-term, low-risk, steady-return
+# investing. Its short-term counterpart is profile_short_term.yaml.
 #
 # QUICK START:
 # 1. Update the file paths below to point to your Morningstar Excel exports
 # 2. Adjust the thresholds and weights to match your preferences
-# 3. Run: python main.py
-# 4. When prompted, enter the path to this YAML file
+# 3. Run: python main.py   (enter input_files/profile_long_term.yaml when asked)
+#    or:  python run_ci.py  (all profiles in config.PROFILE_INPUT_FILES, one report)
 #
 # ============================================================================
 
-# Which investment profile to use (A = long-term, low-risk strategy)
-profile: A
+# Profile key: names its score columns (Profile LT Score, ...) and
+# the report (results_profile_LT_ST_... when run with the other profiles,
+# results_profile_LT_... when run alone). Must be listed in
+# profiles/weighted_profile.py PROFILE_KEYS.
+profile: LT
 
 # INPUT FILES: Point this to your Morningstar Excel export directory
 data_path: data/   # Contains all Morningstar data files (performance + structural combined)
@@ -99,13 +103,17 @@ thresholds:
   weights:
     # How much historical returns matter (split into long-term and short-term)
     long_term_return_performance: 0.25 # Aggregates 1Y-20Y returns for consistent long-term performance
-    short_term_return_performance: 0.10 # Aggregates 1W-YTD returns for recent momentum
+    short_term_return_performance: 0.05 # Aggregates 1W-YTD returns for recent momentum
 
     # How much risk-adjusted performance matters
     risk_adjusted: 0.20
 
     # How much volatility/downside risk matters
     volatility: 0.15
+
+    # How consistently the fund beat the indexes, year by year and in the
+    # S&P 500's volatile periods (crashes and recoveries)
+    resilience: 0.10
 
     # How much tracking error matters
     # Lower tracking error = fund follows its benchmark more closely
@@ -115,7 +123,7 @@ thresholds:
     liquidity_size: 0.05
 
     # How much portfolio quality and valuation matter
-    quality_valuation: 0.15
+    quality_valuation: 0.10
     costs: 0.10
     tax_income: 0.00
 
@@ -177,20 +185,21 @@ thresholds:
 
   concept_weights:
     # LONG-TERM RETURN PERFORMANCE: Aggregates 1Y-20Y returns for consistent performance
-    # Equal weights all available periods by default (sums to 1.0)
+    # Weighted toward full market cycles (5Y, 10Y, 15Y); 1Y-2Y count little
+    # because the short-term profile covers recent results. Sums to 1.0.
     long_term_return_performance:
-      return_1y: 0.15  # 1/12 ≈ 8.33%
-      return_2y: 0.10  # 1/12 ≈ 8.33%
-      return_3y: 0.095  # 1/12 ≈ 8.33%
-      return_4y: 0.085  # 1/12 ≈ 8.33%
-      return_5y: 0.075  # 1/12 ≈ 8.33%
-      return_6y: 0.06  # 1/12 ≈ 8.33%
-      return_7y: 0.06  # 1/12 ≈ 8.33%
-      return_8y: 0.06  # 1/12 ≈ 8.33%
-      return_9y: 0.065  # 1/12 ≈ 8.33%
-      return_10y: 0.07 # 1/12 ≈ 8.33%
-      return_15y: 0.085 # 1/12 ≈ 8.33%
-      return_20y: 0.09 # 1/12 ≈ 8.35% (adjusted to sum to 1.0)
+      return_1y: 0.03
+      return_2y: 0.04
+      return_3y: 0.08
+      return_4y: 0.08
+      return_5y: 0.15
+      return_6y: 0.07
+      return_7y: 0.07
+      return_8y: 0.07
+      return_9y: 0.07
+      return_10y: 0.15
+      return_15y: 0.12
+      return_20y: 0.07  # few funds are 20 years old
 
     # SHORT-TERM RETURN PERFORMANCE: Aggregates 1W-YTD returns for recent momentum
     # Equal weights all available periods by default (sums to 1.0)
@@ -205,24 +214,46 @@ thresholds:
       return_ytd: 0.05  # 1/8 = 12.5%
 
     # RISK-ADJUSTED: How different risk metrics are weighted
+    # Sums to 1.0. Longer periods (5Y, 10Y) cover more than one market cycle.
     risk_adjusted:
-      sharpe_3y: 0.45      # 3-year Sharpe ratio (return per unit of risk)
-      sharpe_1y: 0.10      # 1-year Sharpe ratio
-      upside: 0.25         # Upside capture (how well fund gains in up markets)
-      downside: 0.20        # Downside capture (how well fund protects in down markets)
+      sharpe_1y: 0.05      # Morningstar Sharpe ratio (return per unit of risk)
+      sharpe_3y: 0.20
+      sharpe_5y: 0.15
+      sharpe_10y: 0.10
+      upside: 0.10         # 3Y upside capture (how well fund gains in up markets)
+      upside_1y: 0.00
+      upside_5y: 0.00
+      upside_10y: 0.00
+      downside: 0.10       # 3Y downside capture (how well fund protects in down markets)
+      downside_1y: 0.00
+      downside_5y: 0.05
+      downside_10y: 0.05
       # Yahoo Finance metrics (columns Sharpe 1y/3y, Z Score 1y/3y in the report).
-      # Weights are relative: this block sums to 1.50, so Yahoo is 0.50 / 1.50
-      # = 1/3 of the Risk-Adjusted score. Set to 0.0 to leave Yahoo out.
-      yahoo_sharpe_3y: 0.10  # Yahoo 3-year Sharpe ratio (daily prices)
-      yahoo_sharpe_1y: 0.15  # Yahoo 1-year Sharpe ratio
-      yahoo_zscore_3y: 0.10  # 3Y Sharpe vs funds in the same Yahoo sub-sector
-      yahoo_zscore_1y: 0.15  # 1Y Sharpe vs funds in the same Yahoo sub-sector
+      # 0.20 of 1.0 = 20% of the Risk-Adjusted score. Set to 0.0 to leave Yahoo out.
+      yahoo_sharpe_3y: 0.05  # Yahoo 3-year Sharpe ratio (daily prices)
+      yahoo_sharpe_1y: 0.05  # Yahoo 1-year Sharpe ratio
+      yahoo_zscore_3y: 0.05  # 3Y Sharpe vs funds in the same Yahoo sub-sector
+      yahoo_zscore_1y: 0.05  # 1Y Sharpe vs funds in the same Yahoo sub-sector
 
     # VOLATILITY: How different volatility measures are weighted
+    # Sums to 1.0. Drawdown = largest peak-to-trough loss (closer to 0 is better).
     volatility:
-      stdev_3y: 0.35       # 3-year standard deviation (price volatility)
-      drawdown_3y: 0.35    # 3-year maximum drawdown (largest peak-to-trough decline)
-      drawdown_5y: 0.30    # 5-year maximum drawdown
+      stdev_1y: 0.00       # standard deviation (price volatility)
+      stdev_3y: 0.20
+      stdev_5y: 0.15
+      stdev_10y: 0.05
+      drawdown_1y: 0.00    # maximum drawdown
+      drawdown_3y: 0.20
+      drawdown_5y: 0.25
+      drawdown_10y: 0.15
+
+    # RESILIENCE: consistency and crash results (sums to 1.0)
+    resilience:
+      yearly_beat_pct: 0.25          # % of calendar years the fund beat all indexes
+      yearly_bottom_10_share: 0.15   # share of years in the bottom 10% (lower is better)
+      volatile_beat_pct: 0.25        # % of volatile periods the fund beat all indexes
+      volatile_bottom_10_share: 0.15 # share of volatile periods in the bottom 10% (lower is better)
+      worst_3m_return: 0.20          # Worst Three Month Return (less negative is better)
 
     # TRACKING: How tracking error over different periods is weighted
     # Low tracking error: The fund closely follows its benchmark.

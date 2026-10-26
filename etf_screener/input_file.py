@@ -1,6 +1,6 @@
 """
 Loads a single profile's run configuration (paths, profile name, top_n,
-and eligibility thresholds) from a YAML input file, e.g. input_profile_a.yaml.
+and eligibility thresholds) from a YAML input file, e.g. input_files/profile_long_term.yaml.
 
 Keeping this separate from main.py mirrors the rest of the project: each
 concern (loading, merging, scoring, export, and now input-file parsing)

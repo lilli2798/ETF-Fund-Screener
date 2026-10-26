@@ -4,7 +4,7 @@ A Python tool that scores and ranks ETFs and mutual funds from Morningstar expor
 
 ## What This Tool Does
 
-- **Scores every fund (0-100) on 9 concepts** and ranks it within its Morningstar Category and overall
+- **Scores every fund (0-100) on 10 concepts** (returns, risk-adjusted return, volatility, resilience in crashes and calendar years, costs, quality, ...) and ranks it within its Morningstar Category and overall
 - **Filters out funds** that don't meet your rules (expense ratio, loads, minimum investment, leveraged funds, ...)
 - **Adds Yahoo Finance metrics**: sub-sector, Sharpe ratio (1Y/3Y) and sub-sector Z-scores
 - **Adds the last 10 calendar-year returns** and how often each fund beat or trailed the major indexes
@@ -33,23 +33,30 @@ Keep all of them: the screener merges every file in the folder by **Ticker**. In
 ### Run
 ```bash
 cd etf_screener
-python main.py        # asks for the profile file, e.g. input_files/input_profile_a.yaml
-python run_ci.py      # same, without prompts (uses input_files/input_profile_a.yaml)
+python main.py        # asks for a profile file; press Enter to run all profiles into one report
+python run_ci.py      # no prompts; all profiles in config.PROFILE_INPUT_FILES into one report
 ```
 
 ### Output (in `output/etf_screener/`, not stored in git)
-- `results_profile_A_<date-time>.xlsx` - the report (one row per fund, benchmark rows at the bottom)
-- `results_profile_A_<date-time>_by_category/` - one subfolder each for Asset Class, Morningstar Category, Yahoo sub-sector and Style Box, with one file per group
-- `results_profile_A_<date-time>_used_weights.yaml` - the exact weights used for that run
+- `results_profile_LT_ST_<date-time>.xlsx` - one row per fund (benchmark rows at the bottom) with both `Profile LT ...` and `Profile ST ...` score/rank columns. The rows and concept scores come from LT; funds ST filters out (leveraged funds) have a blank ST score. Running a single YAML in `main.py` gives `results_profile_<LT|ST>_...` with just that profile.
+- `results_profile_LT_ST_<date-time>_by_category/` - one subfolder each for Asset Class, Morningstar Category, Yahoo sub-sector and Style Box, with one file per group
+- `results_profile_LT_ST_<date-time>_used_weights_<LT|ST>.yaml` - the exact weights each profile used
 - `run_recorder.yaml` - settings of every run, the funds missing yearly data, and how many funds have volatile-period data
 - Local runs also save results to the SQLite database `data/etf_screener.db` (kept on your computer only)
 
 ## Configuration
 
-Everything is set in the profile YAML (`etf_screener/input_files/input_profile_a.yaml`); anything you leave out falls back to the defaults in `etf_screener/config.py`.
+Each profile has its own YAML in `etf_screener/input_files/`; anything you leave out falls back to the defaults in `etf_screener/config.py`.
+
+| Profile | YAML | Ranks funds by |
+|---|---|---|
+| `LT` | `profile_long_term.yaml` | Long-term, low-risk, steady returns |
+| `ST` | `profile_short_term.yaml` | Short-term momentum (1M-6M returns, 1Y risk-adjusted return) |
+
+Both share the filter and scoring code in `profiles/weighted_profile.py`; only their YAML settings differ. Every eligible fund is ranked, so the highest rank numbers in a profile's columns are its weakest funds.
 
 ```yaml
-profile: A
+profile: LT
 data_path: data/                 # Morningstar exports
 out_path: ../output/etf_screener # where results go
 thresholds:
@@ -58,12 +65,13 @@ thresholds:
   min_initial_investment: 50000
   weights:                       # how much each concept counts (should sum to ~1.0)
     long_term_return_performance: 0.25
-    short_term_return_performance: 0.10
+    short_term_return_performance: 0.05
     risk_adjusted: 0.20
     volatility: 0.15
+    resilience: 0.10             # beat the indexes in calendar years and crashes
     tracking: 0.05
     liquidity_size: 0.05
-    quality_valuation: 0.15
+    quality_valuation: 0.10
     costs: 0.10
     tax_income: 0.00
   concept_weights:               # how much each metric counts inside a concept
@@ -83,7 +91,7 @@ thresholds:
 |---|---|
 | Morningstar data | Everything from your exports |
 | `... Score` concept columns | Each concept, 0-100 within category |
-| `Profile A Score`, `Rank In Category`, `Rank Overall`, `Selected Flag` | Final score; selected = top N (default 5) in its category |
+| `Profile LT Score` / `Profile ST Score`, `Rank In Category`, `Rank Overall`, `Selected Flag` | Final score; selected = top N (default 5) in its category |
 | `Yahoo SubSector`, `Sharpe 1Y/3Y`, `Z Score 1Y/3Y` | Yahoo metrics; Z-scores compare Sharpe within the same sub-sector |
 | `Yearly Return (2016)` ... `(2025)` | Calendar-year returns, in percent |
 | `Yearly Beat All Indexes`, `Yearly Trailed All Indexes`, `Yearly Beat %`, ... | Years the fund beat the **best** / trailed the **worst** of ^GSPC, ^DJI, ^IXIC |
@@ -152,7 +160,7 @@ ETF-Fund-Screener/
 │   ├── data_loading.py         # Reads and merges the Morningstar exports
 │   ├── merging.py              # Fund filter, yearly return columns
 │   ├── scoring.py              # Concept scores
-│   ├── profiles/profile_a.py   # Profile A filters and final score
+│   ├── profiles/weighted_profile.py  # Profile filters and final score (LT, ST)
 │   ├── performance.py          # Yearly stats, volatile periods, benchmark rows
 │   ├── export.py               # Excel output and run_recorder.yaml
 │   ├── database.py             # Local SQLite results database
@@ -172,7 +180,7 @@ ETF-Fund-Screener/
 │   │   ├── compare_results.py                  # Compare selections across result files
 │   │   ├── get_yahoo_dta.py                    # Yahoo metrics for a watchlist (tickers.txt)
 │   │   └── customized_query_returns.py, ...    # Older custom date-range tool
-│   ├── input_files/input_profile_a.yaml
+│   ├── input_files/            # profile_long_term.yaml, profile_short_term.yaml
 │   ├── docs/                   # Glossary, column dictionary, Profile A design, database schema
 │   └── data/                   # Your Morningstar exports (not in git)
 ├── .github/workflows/          # Daily, yearly and cleanup jobs
@@ -192,12 +200,12 @@ ETF-Fund-Screener/
 - **Indexes are price-only, funds include dividends**, so funds look about 1-2 points/year better than the indexes in the yearly and crisis comparisons (e.g. 2025: SPY 18.9% vs ^GSPC 17.5%).
 - **Yearly returns for 2006-2025 end on Dec 30** instead of Dec 31 (an old download bug, since fixed); 2026 onward is correct. A full rebuild of the yearly CSV would correct the older years.
 - **Yahoo sub-sectors come from a fund's top 10 holdings** (the most Yahoo lists) and are re-checked about once a year; new funds are looked up the night they appear. Set `force_refresh_subsector: true` in `yahoo_metrics` for one run to refresh them all. Broad funds can change sub-sector between lookups, which moves their Z-scores.
-- **Only Profile A** (long-term, low-risk) is implemented; new profiles can be added in `profiles/`.
+- **Two profiles share one set of filters**: LT and ST differ only in their YAML settings. A profile that needs a new kind of rule needs its own module in `profiles/`.
 - **The GitHub job screens its cached copy of your exports**, not your latest local files.
 
 ## Documentation
 
 - `etf_screener/docs/column_glossary.md` - definitions and formulas for all metrics
-- `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in Profile A (rebuild with `python docs/build_column_dictionary.py` after changing weights)
+- `etf_screener/docs/report_column_dictionary.xlsx` - what every report column means: definition, formula, optimal value, caveats, and its weight in the long-term profile (rebuild with `python docs/build_column_dictionary.py` after changing weights; add `input_files/profile_short_term.yaml` for the short-term weights)
 - `etf_screener/docs/profile_a_design.md` - Profile A design
 - `etf_screener/docs/database_schema.md` - local database tables

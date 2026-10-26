@@ -1,0 +1,163 @@
+# ============================================================================
+# ETF Fund Screener - Short-Term Profile (ST)
+# ============================================================================
+#
+# Ranks funds by recent momentum: 1-month to 6-month returns, 1-year
+# risk-adjusted return, and enough liquidity to trade in and out.
+# Its long-term counterpart is profile_long_term.yaml.
+#
+# The report ranks EVERY eligible fund, so the same file answers both
+# questions: the top of each category is the short-term buy list, and the
+# bottom (highest Profile ST Rank In Category) is the short-term laggards.
+#
+# Run: python main.py   (enter input_files/profile_short_term.yaml when asked)
+#  or: python run_ci.py  (all profiles in config.PROFILE_INPUT_FILES, one report)
+#
+# Starting values below are a first draft -- tune them with
+# docs/report_column_dictionary.xlsx. Any key left out falls back to
+# config.py's default, NOT to 0, so set a weight to 0.0 to turn it off.
+# ============================================================================
+
+# Profile key: names its score columns (Profile ST Score, ...) and
+# the report (results_profile_LT_ST_... when run with the other profiles,
+# results_profile_ST_... when run alone). Must be listed in
+# profiles/weighted_profile.py PROFILE_KEYS.
+profile: ST
+
+data_path: data/
+out_path: ../output/etf_screener
+
+# ============================================================================
+# FILTERS & THRESHOLDS
+# ============================================================================
+# Same eligibility rules as the long-term profile, except leveraged funds
+# are excluded. run_ci.py runs the long-term profile first and reuses its
+# Yahoo download for every fund it already fetched, so stricter filters
+# here cost nothing; looser ones download only the extra funds.
+# ============================================================================
+
+thresholds:
+  require_category: false
+  max_expense_ratio: 1.75            # percent
+  require_fund_size: false
+  min_fund_size: null
+  require_3y_return: false           # short-term picks don't need a 3-year history
+  min_3y_return: null
+  exclude_leveraged_funds: true      # 2x/3x funds top every momentum list but lose value when held
+  exclude_interval_funds: false
+  exclude_tender_offer_funds: false
+  max_deferred_load: 0.0
+  max_front_load: 0.0
+  min_initial_investment: 50000      # dollars
+  max_redemption_fee: 0.0            # percent
+  require_benchmark_outperformance: false
+
+  # ==========================================================================
+  # SCORING WEIGHTS (how much each concept counts; sums to 1.00)
+  # ==========================================================================
+  weights:
+    short_term_return_performance: 0.40 # recent momentum is the main signal
+    risk_adjusted: 0.20                 # 1-year return per unit of risk
+    volatility: 0.10                    # avoid funds that swing wildly
+    resilience: 0.00                    # multi-year consistency; a long-term question
+    liquidity_size: 0.10                # easy to get in and out
+    costs: 0.10
+    long_term_return_performance: 0.05  # light check that the trend isn't a one-off
+    quality_valuation: 0.05
+    tracking: 0.00
+    tax_income: 0.00
+
+  # ==========================================================================
+  # DETAILED WEIGHTS WITHIN EACH CONCEPT (each block sums to 1.0)
+  # Every key is listed, because a missing key falls back to config.py.
+  # ==========================================================================
+  concept_weights:
+    short_term_return_performance:
+      return_1w: 0.05    # too noisy to count much
+      return_1m: 0.20
+      return_2m: 0.15
+      return_qtd: 0.05
+      return_3m: 0.20
+      return_6m: 0.20
+      return_9m: 0.10
+      return_ytd: 0.05
+
+    risk_adjusted:
+      sharpe_1y: 0.30        # Morningstar 1-year Sharpe
+      yahoo_sharpe_1y: 0.25  # Yahoo 1-year Sharpe (daily prices)
+      yahoo_zscore_1y: 0.25  # 1Y Sharpe vs funds in the same Yahoo sub-sector
+      upside_1y: 0.10        # 1Y upside capture
+      downside_1y: 0.05      # 1Y downside capture
+      sharpe_3y: 0.05
+      sharpe_5y: 0.00
+      sharpe_10y: 0.00
+      upside: 0.00           # 3Y upside capture
+      upside_5y: 0.00
+      upside_10y: 0.00
+      downside: 0.00         # 3Y downside capture
+      downside_5y: 0.00
+      downside_10y: 0.00
+      yahoo_sharpe_3y: 0.00
+      yahoo_zscore_3y: 0.00
+
+    volatility:               # drawdown closer to 0 is better
+      stdev_1y: 0.30
+      drawdown_1y: 0.30
+      stdev_3y: 0.20
+      drawdown_3y: 0.20
+      stdev_5y: 0.00
+      stdev_10y: 0.00
+      drawdown_5y: 0.00
+      drawdown_10y: 0.00
+
+    liquidity_size:
+      fund_size: 0.60
+      trading_volume: 0.40   # not in the current data, so Fund Size is the whole score
+
+    costs:
+      adjusted_expense_ratio: 1.0
+
+    long_term_return_performance:
+      return_1y: 0.50
+      return_2y: 0.30
+      return_3y: 0.20
+      return_4y: 0.00
+      return_5y: 0.00
+      return_6y: 0.00
+      return_7y: 0.00
+      return_8y: 0.00
+      return_9y: 0.00
+      return_10y: 0.00
+      return_15y: 0.00
+      return_20y: 0.00
+
+    quality_valuation:
+      growth_grade: 0.20
+      financial_health: 0.15
+      profitability_grade: 0.15
+      price_fair_value: 0.15
+      medalist: 0.15
+      star_rating: 0.15
+      economic_moat_wide: 0.05
+
+    # Weight 0 above, so these don't affect the score; kept so the
+    # used-weights report shows the whole picture.
+    tracking:
+      tracking_error_3y: 0.55
+      tracking_error_1y: 0.45
+
+    resilience:
+      yearly_beat_pct: 0.25
+      yearly_bottom_10_share: 0.15
+      volatile_beat_pct: 0.25
+      volatile_bottom_10_share: 0.15
+      worst_3m_return: 0.20
+
+    tax_income:
+      tax_cost_ratio_1y: 0.20
+      tax_cost_ratio_2y: 0.15
+      dividend_per_share_trailing: 0.10
+      dividend_per_share_forward: 0.10
+      dividend_per_share_1y_avg: 0.10
+      dividend_per_share_3y_avg: 0.10
+      sec_yield: 0.25

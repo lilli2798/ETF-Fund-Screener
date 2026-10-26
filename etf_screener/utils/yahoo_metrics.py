@@ -425,6 +425,26 @@ def _compute_sharpe_for_batch(
 # MAIN ENTRY POINT
 # =========================================================================
 
+def add_subsector_z_scores(df_matrix: pd.DataFrame) -> pd.DataFrame:
+    """(Re)compute Z_Score_1Y / Z_Score_3Y: each fund's Sharpe compared with
+    the other funds in the frame that share its Yahoo_SubSector. Call it on
+    exactly the funds that should be peers -- e.g. after narrowing an
+    earlier download to one profile's eligible funds."""
+    df_matrix = df_matrix.copy()
+    try:
+        df_matrix["Z_Score_1Y"] = df_matrix.groupby("Yahoo_SubSector")["Sharpe_1Y"].transform(
+            lambda x: (x - x.mean()) / x.std() if (x.std() > 0 and not pd.isna(x.std())) else 0.0
+        )
+        df_matrix["Z_Score_3Y"] = df_matrix.groupby("Yahoo_SubSector")["Sharpe_3Y"].transform(
+            lambda x: (x - x.mean()) / x.std() if (x.std() > 0 and not pd.isna(x.std())) else 0.0
+        )
+    except Exception as z_error:
+        print(f"  [Yahoo Metrics] [Warning] Z-score calculation failed: {z_error}")
+        df_matrix["Z_Score_1Y"] = 0.0
+        df_matrix["Z_Score_3Y"] = 0.0
+    return df_matrix
+
+
 def get_yahoo_metrics_for_tickers(
     tickers: Iterable[str],
     cfg: Optional[YahooMetricsConfig] = None,
@@ -518,19 +538,7 @@ def get_yahoo_metrics_for_tickers(
         f"{cache_hits_after} new/refreshed, saved to {cfg.subsector_cache_path}"
     )
 
-    df_matrix = pd.DataFrame.from_records(records)
-
-    try:
-        df_matrix["Z_Score_1Y"] = df_matrix.groupby("Yahoo_SubSector")["Sharpe_1Y"].transform(
-            lambda x: (x - x.mean()) / x.std() if (x.std() > 0 and not pd.isna(x.std())) else 0.0
-        )
-        df_matrix["Z_Score_3Y"] = df_matrix.groupby("Yahoo_SubSector")["Sharpe_3Y"].transform(
-            lambda x: (x - x.mean()) / x.std() if (x.std() > 0 and not pd.isna(x.std())) else 0.0
-        )
-    except Exception as z_error:
-        print(f"  [Yahoo Metrics] [Warning] Z-score calculation failed: {z_error}")
-        df_matrix["Z_Score_1Y"] = 0.0
-        df_matrix["Z_Score_3Y"] = 0.0
+    df_matrix = add_subsector_z_scores(pd.DataFrame.from_records(records))
 
     if cfg.log_unmapped_keys and unmapped_key_log:
         print(f"\n[Yahoo Metrics] {len(unmapped_key_log)} unmapped industryKey/sectorKey pair(s):")

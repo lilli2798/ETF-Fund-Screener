@@ -53,6 +53,7 @@ def write_used_weights_report(
     profile_name: str,
     top_n: int,
     thresholds: Dict[str, Any],
+    name_suffix: str = "",
 ) -> str:
     """
     Write a human-readable YAML report of exactly what configuration
@@ -63,12 +64,13 @@ def write_used_weights_report(
 
     Saved as {out_path}/{result_filename_without_ext}_used_weights.yaml,
     named to sit right next to its corresponding results_*.xlsx file so
-    it's obvious which report belongs to which run.
+    it's obvious which report belongs to which run. A report with several
+    profiles gets one file per profile, e.g. ..._used_weights_ST.yaml.
     """
     Path(out_path).mkdir(parents=True, exist_ok=True)
 
     base_name = os.path.splitext(result_filename)[0]
-    report_path = os.path.join(out_path, f"{base_name}_used_weights.yaml")
+    report_path = os.path.join(out_path, f"{base_name}_used_weights{name_suffix}.yaml")
 
     report_data = {
         "result_file": result_filename,
@@ -203,6 +205,7 @@ def format_column_names_for_export(df: pd.DataFrame) -> pd.DataFrame:
     """
     preserve_uppercase = {
         "etf", "aum", "ytd", "qtd", "sec", "roic", "nav", "cgd",
+        "lt", "st",  # profile keys: Profile_LT_Score -> "Profile LT Score"
     }
 
     def humanize(col: str) -> str:

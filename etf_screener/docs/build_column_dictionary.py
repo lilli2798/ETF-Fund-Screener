@@ -3,13 +3,19 @@
 One row per column name; columns that only differ by period / variant
 (e.g. Maximum Drawdown (1Y/3Y/5Y/10Y)) are listed once with their variants.
 Each row has the definition, formula, optimal value, conditions / caveats,
-source, and how much it counts in the Profile A score (read from the
+source, and how much it counts in the profile score (read from the
 profile YAML, so re-run this after changing weights).
 
 Usage (from etf_screener/):
-    python docs/build_column_dictionary.py [path/to/results_profile_A_....xlsx]
-Without a path, the newest results_profile_A_*.xlsx in the YAML's out_path
-is used to get the list of report columns.
+    python docs/build_column_dictionary.py [profile.yaml] [report.xlsx]
+The profile defaults to input_files/profile_long_term.yaml, which writes
+docs/report_column_dictionary.xlsx; any other profile writes
+docs/report_column_dictionary_<key>.xlsx. Without a report, the newest
+report with that profile's columns (normally the combined
+results_profile_LT_ST_*.xlsx) in the YAML's out_path is used to get the
+list of report columns. The "Used In" column and concept weights follow
+the chosen profile; the other profiles' Score / Rank / Flag columns get
+their own rows with their own YAML weights.
 """
 import json
 import re
@@ -23,22 +29,31 @@ from openpyxl.styles import Alignment, Font, PatternFill
 PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT))
 sys.path.append(str(PROJECT / "yahoo_returns"))
-from config import VOLATILE_CONFIG_PATH  # noqa: E402
+from config import PROFILE_INPUT_FILES, VOLATILE_CONFIG_PATH  # noqa: E402
 from input_file import load_profile_input  # noqa: E402
 from volatile_periods import load_periods  # noqa: E402
 
-OUT = PROJECT / "docs/report_column_dictionary.xlsx"
+DEFAULT_PROFILE = PROJECT / "input_files/profile_long_term.yaml"
+args = sys.argv[1:]
+yaml_args = [a for a in args if a.endswith((".yaml", ".yml"))]
+report_args = [a for a in args if a.endswith(".xlsx")]
 
-profile = load_profile_input(str(PROJECT / "input_files/input_profile_a.yaml"))
-if len(sys.argv) > 1:
-    REPORT = Path(sys.argv[1])
+PROFILE_PATH = Path(yaml_args[0]) if yaml_args else DEFAULT_PROFILE
+profile = load_profile_input(str(PROFILE_PATH))
+KEY = profile.profile_name
+PA = f"Profile {KEY}"  # e.g. "Profile LT", as in the report's column names
+OUT = PROJECT / ("docs/report_column_dictionary.xlsx" if PROFILE_PATH.resolve() == DEFAULT_PROFILE.resolve()
+                 else f"docs/report_column_dictionary_{KEY}.xlsx")
+if report_args:
+    REPORT = Path(report_args[0])
 else:
-    reports = sorted((PROJECT / profile.out_path).glob("results_profile_A_*.xlsx"))
+    # newest report with this profile's columns: results_profile_LT_ST_... or results_profile_LT_...
+    reports = sorted((PROJECT / profile.out_path).glob(f"results_profile_*{KEY}_*.xlsx"), key=lambda r: r.stat().st_mtime)
     reports = [r for r in reports if not r.name.startswith("~$")]
     if not reports:
-        sys.exit(f"No results_profile_A_*.xlsx in {PROJECT / profile.out_path} - run the screener first or pass a report path.")
+        sys.exit(f"No results_profile_*{KEY}_*.xlsx in {PROJECT / profile.out_path} - run the screener first or pass a report path.")
     REPORT = reports[-1]
-print(f"Report columns from: {REPORT.name}")
+print(f"Profile {KEY} ({PROFILE_PATH.name}); report columns from: {REPORT.name}")
 W = profile.thresholds["weights"]
 CW = profile.thresholds["concept_weights"]
 TOP_N = profile.top_n_per_category
@@ -48,6 +63,7 @@ CONCEPT_LABEL = {
     "long_term_return_performance": "Long-term Return", "short_term_return_performance": "Short-term Return",
     "risk_adjusted": "Risk-adjusted", "volatility": "Volatility", "tracking": "Tracking",
     "liquidity_size": "Liquidity/Size", "quality_valuation": "Quality/Valuation", "costs": "Costs", "tax_income": "Tax/Income",
+    "resilience": "Resilience",
 }
 WITHIN = ("Scored as a percentile rank WITHIN the fund's Morningstar Category, so a fund is only compared with "
           "funds of the same type.")
@@ -63,7 +79,7 @@ TOTAL_CW = sum(v for v in W.values() if v)
 
 
 def concept_share(concept):
-    """Effective share of Profile A (the code divides by the sum of weights)."""
+    """Effective share of the profile score (the code divides by the sum of weights)."""
     return W.get(concept, 0) / TOTAL_CW
 
 
@@ -79,16 +95,16 @@ def used(concept, keys):
     parts = []
     for label, key in keys:
         inner = CW.get(concept, {}).get(key)
-        if inner is None or (concept, key) in ABSENT:
+        if not inner or (concept, key) in ABSENT:
             continue
         prefix = f"{label}: " if label else ""
         share = inner_share(concept, key)
-        parts.append(f"{prefix}YAML weight {inner:g} = {share:.0%} of {CONCEPT_LABEL[concept]} (≈{concept_share(concept) * share * 100:.1f}% of Profile A)")
+        parts.append(f"{prefix}YAML weight {inner:g} = {share:.0%} of {CONCEPT_LABEL[concept]} (≈{concept_share(concept) * share * 100:.1f}% of {PA})")
     if not parts:
         return "No"
     if cw == 0:
-        return f"No - {CONCEPT_LABEL[concept]} has 0 weight in Profile A (inputs: " + "; ".join(parts) + ")"
-    return "Yes - " + "; ".join(parts) + f". {CONCEPT_LABEL[concept]} = {concept_share(concept):.1%} of Profile A"
+        return f"No - {CONCEPT_LABEL[concept]} has 0 weight in {PA} (inputs: " + "; ".join(parts) + ")"
+    return "Yes - " + "; ".join(parts) + f". {CONCEPT_LABEL[concept]} = {concept_share(concept):.1%} of {PA}"
 
 
 # --------------------------------------------------------------------------
@@ -189,6 +205,10 @@ stat_defs = {
 for prefix, u, o, src in (("Yearly", "calendar years", "year", YH), ("Volatile", "volatile periods", "period", YH)):
     for stat, (d, f, opt, c) in stat_defs.items():
         D[f"{prefix} {stat}"] = (d.format(u=u, o=o, p=prefix), f.format(u=u, o=o), opt, c.format(u=u, o=o, p=prefix), CALC, "No")
+    # Inputs of the Resilience score
+    D[f"{prefix} Beat %"] = D[f"{prefix} Beat %"][:5] + (used("resilience", [("", f"{prefix.lower()}_beat_pct")]),)
+    D[f"{prefix} Bottom 10% Count"] = D[f"{prefix} Bottom 10% Count"][:5] + (
+        used("resilience", [("As a share of Periods With Data", f"{prefix.lower()}_bottom_10_share")]),)
 
 D["Volatile Decline"] = ("Fund's total return during a market crisis: from the S&P 500 high (start date) to its low (end date), in percent. One column per crisis - see the Variants column and the 'Volatile Periods' tab for dates.",
                          "Volatile Decline = Adj Close on low date / Adj Close on start date - 1", "Higher (smaller loss) is better",
@@ -200,14 +220,14 @@ D["Sharpe Ratio"] = ("Morningstar's Sharpe ratio: return above the risk-free rat
                      "Sharpe = (Rp - Rf) / σp, annualized; Rp = fund return, Rf = risk-free (T-bill) rate, σp = standard deviation of monthly returns",
                      "Higher is better (> 1 good, > 2 very good, < 0 = did worse than cash)",
                      "1Y is short and noisy; prefer 3Y/5Y. Bond funds have different typical levels than stock funds - compare within category. Inherits sector distortion through σp (semis more volatile than software).",
-                     MS, used("risk_adjusted", [("3Y", "sharpe_3y"), ("1Y", "sharpe_1y")]))
+                     MS, used("risk_adjusted", [("1Y", "sharpe_1y"), ("3Y", "sharpe_3y"), ("5Y", "sharpe_5y"), ("10Y", "sharpe_10y")]))
 D["Standard Deviation"] = ("Annualized standard deviation of monthly returns, in percent - how much the return swings up and down.",
                            "σ = sqrt( Σ(Ri - R̄)² / (n - 1) ) x sqrt(12), Ri = monthly return",
                            "Lower = steadier",
                            "Up and down swings count the same. Typical: bond funds 3-7%, broad stock funds 15-20%. HIGH sector distortion: semiconductor-heavy funds are far more volatile than software-heavy funds in the same category.",
-                           MS, used("volatility", [("3Y", "stdev_3y")]))
+                           MS, used("volatility", [("1Y", "stdev_1y"), ("3Y", "stdev_3y"), ("5Y", "stdev_5y"), ("10Y", "stdev_10y")]))
 D["Worst Three Month Return"] = ("Lowest return over any rolling 3-month window in Morningstar's history window, in percent.", "", "Higher (less negative) is better",
-                                 "A gut-check: could you hold the fund through this loss?", MS, "No")
+                                 "A gut-check: could you hold the fund through this loss?", MS, used("resilience", [("", "worst_3m_return")]))
 D["Best Three Month Return"] = ("Highest return over any rolling 3-month window, in percent.", "", "Higher is better, but read with the worst 3 months",
                                 "A big best AND big worst = very volatile fund (often leveraged or single-sector).", MS, "No")
 D["Morningstar Risk Rating"] = ("Morningstar's downside-risk rating vs the category: Low, Below Average, Average, Above Average, High.",
@@ -218,17 +238,17 @@ D["Upside Capture Ratio"] = ("Share of the benchmark's gains the fund captured i
                              "Upside Capture = (fund's compounded return in benchmark-up months / benchmark's return in those months) x 100",
                              "Higher is better",
                              "Read with Downside Capture: upside > downside is ideal. Values far beyond ±300 happen when the benchmark barely moved - ignore those. Semi-heavy funds amplify both up and down capture.",
-                             MS, used("risk_adjusted", [("3Y", "upside")]))
+                             MS, used("risk_adjusted", [("1Y", "upside_1y"), ("3Y", "upside"), ("5Y", "upside_5y"), ("10Y", "upside_10y")]))
 D["Downside Capture Ratio"] = ("Share of the benchmark's losses the fund took in months when the benchmark fell, in percent (60 = lost only 60% as much).",
                                "Downside Capture = (fund's compounded return in benchmark-down months / benchmark's return in those months) x 100",
                                "Lower is better (< 100 = protects in bad months)",
                                "Negative = the fund rose while the benchmark fell. Extreme values are unreliable. Scored inverted.",
-                               MS, used("risk_adjusted", [("3Y", "downside")]))
+                               MS, used("risk_adjusted", [("1Y", "downside_1y"), ("3Y", "downside"), ("5Y", "downside_5y"), ("10Y", "downside_10y")]))
 D["Maximum Drawdown"] = ("Largest peak-to-bottom loss over the period, in percent (a negative number).",
                          "Max Drawdown = min over t of ( Value_t / max(Value_s for s ≤ t) - 1 )",
                          "Closer to 0 is better",
-                         "The worst pain an investor would have felt. 5Y includes the 2022 bear market. HIGH sector distortion (cyclical semis vs software).",
-                         MS, used("volatility", [("3Y", "drawdown_3y"), ("5Y", "drawdown_5y")]))
+                         "The worst pain an investor would have felt. 5Y includes the 2022 bear market. HIGH sector distortion (cyclical semis vs software). Scored as-is (not inverted): the higher, less negative value scores better.",
+                         MS, used("volatility", [("1Y", "drawdown_1y"), ("3Y", "drawdown_3y"), ("5Y", "drawdown_5y"), ("10Y", "drawdown_10y")]))
 D["Portfolio Risk Score"] = ("Morningstar Portfolio Risk Score as text, e.g. 'Aggressive (73)': a single number for the current, forward-looking risk of the fund, based on the estimated volatility of its future returns (from its holdings). Usually 0-100; above 100 = extreme risk.",
                              "Morningstar bands: Conservative 0-23, Moderate 24-47, Aggressive 48-78, Very Aggressive 79-99, Extreme 100+. (Labels seen in this export use slightly different lower cutoffs: Conservative 1-28, Moderate 29-54, Aggressive 55-78.)",
                              "Lower for low-risk investing",
@@ -357,37 +377,97 @@ D["Yahoo Fetch Error"] = ("Message when Yahoo returned no data for the fund.", "
 D["Yahoo Data Suspect"] = ("1 if the fund is older than 3 years (per Morningstar) but has no Yahoo 3Y Sharpe / Z-score.", "Inception Date ≤ today - 3 years AND (Sharpe 3Y or Z Score 3Y blank)", "0",
                            "Usually an ETF converted from an older mutual fund (Yahoo only has the new ticker's prices).", CALC, "No")
 
+# Label of each concept input, and whether "lower is better" (scored inverted)
+INPUT_LABELS = {
+    "long_term_return_performance": {f"return_{p}": (f"Total Return {p.upper()}", False)
+                                     for p in ("1y", "2y", "3y", "4y", "5y", "6y", "7y", "8y", "9y", "10y", "15y", "20y")},
+    "short_term_return_performance": {f"return_{p}": (f"Total Return {p.upper()}", False)
+                                      for p in ("1w", "1m", "2m", "qtd", "3m", "6m", "9m", "ytd")},
+    "risk_adjusted": {
+        **{f"sharpe_{p}": (f"Morningstar Sharpe {p.upper()}", False) for p in ("1y", "3y", "5y", "10y")},
+        "upside": ("Upside Capture 3Y", False), "downside": ("Downside Capture 3Y", True),
+        **{f"upside_{p}": (f"Upside Capture {p.upper()}", False) for p in ("1y", "5y", "10y")},
+        **{f"downside_{p}": (f"Downside Capture {p.upper()}", True) for p in ("1y", "5y", "10y")},
+        "yahoo_sharpe_1y": ("Yahoo Sharpe 1Y", False), "yahoo_sharpe_3y": ("Yahoo Sharpe 3Y", False),
+        "yahoo_zscore_1y": ("Z Score 1Y", False), "yahoo_zscore_3y": ("Z Score 3Y", False),
+    },
+    "volatility": {**{f"stdev_{p}": (f"Standard Deviation {p.upper()}", True) for p in ("1y", "3y", "5y", "10y")},
+                   **{f"drawdown_{p}": (f"Max Drawdown {p.upper()}", False) for p in ("1y", "3y", "5y", "10y")}},
+    "resilience": {"yearly_beat_pct": ("Yearly Beat %", False),
+                   "yearly_bottom_10_share": ("Yearly Bottom 10% Count / Yearly Periods With Data", True),
+                   "volatile_beat_pct": ("Volatile Beat %", False),
+                   "volatile_bottom_10_share": ("Volatile Bottom 10% Count / Volatile Periods With Data", True),
+                   "worst_3m_return": ("Worst Three Month Return", False)},
+    "tracking": {"tracking_error_3y": ("Tracking Error 3Y", True), "tracking_error_1y": ("Tracking Error 1Y", True)},
+    "liquidity_size": {"fund_size": ("Fund Size with fixed cutoffs ($10M → 0, $500M target, $5B → 100)", False),
+                       "trading_volume": ("Trading Volume", False)},
+    "quality_valuation": {"growth_grade": ("Growth Grade", False), "financial_health": ("Financial Health", False),
+                          "profitability_grade": ("Profitability", False), "price_fair_value": ("Price/Fair Value", True),
+                          "medalist": ("Medalist", False), "star_rating": ("Star rating", False),
+                          "economic_moat_wide": ("Wide moat", False)},
+    "costs": {"adjusted_expense_ratio": ("Adjusted Expense Ratio", True)},
+    "tax_income": {"tax_cost_ratio_1y": ("Tax Cost Ratio 1Y", True), "tax_cost_ratio_2y": ("Tax Cost Ratio 2Y", True),
+                   "dividend_per_share_trailing": ("Dividend per Share (Trailing)", False),
+                   "dividend_per_share_forward": ("Dividend per Share (Forward)", False),
+                   "dividend_per_share_1y_avg": ("Dividend per Share (1Y Avg)", False),
+                   "dividend_per_share_3y_avg": ("Dividend per Share (3Y Avg)", False),
+                   "sec_yield": ("SEC 30-Day Yield", False)},
+}
+
+
+def inputs_text(concept):
+    """'Total Return 5Y 15%, ...' for the inputs this YAML weights, as shares of the concept."""
+    parts = []
+    for key, (label, inverted) in INPUT_LABELS[concept].items():
+        if CW.get(concept, {}).get(key) and (concept, key) not in ABSENT:
+            parts.append(f"{label} {inner_share(concept, key):.0%}" + (" (inverted)" if inverted else ""))
+    return ", ".join(parts) or "none (all input weights are 0)"
+
+
 concept_rows = [
-    ("Long Term Return Performance Score", "long_term_return_performance", "Total Return 1Y-20Y (1Y 15%, 2Y 10%, 3Y 9.5%, 4Y 8.5%, 5Y 7.5%, 6-8Y 6% each, 9Y 6.5%, 10Y 7%, 15Y 8.5%, 20Y 9%)", "Missing periods (young funds) are skipped, not counted as 0."),
-    ("Short Term Return Performance Score", "short_term_return_performance", "Total Return 1W 5%, 1M / 2M / QTD / 3M 15% each, 6M 12%, 9M 10%, YTD 5%", "Recent momentum - changes quickly."),
-    ("Risk Adjusted Score", "risk_adjusted", "Morningstar Sharpe 3Y 45% / 1Y 10%, Upside Capture 3Y 25%, Downside Capture 3Y 20% (inverted), Yahoo Sharpe 3Y 10% / 1Y 15%, Z Score 3Y 10% / 1Y 15%", "Missing Yahoo values drop out instead of counting as 0."),
-    ("Volatility Score", "volatility", "Standard Deviation 3Y 35%, Max Drawdown 3Y 35%, 5Y 30% (all inverted)", "Blank for funds younger than 3 years."),
-    ("Tracking Score", "tracking", "Tracking Error 3Y 55%, 1Y 45% (inverted)", "Good for index funds; for active funds low tracking error just means 'close to the index'."),
-    ("Liquidity Size Score", "liquidity_size", "Fund Size with fixed cutoffs ($10M → 0, $500M target, $5B → 100)", "Not within category."),
-    ("Quality Valuation Score", "quality_valuation", "Growth Grade 20%, Financial Health 15%, Profitability 15%, Price/Fair Value 15% (inverted), Medalist 15%, Star rating 15%, Wide moat 5%", "Mostly equity data; bond funds rely on Medalist and stars."),
-    ("Costs Score", "costs", "Adjusted Expense Ratio 100% (inverted)", ""),
-    ("Tax Income Score", "tax_income", "Tax Cost Ratio 1Y 20% / 2Y 15% (inverted), Dividend per Share 10% each x4, SEC 30-Day Yield 25%", ""),
+    ("Long Term Return Performance Score", "long_term_return_performance", "Missing periods (young funds) are skipped, not counted as 0."),
+    ("Short Term Return Performance Score", "short_term_return_performance", "Recent momentum - changes quickly."),
+    ("Risk Adjusted Score", "risk_adjusted", "Missing Yahoo values drop out instead of counting as 0."),
+    ("Volatility Score", "volatility", "Blank for funds younger than 3 years. Max drawdown is negative, so it is NOT inverted: closer to 0 scores higher."),
+    ("Resilience Score", "resilience", "How consistently the fund beat the indexes: calendar years and the S&P 500's volatile periods (crashes and recoveries). Bottom-10% counts are divided by the periods the fund has data for, so older funds aren't penalized for having more periods."),
+    ("Tracking Score", "tracking", "Good for index funds; for active funds low tracking error just means 'close to the index'."),
+    ("Liquidity Size Score", "liquidity_size", "Not within category."),
+    ("Quality Valuation Score", "quality_valuation", "Mostly equity data; bond funds rely on Medalist and stars."),
+    ("Costs Score", "costs", ""),
+    ("Tax Income Score", "tax_income", ""),
 ]
-for name, concept, inputs, note in concept_rows:
+for name, concept, note in concept_rows:
     cw = W.get(concept, 0)
-    D[name] = (f"0-100 concept score from these inputs (YAML weights, divided by their total): {inputs}.", NORM, "Higher is better (100 = best in category)",
-               (WITHIN + " " + note).strip(), CALC, f"Yes - YAML weight {cw:g} = {concept_share(concept):.1%} of Profile A" if cw else "No - 0 weight in Profile A")
+    D[name] = (f"0-100 concept score from these inputs (YAML weights, divided by their total): {inputs_text(concept)}.", NORM, "Higher is better (100 = best in category)",
+               (WITHIN + " " + note).strip(), CALC, f"Yes - YAML weight {cw:g} = {concept_share(concept):.1%} of {PA}" if cw else f"No - 0 weight in {PA}")
 D["Return Rank"] = ("Rank of the matching 'Total Return' column across ALL funds in the report (1 = highest return).",
                     "Rank = position when all funds are sorted by that period's return, highest first (ties share the lowest rank)",
                     "Lower is better (1 = best)",
                     "Across all categories, not within category - leveraged / sector funds dominate both ends. Used for the 1W & 1M momentum tabs.", CALC, "No")
-D["Profile A Score"] = ("Final 0-100 score combining the nine concept scores with the weights in input_profile_a.yaml.",
-                        "Profile A Score = Σ(concept weight x concept score) / Σ(weights of concept scores the fund has). YAML weights: " + ", ".join(f"{CONCEPT_LABEL[k]} {v:g}" for k, v in W.items()) + f" (sum {TOTAL_CW:g}, so each effective share = weight / {TOTAL_CW:g})",
+def add_profile_rows(key, yaml_name, weights, top_n):
+    """The five score/rank/flag columns one profile adds to the report."""
+    pa, total = f"Profile {key}", sum(v for v in weights.values() if v)
+    D[f"{pa} Score"] = (f"Final 0-100 score combining the concept scores with the weights in {yaml_name}.",
+                        f"{pa} Score = Σ(concept weight x concept score) / Σ(weights of concept scores the fund has). YAML weights: " + ", ".join(f"{CONCEPT_LABEL[k]} {v:g}" for k, v in weights.items()) + f" (sum {total:g}, so each effective share = weight / {total:g})",
                         "Higher is better",
-                        "Blank concept scores (e.g. Volatility for young funds) are left out and the rest re-weighted. Because inputs are ranked within category, the score means 'good for its category', not 'better than every other fund'.",
-                        CALC, "This IS the Profile A score")
-D["Profile A Rank In Category"] = ("Rank of the Profile A Score within the fund's Morningstar Category (1 = best).", "", "Lower is better",
-                                   "Read with the category size: 5th of 8 is mediocre, 5th of 400 is excellent.", CALC, "No")
-D["Profile A Selected Flag"] = (f"1 if the fund is in the top {TOP_N} of its Morningstar Category by Profile A Score.", f"Rank In Category ≤ top_n_per_category ({TOP_N})", "1 = selected",
-                                "top_n_per_category is set in the YAML.", CALC, "No")
-D["Profile A Rank Overall"] = ("Rank of the Profile A Score across all funds (1 = best).", "", "Lower is better",
+                        "Blank concept scores (e.g. Volatility for young funds) are left out and the rest re-weighted. Because inputs are ranked within category, the score means 'good for its category', not 'better than every other fund'."
+                        + ("" if key == KEY else f" Uses {key}'s own concept weights, so it can't be recomputed from the concept score columns in this report (those use {KEY}'s). Blank for funds {yaml_name} filters out."),
+                        CALC, f"This IS the {pa} score" if key == KEY else f"No - this is the {pa} score")
+    D[f"{pa} Rank In Category"] = (f"Rank of the {pa} Score within the fund's Morningstar Category (1 = best).", "", "Lower is better",
+                                   "Read with the category size: 5th of 8 is mediocre, 5th of 400 is excellent. The highest numbers are the category's weakest funds for this profile.", CALC, "No")
+    D[f"{pa} Selected Flag"] = (f"1 if the fund is in the top {top_n} of its Morningstar Category by {pa} Score.", f"Rank In Category ≤ top_n_per_category ({top_n})", "1 = selected",
+                                f"top_n_per_category is set in {yaml_name}.", CALC, "No")
+    D[f"{pa} Rank Overall"] = (f"Rank of the {pa} Score across all funds (1 = best).", "", "Lower is better",
                                "Mixes categories; a top bond fund and a top stock fund can both rank high.", CALC, "No")
-D["Profile A Selected Overall Flag"] = (f"1 if the fund is in the top {TOP_N} overall.", f"Rank Overall ≤ {TOP_N}", "1 = selected", "", CALC, "No")
+    D[f"{pa} Selected Overall Flag"] = (f"1 if the fund is in the top {top_n} overall.", f"Rank Overall ≤ {top_n}", "1 = selected", "", CALC, "No")
+
+
+add_profile_rows(KEY, PROFILE_PATH.name, W, TOP_N)
+# A combined report (results_profile_LT_ST_...) also has the other profiles' columns.
+for other_file in PROFILE_INPUT_FILES:
+    other = load_profile_input(str(PROJECT / other_file))
+    if other.profile_name != KEY and f"Profile {other.profile_name} Score" in report_cols:
+        add_profile_rows(other.profile_name, Path(other_file).name, other.thresholds["weights"], other.top_n_per_category)
 D["Missing From Yahoo"] = ("('No Yahoo Data' tab only) Which Yahoo-based results are missing: Sharpe / Z-score, yearly returns, volatile periods.", "", "n/a",
                            "These funds are taken off the overview; all their Morningstar columns are still on that tab.", CALC, "No")
 for side, best in (("Top", "best"), ("Bottom", "worst")):
@@ -411,13 +491,16 @@ for name in ("Trading Volume", "Management Style", "3Y Return Rank in Category")
 VARIANT_KEYS = {
     "Total Return": {**{p: ("short_term_return_performance", f"return_{p.lower()}") for p in ["1W", "1M", "2M", "QTD", "3M", "6M", "9M", "YTD"]},
                      **{p: ("long_term_return_performance", f"return_{p.lower()}") for p in ["1Y", "2Y", "3Y", "4Y", "5Y", "6Y", "7Y", "8Y", "9Y", "10Y", "15Y", "20Y"]}},
-    "Sharpe Ratio": {"3Y": ("risk_adjusted", "sharpe_3y"), "1Y": ("risk_adjusted", "sharpe_1y")},
-    "Upside Capture Ratio": {"3Y": ("risk_adjusted", "upside")},
-    "Downside Capture Ratio": {"3Y": ("risk_adjusted", "downside")},
+    "Sharpe Ratio": {"1Y": ("risk_adjusted", "sharpe_1y"), "3Y": ("risk_adjusted", "sharpe_3y"),
+                     "5Y": ("risk_adjusted", "sharpe_5y"), "10Y": ("risk_adjusted", "sharpe_10y")},
+    "Upside Capture Ratio": {"1Y": ("risk_adjusted", "upside_1y"), "3Y": ("risk_adjusted", "upside"),
+                             "5Y": ("risk_adjusted", "upside_5y"), "10Y": ("risk_adjusted", "upside_10y")},
+    "Downside Capture Ratio": {"1Y": ("risk_adjusted", "downside_1y"), "3Y": ("risk_adjusted", "downside"),
+                               "5Y": ("risk_adjusted", "downside_5y"), "10Y": ("risk_adjusted", "downside_10y")},
     "Sharpe": {"3Y": ("risk_adjusted", "yahoo_sharpe_3y"), "1Y": ("risk_adjusted", "yahoo_sharpe_1y")},
     "Z Score": {"3Y": ("risk_adjusted", "yahoo_zscore_3y"), "1Y": ("risk_adjusted", "yahoo_zscore_1y")},
-    "Standard Deviation": {"3Y": ("volatility", "stdev_3y")},
-    "Maximum Drawdown": {"3Y": ("volatility", "drawdown_3y"), "5Y": ("volatility", "drawdown_5y")},
+    "Standard Deviation": {p: ("volatility", f"stdev_{p.lower()}") for p in ("1Y", "3Y", "5Y", "10Y")},
+    "Maximum Drawdown": {p: ("volatility", f"drawdown_{p.lower()}") for p in ("1Y", "3Y", "5Y", "10Y")},
     "Tracking Error": {"3Y": ("tracking", "tracking_error_3y"), "1Y": ("tracking", "tracking_error_1y")},
     "Tax Cost Ratio": {"1Y": ("tax_income", "tax_cost_ratio_1y"), "2Y": ("tax_income", "tax_cost_ratio_2y")},
     "Medalist Rating": {"Overall": ("quality_valuation", "medalist")},
@@ -443,7 +526,7 @@ for col in report_cols + extra_cols:
         ck = VARIANT_KEYS[base].get(variant)
         u = used(ck[0], [("", ck[1])]) if ck else "No"
     all_rows.append({"Report Column": col, "Tab": tab_of(col), "Column Dictionary Row": base,
-                     "Variant": variant, "Optimal Value": o, "Source": s, "Used In Profile A Score": u})
+                     "Variant": variant, "Optimal Value": o, "Source": s, f"Used In {PA} Score": u})
 all_columns = pd.DataFrame(all_rows)
 
 # Morningstar's own definitions (docs/morningstar_definitions.json, researched
@@ -482,7 +565,7 @@ for base, variants in groups.items():
     else:
         shown = ", ".join(variants)
     rows.append({"Column Name": base, "Variants": shown, "Definition": d, "Formula / Notes": f,
-                 "Optimal Value": o, "Condition": c, "Source": s, "Used In Profile A Score": u, **ms_columns(base)})
+                 "Optimal Value": o, "Condition": c, "Source": s, f"Used In {PA} Score": u, **ms_columns(base)})
 dictionary = pd.DataFrame(rows)
 
 # Volatile periods tab
@@ -497,16 +580,16 @@ concepts = pd.DataFrame([
     ("Long-term Return", W["long_term_return_performance"], "Total Return 1Y-20Y", "Medium-High", "Yes / Medium-High", "Multi-year returns diverge a lot by sub-sector timing."),
     ("Short-term Return", W["short_term_return_performance"], "Total Return 1W-YTD", "Medium-High", "Yes / Medium-High", "Short windows are dominated by what's in favour this month."),
     ("Risk-adjusted", W["risk_adjusted"], "Sharpe, capture ratios, Yahoo Sharpe & Z-scores", "Medium", "Yes / Moderate", "Inherits volatility's distortion through the Sharpe denominator."),
-    ("Volatility", W["volatility"], "Standard Deviation 3Y, Max Drawdown 3Y/5Y", "High", "Yes / High", "Std dev and drawdown directly reflect sub-sector cyclicality (semis >> software)."),
+    ("Volatility", W["volatility"], "Standard Deviation and Max Drawdown 1Y/3Y/5Y/10Y", "High", "Yes / High", "Std dev and drawdown directly reflect sub-sector cyclicality (semis >> software)."),
+    ("Resilience", W.get("resilience", 0), "Yearly / Volatile Beat %, share of years / periods in the bottom 10%, Worst Three Month Return", "Medium", "No / Moderate", "Beating ALL the broad indexes favours whatever led the market (e.g. tech in 2023-24); defensive funds shine in the crash periods instead."),
     ("Tracking", W["tracking"], "Tracking Error 1Y/3Y", "Low-Medium", "Yes / Low", "Benchmark-relative, so partly self-correcting."),
     ("Liquidity/Size", W["liquidity_size"], "Fund Size", "Low", "No / No", "Driven by popularity and age, not holdings."),
     ("Quality/Valuation", W["quality_valuation"], "Grades, Price/Fair Value, Medalist, stars, moat", "High", "Yes / High", "Growth grade and Price/Fair Value differ systematically software vs hardware."),
     ("Costs", W["costs"], "Adjusted Expense Ratio", "Low", "No / No", "Driven by passive vs active, not composition."),
     ("Tax/Income", W["tax_income"], "Tax Cost Ratio, dividends, SEC yield", "Medium", "Yes / Moderate", "Yield and distributions differ by sector maturity."),
-], columns=["Concept", "Weight in Profile A", "Inputs", "Sector-composition distortion risk",
+], columns=["Concept", "YAML weight", "Inputs", "Sector-composition distortion risk",
             "Depends on Morningstar Category / on dominant industry", "Why"])
-concepts.insert(2, "Effective share of Profile A", concepts["Weight in Profile A"].map(lambda v: f"{v / TOTAL_CW:.1%}"))
-concepts = concepts.rename(columns={"Weight in Profile A": "YAML weight"})
+concepts.insert(2, f"Effective share of {PA}", concepts["YAML weight"].map(lambda v: f"{v / TOTAL_CW:.1%}"))
 
 with pd.ExcelWriter(OUT, engine="openpyxl") as xw:
     dictionary.to_excel(xw, index=False, sheet_name="Column Dictionary")

@@ -1,12 +1,14 @@
 """Reads the latest screener output and delivers only high-signal rows
 via Slack webhook and/or email.
 
-The screener pipeline (main.py / profiles/profile_a.py) exports a
-"Profile A Selected Flag" column (True for rows ranked in the top_n of
-their category) -- there is no "Decision" column in that output (that
+The screener pipeline (main.py / profiles/weighted_profile.py) exports a
+"Profile <key> Selected Flag" column per profile, e.g. "Profile LT
+Selected Flag" (True for rows ranked in the top_n of their category) -- there is no "Decision" column in that output (that
 name only exists in the separate standalone_utils/get_yahoo_dta.py Sharpe/Decision CSV
 workflow). Alert-worthy rows here are therefore rows where the profile's
-Selected Flag column is True.
+Selected Flag column is True. Every profile in config.PROFILE_INPUT_FILES
+gets its own section, from the newest report that has its columns
+(normally one combined results_profile_LT_ST_... file).
 
 Email delivery is enabled by setting SMTP-related environment variables
 (see the EMAIL_* variables below). If they are not set, email sending is
@@ -23,13 +25,13 @@ from pathlib import Path
 import pandas as pd
 import requests
 
+from config import PROFILE_INPUT_FILES
 from input_file import load_profile_input
 
-# Read the output folder from the same profile YAML run_ci.py uses, so the
-# alert step always looks where the screener actually wrote its results.
+# Read each profile's output folder from the same YAMLs run_ci.py uses, so
+# the alert step always looks where the screener actually wrote its results.
 # Set OUTPUT_DIR in the environment to override.
-PROFILE_INPUT_PATH = str(Path(__file__).parent / "input_files" / "input_profile_a.yaml")
-OUTPUT_DIR = os.environ.get("OUTPUT_DIR") or load_profile_input(PROFILE_INPUT_PATH).out_path
+PROFILE_INPUTS = [load_profile_input(str(Path(__file__).parent / f)) for f in PROFILE_INPUT_FILES]
 WEBHOOK_URL = os.environ.get("SLACK_WEBHOOK_URL")
 
 # --- Email configuration (all optional; email is skipped if EMAIL_TO is unset) ---
@@ -48,13 +50,14 @@ def find_latest_file(directory: str, pattern: str) -> str | None:
     return max(files, key=os.path.getmtime) if files else None
 
 
-def build_alert_message(df: pd.DataFrame, selected_flag_col: str) -> tuple[str, pd.DataFrame]:
+def build_alert_message(df: pd.DataFrame, profile_name: str) -> tuple[str, pd.DataFrame]:
+    selected_flag_col = f"Profile {profile_name} Selected Flag"
     hits = df[df[selected_flag_col].fillna(False).astype(bool)]
     if hits.empty:
         return "", hits
 
-    score_col = next((c for c in df.columns if c == "Profile A Score"), None)
-    rank_col = next((c for c in df.columns if c == "Profile A Rank In Category"), None)
+    score_col = next((c for c in df.columns if c == f"Profile {profile_name} Score"), None)
+    rank_col = next((c for c in df.columns if c == f"Profile {profile_name} Rank In Category"), None)
 
     lines = []
     yahoo_issue_hits = 0
@@ -69,7 +72,7 @@ def build_alert_message(df: pd.DataFrame, selected_flag_col: str) -> tuple[str, 
             yahoo_note = " | Yahoo data issue logged"
         lines.append(f"*{ticker}* — Selected ({category}{score_text}{rank_text}{yahoo_note})")
 
-    header = "\U0001F4C8 *Daily ETF Screener Alerts*"
+    header = f"*Profile {profile_name}*"
     if yahoo_issue_hits:
         header += f"\n\u26A0\uFE0F Yahoo data issues flagged on {yahoo_issue_hits} selected row(s)."
     message = header + "\n" + "\n".join(lines[:20])
@@ -85,7 +88,7 @@ def send_slack(message: str) -> None:
     print("Alert sent to Slack.")
 
 
-def send_email(subject: str, body: str, attachment_path: str | None = None) -> None:
+def send_email(subject: str, body: str, attachment_paths: list[str] | None = None) -> None:
     """Send an email via SMTP. Skips silently if EMAIL_TO is not configured.
 
     Requires EMAIL_TO plus, for authenticated SMTP servers, EMAIL_USERNAME
@@ -106,7 +109,9 @@ def send_email(subject: str, body: str, attachment_path: str | None = None) -> N
     msg["To"] = ", ".join(recipients)
     msg.set_content(body)
 
-    if attachment_path and EMAIL_ATTACH_REPORT and os.path.isfile(attachment_path):
+    for attachment_path in attachment_paths or []:
+        if not (EMAIL_ATTACH_REPORT and os.path.isfile(attachment_path)):
+            continue
         with open(attachment_path, "rb") as f:
             data = f.read()
         filename = os.path.basename(attachment_path)
@@ -129,32 +134,50 @@ def send_email(subject: str, body: str, attachment_path: str | None = None) -> N
 
 
 def main():
-    latest_xlsx = find_latest_file(OUTPUT_DIR, "results_*.xlsx")
-    if not latest_xlsx:
-        print(f"No output file found in {os.path.abspath(OUTPUT_DIR)}; skipping alerts.")
+    sections = []
+    reports = []
+    any_hits = False
+    for profile_input in PROFILE_INPUTS:
+        profile_name = profile_input.profile_name
+        output_dir = os.environ.get("OUTPUT_DIR") or profile_input.out_path
+        # Matches the combined report (results_profile_LT_ST_...) and older
+        # single-profile ones (results_profile_ST_...).
+        latest_xlsx = find_latest_file(output_dir, f"results_profile_*{profile_name}_*.xlsx")
+        if not latest_xlsx:
+            print(f"No Profile {profile_name} report found in {os.path.abspath(output_dir)}; skipping it.")
+            continue
+        if latest_xlsx not in reports:  # one combined file serves every profile
+            reports.append(latest_xlsx)
+
+        df = pd.read_excel(latest_xlsx)
+        if f"Profile {profile_name} Selected Flag" not in df.columns:
+            print(f"No 'Profile {profile_name} Selected Flag' column in {latest_xlsx}; skipping it.")
+            continue
+
+        message, hits = build_alert_message(df, profile_name)
+        if hits.empty:
+            message = f"*Profile {profile_name}*\nNo alert-worthy tickers today."
+        else:
+            any_hits = True
+        sections.append(message)
+
+    if not reports:
+        print("No profile reports found; skipping alerts.")
         return
 
-    df = pd.read_excel(latest_xlsx)
-    selected_flag_col = next((c for c in df.columns if c == "Profile A Selected Flag"), None)
-    if selected_flag_col is None:
-        print("No 'Profile A Selected Flag' column found; skipping alerts.")
-        return
-
-    message, hits = build_alert_message(df, selected_flag_col)
-    if hits.empty:
+    message = "\U0001F4C8 *Daily ETF Screener Alerts*\n\n" + "\n\n".join(sections)
+    if not any_hits:
         print("No alert-worthy tickers today.")
-        message = "No alert-worthy tickers today."
 
     # Slack: only send when there are actual hits (preserves original behavior).
-    if not hits.empty:
+    if any_hits:
         if WEBHOOK_URL:
             send_slack(message)
         else:
             print("No SLACK_WEBHOOK_URL set — printing instead:\n" + message)
 
     # Email: send a daily report regardless of hits, so it can double as the report delivery.
-    email_body = message if message else "No alert-worthy tickers today."
-    send_email(EMAIL_SUBJECT, email_body, attachment_path=latest_xlsx)
+    send_email(EMAIL_SUBJECT, message, attachment_paths=reports)
 
 
 if __name__ == "__main__":

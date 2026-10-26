@@ -17,14 +17,17 @@ HOW IT WORKS:
   7. Exports results to Excel with formatted headers and all details
 
 ADDING NEW INVESTMENT PROFILES:
-  To create a new investment strategy (e.g., aggressive growth, income-focused):
-  1. Copy profiles/profile_a.py as a template and name it profiles/profile_x.py
-  2. Add one line: `import profiles.profile_x`  (see line 55 below)
-  3. Create a YAML configuration file for your new profile
-  No other code changes needed - the profile self-registers automatically!
+  Profiles LT (long term) and ST (short term) share the logic in
+  profiles/weighted_profile.py and differ only in their YAML files.
+  To add one that only needs different thresholds or weights:
+  1. Copy a YAML in input_files/ and give it a new `profile:` key
+  2. Add that key to PROFILE_KEYS in profiles/weighted_profile.py
+  3. Add the YAML to config.PROFILE_INPUT_FILES so run_ci.py runs it
+  All profiles in PROFILE_INPUT_FILES go into one report
+  (results_profile_LT_ST_...), each with its own score/rank columns.
 
 CONFIGURATION:
-  All settings come from a YAML file (e.g., input_profile_a.yaml):
+  All settings come from a YAML file (e.g., input_files/profile_long_term.yaml):
   - Input file paths (structural data, performance data)
   - Output directory
   - Profile name (which investment strategy to use)
@@ -38,7 +41,7 @@ TECHNICAL NOTE:
 """
 
 import os
-from typing import List, Tuple
+from typing import List, Sequence, Tuple
 
 import pandas as pd
 import yaml
@@ -48,6 +51,7 @@ from config import (
     DEFAULT_DATA_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
+    PROFILE_INPUT_FILES,
     YEARLY_RETURN_YEARS,
     YEARLY_RETURNS_CSV,
 )
@@ -61,6 +65,7 @@ from utils import yahoo_metrics
 
 YahooMetricsConfig = yahoo_metrics.YahooMetricsConfig
 get_yahoo_metrics_for_tickers = yahoo_metrics.get_yahoo_metrics_for_tickers
+add_subsector_z_scores = yahoo_metrics.add_subsector_z_scores
 
 from export import (
     add_sheets_to_workbook,
@@ -76,28 +81,34 @@ from database import ETFScreenerDatabase
 
 
 # Import each profile module once so it self-registers into
-# PROFILE_FILTERS / PROFILE_SCORERS. Add new profiles here, one line each.
-import profiles.profile_a  # noqa: F401  (registers "A")
-# import profiles.profile_b  # noqa: F401  (registers "B" -- future)
+# PROFILE_FILTERS / PROFILE_SCORERS. Add new profile modules here, one line each.
+import profiles.weighted_profile  # noqa: F401  (registers "LT" and "ST")
+
+# Yahoo results already fetched in this process, keyed by settings.
+_YAHOO_RESULTS: dict = {}
 
 
-def get_profile_input_interactively() -> ProfileInput:
+def get_profile_input_interactively() -> List[ProfileInput]:
     """
     Repeatedly prompt for a profile input file path until one loads
-    successfully. Mirrors the retry pattern already used elsewhere in
+    successfully. Pressing Enter without a path loads every profile in
+    config.PROFILE_INPUT_FILES (one combined report). Mirrors the retry pattern already used elsewhere in
     this project for struct/perf file loading -- catches common errors
     (missing file, bad YAML, invalid contents) and lets the user retype
     the path instead of crashing the whole pipeline.
     """
     while True:
-        input_file = input("Path to profile input file (e.g. input_profile_a.yaml): ").strip()
+        input_file = input(
+            "Path to profile input file (e.g. input_files/profile_long_term.yaml),\n"
+            "or press Enter for all profiles in one report: "
+        ).strip()
 
         if not input_file:
-            print("  Please enter a file path.")
-            continue
+            here = os.path.dirname(os.path.abspath(__file__))
+            return [load_profile_input(os.path.join(here, f)) for f in PROFILE_INPUT_FILES]
 
         try:
-            return load_profile_input(input_file)
+            return [load_profile_input(input_file)]
         except FileNotFoundError:
             print(f"  File not found: {input_file}. Please check the path and try again.")
         except PermissionError:
@@ -111,8 +122,8 @@ def get_profile_input_interactively() -> ProfileInput:
 def _validate_profile_name(profile_name: str) -> None:
     """
     Raise a clear, early ValueError if `profile_name` isn't registered in
-    both PROFILE_FILTERS and PROFILE_SCORERS -- e.g. a typo like 'a'
-    instead of 'A', or a profile module that was never imported.
+    both PROFILE_FILTERS and PROFILE_SCORERS -- e.g. a typo like 'lt'
+    instead of 'LT', or a profile module that was never imported.
     """
     known_filter_names = set(PROFILE_FILTERS)
     known_scorer_names = set(PROFILE_SCORERS)
@@ -121,7 +132,7 @@ def _validate_profile_name(profile_name: str) -> None:
     if profile_name not in known_filter_names or profile_name not in known_scorer_names:
         raise ValueError(
             f"Unknown profile_name '{profile_name}'. "
-            f"Available profiles: {available or '(none registered -- did you forget to `import profiles.profile_x`?)'}"
+            f"Available profiles: {available or '(none registered -- did you forget to import the profile module?)'}"
         )
 
 
@@ -183,34 +194,48 @@ def print_numeric_score_check(df: pd.DataFrame, profile_name: str) -> None:
             )
 
 
-def process_data(
-    data_path: str = DEFAULT_DATA_PATH,
-    out_path: str = DEFAULT_OUT_PATH,
-    profile_name: str = DEFAULT_PROFILE_NAME,
-    top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
-    thresholds: dict = None,
-    save_to_db: bool = True,
-) -> Tuple[pd.DataFrame, str]:
+def profile_columns(profile_name: str) -> List[str]:
+    """The score/rank/flag columns a profile scorer adds (internal names)."""
+    return [
+        f"Profile_{profile_name}_Score",
+        f"Profile_{profile_name}_Rank_In_Category",
+        f"Profile_{profile_name}_Selected_Flag",
+        f"Profile_{profile_name}_Rank_Overall",
+        f"Profile_{profile_name}_Selected_Overall_Flag",
+    ]
+
+
+def add_profile_columns(df_ranked: pd.DataFrame, df_other: pd.DataFrame, profile_name: str) -> pd.DataFrame:
     """
-    Run the full pipeline end-to-end for a single profile:
-      load -> ETF-only filter -> concept scores ->
-      profile eligibility filter -> profile scoring/ranking ->
-      numeric score enforcement ->
-      format for export -> save -> style header row.
-
-    `thresholds` comes from the profile input YAML file (ProfileInput.thresholds)
-    and is passed through to both the registered filter and scorer functions
-    for `profile_name`, so eligibility gates and weights are configurable
-    without editing code. Defaults to an empty dict if not provided, so
-    each profile module's own `thresholds.get(key, default)` calls fall
-    back safely.
-
-    Stage A: ranking/selection logic remains entirely inside PROFILE_SCORERS.
-    This function does not add quality/risk gates on qualitative fields.
+    Merge another profile's score/rank/flag columns onto `df_ranked` by
+    Ticker. Funds the other profile filtered out (e.g. leveraged funds in
+    ST) get a blank score and False flags.
     """
-    if thresholds is None:
-        thresholds = {}
+    cols = [c for c in profile_columns(profile_name) if c in df_other.columns]
+    other = df_other[["Ticker", *cols]].drop_duplicates("Ticker")
+    not_in_base = len(set(other["Ticker"]) - set(df_ranked["Ticker"]))
+    if not_in_base:
+        print(f"  Note: {not_in_base} fund(s) passed Profile {profile_name} but not the base "
+              f"profile's filters, so they are not in the combined report.")
+    merged = df_ranked.merge(other, on="Ticker", how="left")
+    for col in cols:
+        if col.endswith("_Flag"):
+            merged[col] = merged[col].fillna(False).astype(bool)
+    return merged
 
+
+def score_profile(
+    data_path: str,
+    out_path: str,
+    profile_name: str,
+    top_n: int,
+    thresholds: dict,
+) -> Tuple[pd.DataFrame, dict]:
+    """
+    Load, filter and score the data for one profile. Returns the ranked
+    DataFrame (internal column names) and the missing-data reports for
+    the run recorder.
+    """
     _validate_profile_name(profile_name)
 
     print("Loading data (performance + structural combined)...")
@@ -227,7 +252,21 @@ def process_data(
 
     print("Fetching Yahoo Finance metrics (sub-sector, Sharpe, Z-scores)...")
     yahoo_cfg = YahooMetricsConfig.from_thresholds(thresholds)  # ignores unknown/old keys
-    df_yahoo: pd.DataFrame = get_yahoo_metrics_for_tickers(df["Ticker"], cfg=yahoo_cfg)
+    # run_ci.py runs several profiles in one process. Funds an earlier
+    # profile already fetched (with the same settings) are reused; only new
+    # ones are downloaded. Z-scores compare each fund with its sub-sector
+    # peers, so they're recomputed on this profile's own fund list.
+    tickers = {str(t).strip().upper() for t in df["Ticker"].dropna() if str(t).strip()}
+    fetched = _YAHOO_RESULTS.get(repr(yahoo_cfg))
+    if fetched is None:
+        fetched = get_yahoo_metrics_for_tickers(df["Ticker"], cfg=yahoo_cfg)
+    else:
+        missing = sorted(tickers - set(fetched["Ticker"]))
+        print(f"  Reusing Yahoo metrics fetched earlier in this run; {len(missing)} new fund(s) to fetch.")
+        if missing:
+            fetched = pd.concat([fetched, get_yahoo_metrics_for_tickers(missing, cfg=yahoo_cfg)], ignore_index=True)
+    _YAHOO_RESULTS[repr(yahoo_cfg)] = fetched
+    df_yahoo: pd.DataFrame = add_subsector_z_scores(fetched[fetched["Ticker"].isin(tickers)])
 
     # TEMP DEBUG (per user request 2026-07-19): print raw Yahoo results
     # before merging into the Morningstar dataframe, for validation.
@@ -277,15 +316,64 @@ def process_data(
     df_ranked = ensure_profile_score_numeric(df_ranked, profile_name=profile_name)
     print_numeric_score_check(df_ranked, profile_name=profile_name)
 
+    reports = {"yearly_returns_missing": yearly_missing_report, "volatile_performance": volatile_report}
+    return df_ranked, reports
+
+
+def process_data(
+    data_path: str = DEFAULT_DATA_PATH,
+    out_path: str = DEFAULT_OUT_PATH,
+    profile_name: str = DEFAULT_PROFILE_NAME,
+    top_n: int = DEFAULT_TOP_N_PER_CATEGORY,
+    thresholds: dict = None,
+    save_to_db: bool = True,
+    extra_profiles: Sequence[ProfileInput] = (),
+) -> Tuple[pd.DataFrame, str]:
+    """
+    Run the full pipeline end-to-end:
+      load -> ETF-only filter -> concept scores ->
+      profile eligibility filter -> profile scoring/ranking ->
+      numeric score enforcement ->
+      format for export -> save -> style header row.
+
+    `thresholds` comes from the profile input YAML file (ProfileInput.thresholds)
+    and is passed through to both the registered filter and scorer functions
+    for `profile_name`, so eligibility gates and weights are configurable
+    without editing code. Defaults to an empty dict if not provided, so
+    each profile module's own `thresholds.get(key, default)` calls fall
+    back safely.
+
+    `extra_profiles` are scored the same way, each with its own YAML, and
+    their score/rank/flag columns are added to this report (e.g. Profile
+    ST next to Profile LT). The rows, concept scores and other columns
+    come from the first profile (`profile_name`).
+
+    Stage A: ranking/selection logic remains entirely inside PROFILE_SCORERS.
+    This function does not add quality/risk gates on qualitative fields.
+    """
+    if thresholds is None:
+        thresholds = {}
+
+    df_ranked, reports = score_profile(data_path, out_path, profile_name, top_n, thresholds)
+
+    all_profiles = [(profile_name, top_n, thresholds)]
+    for extra in extra_profiles:
+        print(f"\n===== Profile {extra.profile_name}: scoring to add its columns to the report =====")
+        df_extra, _ = score_profile(data_path, out_path, extra.profile_name, extra.top_n_per_category, extra.thresholds)
+        df_ranked = add_profile_columns(df_ranked, df_extra, extra.profile_name)
+        df_ranked = ensure_profile_score_numeric(df_ranked, profile_name=extra.profile_name)
+        all_profiles.append((extra.profile_name, extra.top_n_per_category, extra.thresholds))
+    profile_names = [name for name, _, _ in all_profiles]
+
     print("Formatting column names for export...")
     df_export: pd.DataFrame = format_column_names_for_export(df_ranked)
 
     # Re-apply numeric cast after any export renaming (names may change)
-    df_export = ensure_profile_score_numeric(df_export, profile_name=profile_name)
+    for name in profile_names:
+        df_export = ensure_profile_score_numeric(df_export, profile_name=name)
     # Also catch human-readable renamed headers if export renames them
     for pretty in (
-        "Profile A Score",
-        f"Profile {profile_name} Score",
+        *(f"Profile {name} Score" for name in profile_names),
         "Composite Score",
         "Model Composite Score",
         "Rank In Category",
@@ -294,7 +382,7 @@ def process_data(
         if pretty in df_export.columns:
             df_export[pretty] = pd.to_numeric(df_export[pretty], errors="coerce").astype("float64")
 
-    final_out_path: str = build_timestamped_output_path(out_path, prefix=f"results_profile_{profile_name}")
+    final_out_path: str = build_timestamped_output_path(out_path, prefix="results_profile_" + "_".join(profile_names))
     print(f"Output will be saved to: {final_out_path}")
 
     # Generate sheet name with current date in monthdayyear-overview format
@@ -320,18 +408,21 @@ def process_data(
         output_dir=out_path,
         output_filename=os.path.basename(final_out_path),
         thresholds=thresholds,
-        extra={"yearly_returns_missing": yearly_missing_report, "volatile_performance": volatile_report},
+        extra=reports,
     )
 
     print("Writing used-weights report for this run...")
-    used_weights_path = write_used_weights_report(
-        out_path=out_path,
-        result_filename=os.path.basename(final_out_path),
-        profile_name=profile_name,
-        top_n=top_n,
-        thresholds=thresholds,
-    )
-    print(f"Used-weights report saved to: {used_weights_path}")
+    for name, profile_top_n, profile_thresholds in all_profiles:
+        used_weights_path = write_used_weights_report(
+            out_path=out_path,
+            result_filename=os.path.basename(final_out_path),
+            profile_name=name,
+            top_n=profile_top_n,
+            thresholds=profile_thresholds,
+            # one file per profile when the report holds several
+            name_suffix=f"_{name}" if len(all_profiles) > 1 else "",
+        )
+        print(f"Used-weights report saved to: {used_weights_path}")
 
     # Create separate files by category if columns exist
     # {subfolder: column}. Each split gets its own subfolder, since some
@@ -359,14 +450,14 @@ def process_data(
     if save_to_db:
         print("Saving results to SQLite database...")
         db = ETFScreenerDatabase()
-        run_id = db.save_results(
-            df=df_export,
-            profile_name=profile_name,
-            weights=thresholds
-        )
-
+        for name, _, profile_thresholds in all_profiles:
+            run_id = db.save_results(
+                df=df_export,
+                profile_name=name,
+                weights=profile_thresholds
+            )
+            print(f"Profile {name} results saved to database with run_id: {run_id}")
         db.close()
-        print(f"Results saved to database with run_id: {run_id}")
     else:
         print("Skipping SQLite database save (save_to_db=False).")
 
@@ -415,7 +506,7 @@ def print_summary(df_ranked: pd.DataFrame, profile_name: str, top_n: int) -> Non
 
 
 def main() -> None:
-    profile_input = get_profile_input_interactively()
+    profile_input, *extra_profiles = get_profile_input_interactively()
 
     df_ranked, final_out_path = process_data(
         data_path=profile_input.data_path,
@@ -423,9 +514,12 @@ def main() -> None:
         profile_name=profile_input.profile_name,
         top_n=profile_input.top_n_per_category,
         thresholds=profile_input.thresholds,
+        extra_profiles=extra_profiles,
     )
 
-    print_summary(df_ranked, profile_name=profile_input.profile_name, top_n=profile_input.top_n_per_category)
+    for p in (profile_input, *extra_profiles):
+        print(f"\n===== Profile {p.profile_name} summary =====")
+        print_summary(df_ranked, profile_name=p.profile_name, top_n=p.top_n_per_category)
 
 
 if __name__ == "__main__":

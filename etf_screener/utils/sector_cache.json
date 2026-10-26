@@ -135,6 +135,10 @@
     "cached_date": "2026-10-24T13:45:39.578093",
     "sub_sector": "Broad Market Equity"
   },
+  "ABNFX": {
+    "cached_date": "2026-10-26T03:18:25.036259",
+    "sub_sector": "Broad Market Equity"
+  },
   "ABOT": {
     "cached_date": "2026-10-24T13:45:39.680314",
     "sub_sector": "Broad Market Equity"
@@ -13403,6 +13407,10 @@
     "cached_date": "2026-08-18T01:28:40.456646",
     "sub_sector": "Diversified Telecommunication Services"
   },
+  "GSRTX": {
+    "cached_date": "2026-10-26T03:18:25.019043",
+    "sub_sector": "Broad Market Equity"
+  },
   "GSSC": {
     "cached_date": "2026-10-24T14:27:03.169141",
     "sub_sector": "Healthcare Equipment & Supplies"
@@ -22567,12 +22575,20 @@
     "cached_date": "2026-08-18T02:20:50.024992",
     "sub_sector": "Semiconductors & Semiconductor Equipment"
   },
+  "PAFRX": {
+    "cached_date": "2026-10-26T03:18:25.028237",
+    "sub_sector": "Broad Market Equity"
+  },
   "PAGRX": {
     "cached_date": "2026-10-24T14:40:31.759856",
     "sub_sector": "Software & Services"
   },
   "PAIAX": {
     "cached_date": "2026-10-24T14:40:31.779062",
+    "sub_sector": "Broad Market Equity"
+  },
+  "PAIHX": {
+    "cached_date": "2026-10-26T03:18:25.126507",
     "sub_sector": "Broad Market Equity"
   },
   "PALAX": {
@@ -32977,6 +32993,10 @@
   },
   "VWAHX": {
     "cached_date": "2026-10-24T14:56:40.118022",
+    "sub_sector": "Broad Market Equity"
+  },
+  "VWEAX": {
+    "cached_date": "2026-10-26T03:18:25.125326",
     "sub_sector": "Broad Market Equity"
   },
   "VWEHX": {

@@ -6,6 +6,7 @@ output paths.
 
 import os
 import re
+import shutil
 import time
 from pathlib import Path
 from typing import Any, Dict
@@ -88,6 +89,39 @@ def write_used_weights_report(
         yaml.safe_dump(report_data, f, default_flow_style=False, sort_keys=False)
 
     return report_path
+
+
+def prune_old_reports(output_dir: str, keep: Optional[int]) -> List[str]:
+    """
+    Keep only the newest `keep` results_*_{timestamp}.xlsx reports in
+    output_dir. For each older report, also delete its used-weights YAML
+    files, its _by_category folder and its run_recorder.yaml entry.
+    Returns the names of the deleted reports.
+    """
+    if not keep or not os.path.isdir(output_dir):
+        return []
+    stamp = re.compile(r"_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})\.xlsx$")
+    reports = [p for p in Path(output_dir).glob("results_*.xlsx") if stamp.search(p.name)]
+    reports.sort(key=lambda p: stamp.search(p.name).group(1), reverse=True)
+    old = reports[keep:]
+
+    for report in old:
+        base = report.stem
+        report.unlink(missing_ok=True)
+        for weights_file in Path(output_dir).glob(f"{base}_used_weights*.yaml"):
+            weights_file.unlink(missing_ok=True)
+        shutil.rmtree(Path(output_dir) / f"{base}_by_category", ignore_errors=True)
+
+    recorder_path = os.path.join(output_dir, "run_recorder.yaml")
+    if old and os.path.exists(recorder_path):
+        with open(recorder_path, "r") as f:
+            recorder_data = yaml.safe_load(f) or {}
+        for report in old:
+            recorder_data.pop(report.name, None)
+        with open(recorder_path, "w") as f:
+            yaml.safe_dump(recorder_data, f, default_flow_style=False, sort_keys=False)
+
+    return [p.name for p in old]
 
 
 def build_timestamped_output_path(out_path: str, prefix: str = "results") -> str:

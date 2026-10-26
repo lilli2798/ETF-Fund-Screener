@@ -51,6 +51,7 @@ from config import (
     DEFAULT_DATA_PATH,
     DEFAULT_OUT_PATH,
     DEFAULT_PROFILE_NAME,
+    KEEP_LAST_REPORTS,
     PROFILE_INPUT_FILES,
     YEARLY_RETURN_YEARS,
     YEARLY_RETURNS_CSV,
@@ -76,6 +77,7 @@ from export import (
     append_to_recorder,
     write_used_weights_report,
     create_sheets_by_category,
+    prune_old_reports,
 )
 
 
@@ -443,6 +445,10 @@ def process_data(
             split_dir = os.path.join(category_output_dir, folder)
             os.makedirs(split_dir, exist_ok=True)
             create_sheets_by_category(df_export, category_col, split_dir, sheet_name=sheet_name)
+
+    removed = prune_old_reports(out_path, KEEP_LAST_REPORTS)
+    if removed:
+        print(f"Deleted {len(removed)} old report(s); keeping the newest {KEEP_LAST_REPORTS}.")
 
     return df_ranked, final_out_path
 

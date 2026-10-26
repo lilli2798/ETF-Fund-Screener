@@ -42,7 +42,7 @@ python run_ci.py      # no prompts; all profiles in config.PROFILE_INPUT_FILES i
 - `results_profile_LT_ST_<date-time>_by_category/` - one subfolder each for Asset Class, Morningstar Category, Yahoo sub-sector and Style Box, with one file per group
 - `results_profile_LT_ST_<date-time>_used_weights_<LT|ST>.yaml` - the exact weights each profile used
 - `run_recorder.yaml` - settings of every run, the funds missing yearly data, and how many funds have volatile-period data
-- Keep the reports you want history for: `db_access/query.py` reads every report in this folder as the `reports` table
+- Only the newest 10 reports are kept; each run deletes older ones (with their files and recorder entries). Change `KEEP_LAST_REPORTS` in `config.py` (None = keep all). `db_access/query.py` reads the kept reports as the `reports` table
 
 ## Configuration
 
@@ -157,7 +157,7 @@ Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_retur
 |---|---|---|
 | **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the selected funds (`alerts.py`), commits the sub-sector and volatile caches, attaches the report to the run |
 | **Update Yearly Returns Cache** | January 2 (or run manually) | Adds last year's returns and any new tickers to the yearly CSV and commits it |
-| **Cleanup Workflow Runs** | 1st of each month | Keeps the last 10 runs of each workflow |
+| **Cleanup Workflow Runs** | Daily, 08:00 UTC | Keeps the last 10 runs of each workflow and the last 10 report artifacts |
 
 - Email / Slack settings are GitHub secrets: `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME`, `EMAIL_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO`, `SLACK_WEBHOOK_URL`.
 - GitHub starts from an empty machine each run, so the **caches it needs are committed to git**: `utils/sector_cache.json`, `yahoo_returns/sources/etf_yearly_history.csv` and `etf_volatile_history.csv`. Reports are not.

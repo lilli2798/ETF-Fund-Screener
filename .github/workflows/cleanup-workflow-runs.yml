@@ -1,73 +1,53 @@
 name: Cleanup Workflow Runs
 
+# Keeps GitHub storage small: the last 10 runs of each workflow and the last
+# 10 screener reports (etf-screener-output artifacts). Runs daily, a few hours
+# after the Daily ETF Screener, so at most 10 reports are ever stored.
+# (Reports on your own computer are pruned by the screener itself, see
+# KEEP_LAST_REPORTS in etf_screener/config.py.)
+
 on:
   schedule:
-    - cron: '0 0 1 * *'  # First day of each month at midnight UTC
+    - cron: '0 8 * * *'  # daily, 08:00 UTC
   workflow_dispatch:
+
+env:
+  KEEP: 10
+  REPORT_ARTIFACT: etf-screener-output
 
 jobs:
   cleanup_runs:
     runs-on: ubuntu-latest
     permissions:
       actions: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup GitHub CLI
+      - name: Delete old workflow runs (keep the last 10 per workflow)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gh
-
-      - name: Authenticate with GitHub
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-
-      - name: Delete old workflow runs (keep last 10 per workflow)
-        run: |
-          # This script cleans up old GitHub Actions workflow runs to save storage and keep the workflow history clean.
-          # It keeps the last 10 runs for each workflow and deletes any older runs.
-          # This is done per workflow, so each workflow (daily-etf-screener, update-yearly-cache, etc.) maintains its own history.
-          
-          # Step 1: Get all workflow names and their IDs from the repository
-          gh workflow list --json name,id --jq '.[]' > /tmp/workflows.json
-          
-          # Step 2: Process each workflow individually
-          jq -c '.' /tmp/workflows.json | while IFS= read -r WORKFLOW; do
-            WORKFLOW_NAME=$(echo "$WORKFLOW" | jq -r '.name')
-            WORKFLOW_ID=$(echo "$WORKFLOW" | jq -r '.id')
-            
-            echo "Processing workflow: $WORKFLOW_NAME (ID: $WORKFLOW_ID)"
-            
-            # Step 3: Get all runs for this specific workflow (increase limit to 500 to handle workflows with many runs)
-            gh run list --workflow="$WORKFLOW_ID" --json databaseId,name,createdAt --limit 500 --jq '.[]' > /tmp/runs.json
-            
-            # Step 4: Count total runs for this workflow
-            TOTAL=$(jq 'length' /tmp/runs.json)
-            echo "  Total runs for $WORKFLOW_NAME: $TOTAL"
-            
-            # Step 5: If more than 10 runs exist, delete the older ones
-            if [ "$TOTAL" -gt 10 ]; then
-              DELETE_COUNT=$((TOTAL - 10))
-              echo "  Deleting $DELETE_COUNT old runs from $WORKFLOW_NAME..."
-              
-              # Get IDs of runs to delete (all except the last 10, reversed to delete oldest first)
-              jq -r 'reverse | .[10:] | .[].databaseId' /tmp/runs.json > /tmp/delete_ids.txt
-              
-              # Step 6: Delete each old run individually
-              while IFS= read -r ID; do
-                echo "    Deleting run ID: $ID"
-                gh run delete "$ID" || echo "    Failed to delete run $ID"
-              done < /tmp/delete_ids.txt
-              
-              echo "  Deleted $DELETE_COUNT runs from $WORKFLOW_NAME"
-            else
-              echo "  Less than or equal to 10 runs, nothing to delete"
-            fi
-            
-            rm /tmp/runs.json
+          # gh lists runs newest first, so everything after the first $KEEP is older.
+          # Deleting a run also deletes its artifacts (reports).
+          gh workflow list --all --json id,name --jq '.[] | [.id, .name] | @tsv' |
+          while IFS=$'\t' read -r WORKFLOW_ID WORKFLOW_NAME; do
+            OLD_IDS=$(gh run list --workflow "$WORKFLOW_ID" --limit 1000 --json databaseId \
+                        --jq ".[$KEEP:][].databaseId")
+            COUNT=$(echo "$OLD_IDS" | grep -c . || true)
+            echo "$WORKFLOW_NAME: deleting $COUNT old run(s)"
+            for ID in $OLD_IDS; do
+              gh run delete "$ID" || echo "  could not delete run $ID"
+            done
           done
-          
-          # Cleanup temp file
-          rm /tmp/workflows.json
+
+      - name: Delete old screener reports (keep the last 10)
+        run: |
+          # Catches any report artifacts left over after the run cleanup above.
+          OLD_IDS=$(gh api --paginate "repos/$GH_REPO/actions/artifacts?name=$REPORT_ARTIFACT&per_page=100" \
+                      --jq '.artifacts[] | [.created_at, .id] | @tsv' |
+                    sort -r | tail -n +$((KEEP + 1)) | cut -f2)
+          COUNT=$(echo "$OLD_IDS" | grep -c . || true)
+          echo "$REPORT_ARTIFACT: deleting $COUNT old report(s)"
+          for ID in $OLD_IDS; do
+            gh api -X DELETE "repos/$GH_REPO/actions/artifacts/$ID" || echo "  could not delete artifact $ID"
+          done

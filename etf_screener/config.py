@@ -21,6 +21,11 @@ DEFAULT_TOP_N_PER_CATEGORY: int = 5
 # None = same as top_n_per_category. Set per profile with top_n_overall in the YAML.
 DEFAULT_TOP_N_OVERALL: Optional[int] = None
 
+# Reports kept in the output folder. After each run, older reports (with
+# their used-weights files, _by_category folders and run_recorder entries)
+# are deleted. None = keep everything.
+KEEP_LAST_REPORTS: Optional[int] = 10
+
 # Default input/output paths -- adjust to your environment, or override at
 # runtime via get_paths_from_user() / CLI args.
 DEFAULT_DATA_PATH: str = "data"

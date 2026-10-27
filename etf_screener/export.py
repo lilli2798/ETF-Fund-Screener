@@ -52,13 +52,12 @@ def write_used_weights_report(
     out_path: str,
     result_filename: str,
     profile_name: str,
-    top_n: int,
     thresholds: Dict[str, Any],
     name_suffix: str = "",
 ) -> str:
     """
     Write a human-readable YAML report of exactly what configuration
-    produced a given results file: profile name, top_n, and the fully
+    produced a given results file: profile name and the fully
     resolved (post-YAML-merge) weights/concept_weights actually used
     by scoring.py for this run -- including any metric intentionally
     zeroed out (weight 0.0) rather than silently defaulted.
@@ -76,7 +75,6 @@ def write_used_weights_report(
     report_data = {
         "result_file": result_filename,
         "profile_name": profile_name,
-        "top_n_per_category": top_n,
         "concept_level_weights": thresholds.get("weights", {}),
         "column_level_weights_per_concept": thresholds.get("concept_weights", {}),
         "other_thresholds": {

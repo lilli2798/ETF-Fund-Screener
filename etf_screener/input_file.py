@@ -22,8 +22,8 @@ PROFILE_DIR = Path(__file__).resolve().parent / "input_files"
 PROFILE_GLOB = "profile_*.yaml"
 
 # Top-level keys of a profile YAML.
-REQUIRED_TOP_LEVEL = ("profile", "top_n_per_category", "data_path", "out_path", "thresholds")
-OPTIONAL_TOP_LEVEL = ("top_n_overall", "enabled")
+REQUIRED_TOP_LEVEL = ("profile", "data_path", "out_path", "thresholds")
+OPTIONAL_TOP_LEVEL = ("enabled",)
 
 # Keys under `thresholds:`. A profile YAML only SCORES funds -- it never
 # removes one (rules for every profile are config.PURCHASE_RULES); to make
@@ -38,7 +38,6 @@ class ProfileInput:
     profile_name: str
     data_path: str
     out_path: str
-    top_n_per_category: int
     thresholds: Dict[str, Any]
     path: str = ""
 
@@ -89,17 +88,10 @@ def load_profile_input(input_file: str) -> ProfileInput:
         _check_keys(f"{path.name} thresholds.concept_weights.{concept}",
                     thresholds["concept_weights"][concept] or {}, keys)
 
-    # Top level like top_n_per_category; kept in thresholds so the scorer,
-    # run_recorder.yaml and the used-weights report all see it.
-    # Left out = same as top_n_per_category.
-    top_n_overall = raw.get("top_n_overall")
-    thresholds["top_n_overall"] = None if top_n_overall is None else int(top_n_overall)
-
     return ProfileInput(
         profile_name=profile_name.strip(),
         data_path=raw["data_path"],
         out_path=raw["out_path"],
-        top_n_per_category=int(raw["top_n_per_category"]),
         thresholds=thresholds,
         path=str(path),
     )

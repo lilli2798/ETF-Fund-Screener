@@ -25,9 +25,6 @@
 profile: ST
 # enabled: false   # uncomment to keep this file without running it
 
-# Selection cutoffs. Top level, NOT under thresholds:.
-top_n_per_category: 5   # funds per Morningstar Category with Selected Flag = 1
-top_n_overall: 50       # funds across ALL categories with Selected Overall Flag = 1
 
 data_path: data/
 out_path: ../output/etf_screener

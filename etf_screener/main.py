@@ -13,7 +13,7 @@ HOW IT WORKS:
   3. Fetches additional metrics from Yahoo Finance (Sharpe ratios, Z-scores)
   4. Calculates scores across 8 key dimensions (performance, risk, costs, etc.)
   5. Applies your custom filters (expense ratio limits, fund size, etc.)
-  6. Ranks funds within each category and selects the top N per category
+  6. Ranks funds within each category and overall (1 = best)
   7. Exports results to Excel with formatted headers and all details
 
 ADDING NEW INVESTMENT PROFILES:
@@ -29,7 +29,6 @@ CONFIGURATION:
   - Input file paths (structural data, performance data)
   - Output directory
   - Profile name (which investment strategy to use)
-  - Top N funds to select per category
   - Custom thresholds and weights for scoring
 
 TECHNICAL NOTE:
@@ -148,15 +147,6 @@ def ensure_profile_score_numeric(df: pd.DataFrame, profile_name: str) -> pd.Data
         # plain float64 (not pandas nullable Float64) plays better with openpyxl/Excel
         out[col] = out[col].astype("float64")
 
-    # Selected flags stay boolean if present
-    for col in (
-        f"Profile_{profile_name}_Selected_Flag",
-        f"Profile_{profile_name}_Selected_Overall_Flag",
-        "Model_Selected_Flag",
-    ):
-        if col in out.columns:
-            out[col] = out[col].astype(bool)
-
     return out
 
 
@@ -182,22 +172,20 @@ def print_numeric_score_check(df: pd.DataFrame, profile_name: str) -> None:
 
 
 def profile_columns(profile_name: str) -> List[str]:
-    """The score/rank/flag columns a profile scorer adds (internal names)."""
+    """The score/rank columns a profile scorer adds (internal names)."""
     return [
         f"Profile_{profile_name}_Score",
         f"Profile_{profile_name}_Rank_In_Category",
-        f"Profile_{profile_name}_Selected_Flag",
         f"Profile_{profile_name}_Rank_Overall",
-        f"Profile_{profile_name}_Selected_Overall_Flag",
     ]
 
 
 def add_profile_columns(df_ranked: pd.DataFrame, df_other: pd.DataFrame, profile_name: str) -> pd.DataFrame:
     """
-    Add another profile's score/rank/flag columns to `df_ranked` by Ticker.
+    Add another profile's score/rank columns to `df_ranked` by Ticker.
     The report keeps every fund that passed ANY profile's own rules, so one
     profile's filters never hide another profile's picks:
-      - a fund this profile filtered out gets a blank score and 0 flags here
+      - a fund this profile filtered out gets a blank score and ranks here
       - a fund only this profile kept is added as a new row, with blank
         columns for the earlier profiles and blank concept scores (the
         concept-score columns are the first profile's)
@@ -214,10 +202,6 @@ def add_profile_columns(df_ranked: pd.DataFrame, df_other: pd.DataFrame, profile
         new_rows[concept_cols] = float("nan")
         new_rows = new_rows[[c for c in merged.columns if c in new_rows.columns]]
         merged = pd.concat([merged, new_rows], ignore_index=True)
-
-    for col in merged.columns:  # every profile's flags: blank -> 0
-        if col.startswith("Profile_") and col.endswith("_Flag"):
-            merged[col] = merged[col].astype("boolean").fillna(False).astype(bool)
     return merged
 
 
@@ -225,7 +209,6 @@ def score_profile(
     data_path: str,
     out_path: str,
     profile_name: str,
-    top_n: int,
     thresholds: dict,
 ) -> Tuple[pd.DataFrame, dict]:
     """
@@ -316,7 +299,7 @@ def score_profile(
         df_eligible = PROFILE_FILTERS[profile_name](df, thresholds)
 
     print(f"Computing Profile {profile_name} composite score and rankings...")
-    df_ranked: pd.DataFrame = PROFILE_SCORERS[profile_name](df_eligible, top_n, thresholds)
+    df_ranked: pd.DataFrame = PROFILE_SCORERS[profile_name](df_eligible, thresholds)
 
     # --- Stage A addition: numeric enforcement only (no logic change) ---
     print("Enforcing numeric dtypes on profile score/rank columns...")
@@ -331,7 +314,6 @@ def process_data(
     data_path: str,
     out_path: str,
     profile_name: str,
-    top_n: int,
     thresholds: dict,
     extra_profiles: Sequence[ProfileInput] = (),
 ) -> Tuple[pd.DataFrame, str]:
@@ -353,19 +335,19 @@ def process_data(
     profile's own rules, so the order of the profiles doesn't change which
     funds appear; the concept-score columns are the first profile's.
 
-    Stage A: ranking/selection logic remains entirely inside PROFILE_SCORERS.
+    Stage A: ranking logic remains entirely inside PROFILE_SCORERS.
     This function does not add quality/risk gates on qualitative fields.
     """
-    df_ranked, reports = score_profile(data_path, out_path, profile_name, top_n, thresholds)
+    df_ranked, reports = score_profile(data_path, out_path, profile_name, thresholds)
 
-    all_profiles = [(profile_name, top_n, thresholds)]
+    all_profiles = [(profile_name, thresholds)]
     for extra in extra_profiles:
         print(f"\n===== Profile {extra.profile_name}: scoring to add its columns to the report =====")
-        df_extra, _ = score_profile(data_path, out_path, extra.profile_name, extra.top_n_per_category, extra.thresholds)
+        df_extra, _ = score_profile(data_path, out_path, extra.profile_name, extra.thresholds)
         df_ranked = add_profile_columns(df_ranked, df_extra, extra.profile_name)
         df_ranked = ensure_profile_score_numeric(df_ranked, profile_name=extra.profile_name)
-        all_profiles.append((extra.profile_name, extra.top_n_per_category, extra.thresholds))
-    profile_names = [name for name, _, _ in all_profiles]
+        all_profiles.append((extra.profile_name, extra.thresholds))
+    profile_names = [name for name, _ in all_profiles]
 
     print("Formatting column names for export...")
     df_export: pd.DataFrame = format_column_names_for_export(df_ranked, profile_names)
@@ -408,20 +390,19 @@ def process_data(
     append_to_recorder(
         output_dir=out_path,
         output_filename=os.path.basename(final_out_path),
-        thresholds={"top_n_per_category": top_n, **thresholds},
+        thresholds=thresholds,
         # a combined report also records the other profiles' settings
         extra={**reports, "purchase_rules": dict(PURCHASE_RULES),
-               **({"other_profiles": {name: {"top_n_per_category": n, **t} for name, n, t in all_profiles[1:]}}
+               **({"other_profiles": {name: t for name, t in all_profiles[1:]}}
                   if len(all_profiles) > 1 else {})},
     )
 
     print("Writing used-weights report for this run...")
-    for name, profile_top_n, profile_thresholds in all_profiles:
+    for name, profile_thresholds in all_profiles:
         used_weights_path = write_used_weights_report(
             out_path=out_path,
             result_filename=os.path.basename(final_out_path),
             profile_name=name,
-            top_n=profile_top_n,
             thresholds=profile_thresholds,
             # one file per profile when the report holds several
             name_suffix=f"_{name}" if len(all_profiles) > 1 else "",
@@ -456,46 +437,20 @@ def process_data(
     return df_ranked, final_out_path
 
 
-def print_summary(df_ranked: pd.DataFrame, profile_name: str, top_n: int, top_n_overall: int = None) -> None:
-    """
-    Print the per-category and overall top selections for quick review
-    in the console. Uses the internal (pre-export) column names, since
-    this runs on df_ranked before format_column_names_for_export().
-    """
+def print_summary(df_ranked: pd.DataFrame, profile_name: str, show: int = 20) -> None:
+    """Print the profile's best funds overall (internal column names, since
+    this runs on df_ranked before format_column_names_for_export())."""
     score_col = f"Profile_{profile_name}_Score"
     rank_in_cat_col = f"Profile_{profile_name}_Rank_In_Category"
-    selected_flag_col = f"Profile_{profile_name}_Selected_Flag"
     rank_overall_col = f"Profile_{profile_name}_Rank_Overall"
-    selected_overall_col = f"Profile_{profile_name}_Selected_Overall_Flag"
-
-    display_cols: List[str] = [
-        "Ticker", "Name", "Morningstar Category",
-        score_col, rank_in_cat_col, selected_flag_col,
-        rank_overall_col, selected_overall_col,
-    ]
-    display_cols = [c for c in display_cols if c in df_ranked.columns]
-
-    if selected_flag_col in df_ranked.columns and rank_in_cat_col in df_ranked.columns:
-        selected_by_category = df_ranked[df_ranked[selected_flag_col]].sort_values(
-            ["Morningstar Category", rank_in_cat_col]
-        )
-        print(f"\n{len(selected_by_category)} ETFs selected across all categories "
-              f"(top {top_n} per category).")
-        print(selected_by_category[display_cols].head(50).to_string(index=False))
-    else:
-        print(f"\n(Skipping per-category summary -- '{selected_flag_col}' or "
-              f"'{rank_in_cat_col}' not found on ranked results.)")
-
-    if selected_overall_col in df_ranked.columns and rank_overall_col in df_ranked.columns:
-        selected_overall = df_ranked[df_ranked[selected_overall_col]].sort_values(
-            rank_overall_col
-        )
-        top_n_overall = top_n_overall or top_n
-        print(f"\nTop {top_n_overall} ETFs overall (regardless of category):")
-        print(selected_overall[display_cols].head(top_n_overall).to_string(index=False))
-    else:
-        print(f"\n(Skipping overall summary -- '{selected_overall_col}' or "
-              f"'{rank_overall_col}' not found on ranked results.)")
+    if rank_overall_col not in df_ranked.columns:
+        print(f"(No '{rank_overall_col}' column -- skipping the summary.)")
+        return
+    display_cols = [c for c in ("Ticker", "Name", "Morningstar Category", score_col, rank_in_cat_col, rank_overall_col)
+                    if c in df_ranked.columns]
+    best = df_ranked[df_ranked[rank_overall_col].notna()].sort_values(rank_overall_col)
+    print(f"\nTop {show} funds overall by Profile {profile_name} Score:")
+    print(best[display_cols].head(show).to_string(index=False))
 
 
 def main() -> None:
@@ -505,15 +460,13 @@ def main() -> None:
         data_path=profile_input.data_path,
         out_path=profile_input.out_path,
         profile_name=profile_input.profile_name,
-        top_n=profile_input.top_n_per_category,
         thresholds=profile_input.thresholds,
         extra_profiles=extra_profiles,
     )
 
     for p in (profile_input, *extra_profiles):
         print(f"\n===== Profile {p.profile_name} summary =====")
-        print_summary(df_ranked, profile_name=p.profile_name, top_n=p.top_n_per_category,
-                      top_n_overall=p.thresholds.get("top_n_overall"))
+        print_summary(df_ranked, profile_name=p.profile_name)
 
 
 if __name__ == "__main__":

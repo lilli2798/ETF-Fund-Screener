@@ -14,7 +14,7 @@ docs/report_column_dictionary_<key>.xlsx. Without a report, the newest
 report with that profile's columns (normally the combined
 results_profile_LT_ST_*.xlsx) in the YAML's out_path is used to get the
 list of report columns. The "Used In" column and concept weights follow
-the chosen profile; the other profiles' Score / Rank / Flag columns get
+the chosen profile; the other profiles' Score / Rank columns get
 their own rows with their own YAML weights.
 """
 import json
@@ -57,7 +57,6 @@ else:
 print(f"Profile {KEY} ({PROFILE_PATH.name}); report columns from: {REPORT.name}")
 W = profile.thresholds["weights"]
 CW = profile.thresholds["concept_weights"]
-TOP_N = profile.top_n_per_category
 
 def rule(key: str, fmt) -> str:
     """A shared purchase rule from config.PURCHASE_RULES, e.g. 'max_front_load = 0%'."""
@@ -370,8 +369,6 @@ D["Redemption Fee"] = ("Fee charged when selling within a short holding period, 
 D["Risk Label"] = ("Label part of 'Portfolio Risk Score': Conservative, Moderate, Aggressive, Very Aggressive or Extreme Risk.", "Text before the '(' in Portfolio Risk Score", "Lower risk for low-risk investing", "", CALC, "No")
 D["Risk Score Numeric"] = ("Number part of 'Portfolio Risk Score' (about 100 = as risky as a diversified all-stock portfolio).", "Number inside the '( )' in Portfolio Risk Score", "Lower = less risky",
                            "Above 100 ('Extreme Risk') = riskier than an all-stock portfolio, e.g. leveraged, single-sector or crypto funds (361 funds in this report).", CALC, "No")
-for f in ("Leveraged Fund", "Interval Fund", "Fund Of Funds", "Tender Offer"):
-    D[f"Flag {f}"] = (f"1 if '{f.replace('Of', 'of')}' = Yes, else 0.", "", "0 (except Fund Of Funds: neutral)", "Helper for the structural filters.", CALC, "No")
 D["Yahoo Subsector"] = ("Industry group with the most weight among the fund's top 10 holdings (Yahoo), e.g. Semiconductors, Software & Services, Banks. 'Broad Market Equity' when no industry dominates or no holdings data.",
                         "For each of the top 10 holdings: look up its industry → sub-sector; sum holding weights per sub-sector; pick the largest",
                         "n/a (grouping)",
@@ -458,8 +455,8 @@ D["Return Rank"] = ("Rank of the matching 'Total Return' column across ALL funds
                     "Rank = position when all funds are sorted by that period's return, highest first (ties share the lowest rank)",
                     "Lower is better (1 = best)",
                     "Across all categories, not within category - leveraged / sector funds dominate both ends. For momentum lists use python db_access/query.py momentum_top / momentum_bottom.", CALC, "No")
-def add_profile_rows(key, yaml_name, weights, top_n, top_n_overall):
-    """The five score/rank/flag columns one profile adds to the report."""
+def add_profile_rows(key, yaml_name, weights):
+    """The score and rank columns one profile adds to the report."""
     pa, total = f"Profile {key}", sum(v for v in weights.values() if v)
     D[f"{pa} Score"] = (f"Final 0-100 score combining the concept scores with the weights in {yaml_name}.",
                         f"{pa} Score = Σ(concept weight x concept score) / Σ(weights of concept scores the fund has). YAML weights: " + ", ".join(f"{CONCEPT_LABEL[k]} {v:g}" for k, v in weights.items()) + f" (sum {total:g}, so each effective share = weight / {total:g})",
@@ -469,20 +466,15 @@ def add_profile_rows(key, yaml_name, weights, top_n, top_n_overall):
                         CALC, f"This IS the {pa} score" if key == KEY else f"No - this is the {pa} score")
     D[f"{pa} Rank In Category"] = (f"Rank of the {pa} Score within the fund's Morningstar Category (1 = best).", "", "Lower is better",
                                    "Read with the category size: 5th of 8 is mediocre, 5th of 400 is excellent. The highest numbers are the category's weakest funds for this profile.", CALC, "No")
-    D[f"{pa} Selected Flag"] = (f"1 if the fund is in the top {top_n} of its Morningstar Category by {pa} Score.", f"Rank In Category ≤ top_n_per_category ({top_n})", "1 = selected",
-                                f"top_n_per_category is set in {yaml_name}.", CALC, "No")
     D[f"{pa} Rank Overall"] = (f"Rank of the {pa} Score across all funds (1 = best).", "", "Lower is better",
                                "Mixes categories; a top bond fund and a top stock fund can both rank high.", CALC, "No")
-    D[f"{pa} Selected Overall Flag"] = (f"1 if the fund is in the top {top_n_overall} overall.", f"Rank Overall ≤ top_n_overall ({top_n_overall})", "1 = selected",
-                                        f"top_n_overall is set in {yaml_name} (if left out, top_n_per_category is used).", CALC, "No")
 
 
-add_profile_rows(KEY, PROFILE_PATH.name, W, TOP_N, profile.thresholds.get("top_n_overall") or TOP_N)
+add_profile_rows(KEY, PROFILE_PATH.name, W)
 # A combined report (results_profile_LT_ST_...) also has the other profiles' columns.
 for other in ALL_PROFILES:
     if other.profile_name != KEY and f"Profile {other.profile_name} Score" in report_cols:
-        add_profile_rows(other.profile_name, Path(other.path).name, other.thresholds["weights"], other.top_n_per_category,
-                         other.thresholds.get("top_n_overall") or other.top_n_per_category)
+        add_profile_rows(other.profile_name, Path(other.path).name, other.thresholds["weights"])
 D["Missing From Yahoo"] = ("('No Yahoo Data' tab only) Which Yahoo-based results are missing: Sharpe / Z-score, yearly returns, volatile periods.", "", "n/a",
                            "These funds are taken off the overview; all their Morningstar columns are still on that tab.", CALC, "No")
 

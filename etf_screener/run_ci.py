@@ -19,7 +19,6 @@ if __name__ == "__main__":
         data_path=first.data_path,
         out_path=first.out_path,
         profile_name=first.profile_name,
-        top_n=first.top_n_per_category,
         thresholds=first.thresholds,
         extra_profiles=extras,
     )

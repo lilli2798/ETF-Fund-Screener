@@ -10,7 +10,7 @@ A Python tool that scores and ranks ETFs and mutual funds from Morningstar expor
 - **Adds the last 10 calendar-year returns** and how often each fund beat or trailed the major indexes
 - **Adds performance in 24 volatile market periods since 1976** (crash and recovery returns)
 - **Shows the benchmarks** (S&P 500, Dow Jones, NASDAQ) at the bottom of the report for comparison
-- **Runs nightly on GitHub** and sends the selected funds by email / Slack
+- **Runs nightly on GitHub** and sends the top-ranked funds by email / Slack
 
 ## Quick Start
 
@@ -89,7 +89,7 @@ thresholds:
 |---|---|
 | Morningstar data | Everything from your exports |
 | `... Score` concept columns | Each concept, 0-100 within category |
-| `Profile LT Score` / `Profile ST Score`, `Rank In Category`, `Rank Overall`, `Selected Flag` | Final score; selected = top `top_n_per_category` in its category, or top `top_n_overall` overall |
+| `Profile LT Score` / `Profile ST Score`, `Rank In Category`, `Rank Overall` | Final score and its rank within the category and across all funds (1 = best) |
 | `Return Rank (1W)` ... `(20Y)` | Rank of each period's return across all funds (1 = highest) |
 | `Yahoo SubSector`, `Sharpe 1Y/3Y`, `Z Score 1Y/3Y` | Yahoo metrics; Z-scores compare Sharpe within the same sub-sector |
 | `Yearly Return (2016)` ... `(2025)` | Calendar-year returns, in percent |
@@ -102,7 +102,7 @@ How to read them:
 - **Returns: higher is always better.** For a decline, -5 (lost 5%) is better than -30.
 - **Compare counts with `Periods With Data`** - a fund launched in 2018 can only appear in a few periods. `Beat %` / `Trailed %` are already shares of the periods each fund has.
 - **Percentile buckets rank your screener funds against each other**, not the whole market.
-- **Benchmark rows** (`^IXIC`, `^DJI`, `^GSPC`) at the bottom show the indexes' own yearly and crisis returns. They are never scored or selected.
+- **Benchmark rows** (`^IXIC`, `^DJI`, `^GSPC`) at the bottom show the indexes' own yearly and crisis returns. They are never scored or ranked.
 
 ## Yearly Returns
 
@@ -147,7 +147,7 @@ Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_retur
 
 | Workflow | When | What it does |
 |---|---|---|
-| **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the funds selected in their category AND overall by both LT and ST (`ALERT_FLAGS` in `alerts.py`), commits the sub-sector, volatile and yearly caches, attaches the report to the run |
+| **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the funds within every rank cutoff in `ALERT_RULES` (`alerts.py`: #1 in category and top 100 / 50 overall for LT / ST), commits the sub-sector, volatile and yearly caches, attaches the report to the run |
 | **Update Yearly Returns Cache** | January 2 (or run manually) | Adds last year's returns to the yearly CSV, refills empty rows, and commits it |
 | **Cleanup Workflow Runs** | Daily, 08:00 UTC | Keeps the last 10 runs of each workflow and the last 10 report artifacts |
 
@@ -162,7 +162,7 @@ ETF-Fund-Screener/
 ├── etf_screener/
 │   ├── main.py                 # Entry point (asks for the profile YAML)
 │   ├── run_ci.py               # Same pipeline without prompts (GitHub)
-│   ├── alerts.py               # Email / Slack of funds meeting ALERT_FLAGS (GitHub)
+│   ├── alerts.py               # Email / Slack of funds meeting ALERT_RULES (GitHub)
 │   ├── config.py               # Project-wide settings (columns, benchmarks, grade maps)
 │   ├── input_file.py           # Loads the profile YAML
 │   ├── data_loading.py         # Reads and merges the Morningstar exports

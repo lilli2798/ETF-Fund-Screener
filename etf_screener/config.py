@@ -1,7 +1,7 @@
 """
 ETF Fund Screener - project-wide settings.
 
-Everything that belongs to ONE profile (filters, weights, top_n, folders)
+Everything that belongs to ONE profile (weights, folders)
 lives only in that profile's YAML in input_files/ -- see input_file.py.
 This file holds what every profile shares: the eTrade columns to load,
 the Yahoo return caches, benchmark indexes, letter-grade mappings and

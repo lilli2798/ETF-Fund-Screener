@@ -97,14 +97,14 @@ FROM new JOIN old USING (Ticker)
 ORDER BY abs(change) DESC LIMIT 20;
 ```
 
-**Funds newly selected since the oldest kept run:**
+**Funds newly in the LT top 5 of their category since the oldest kept run:**
 
 ```sql
 SELECT Ticker, Name FROM reports
-WHERE run_time = (SELECT max(run_time) FROM reports) AND "Profile LT Selected Flag" = 1
+WHERE run_time = (SELECT max(run_time) FROM reports) AND "Profile LT Rank In Category" <= 5
   AND Ticker NOT IN (SELECT Ticker FROM reports
                      WHERE run_time = (SELECT min(run_time) FROM reports)
-                       AND "Profile LT Selected Flag" = 1);
+                       AND "Profile LT Rank In Category" <= 5);
 ```
 
 **How far back can you go?** Only as far as the reports in `output/etf_screener/`.
@@ -125,8 +125,8 @@ use that one. Avoid saving over reports; when in doubt, use `reports` with
 | **Text values vs column names** | `"VOO"` means a column called VOO | Use single quotes for values: `Ticker = 'VOO'` |
 | **Two return scales** | Report columns like `"Total Return (1Y)"` are percent (`14.5` = 14.5%). `yearly_returns.total_return` and `volatile_returns.total_return` are fractions (`0.145` = 14.5%) | Multiply the Yahoo tables by 100 before comparing with report columns |
 | **Ticker case between tables** | Yahoo tables use lower-case `ticker`, reports use `Ticker`, and spelling can differ in case | Join with `upper(y.ticker) = upper(r.Ticker)` |
-| **Flags are 0 / 1 numbers** | Selected and Flag columns are stored as 0.0 / 1.0 | Write `"Profile LT Selected Flag" = 1` |
-| **Blank ST scores** | Leveraged funds are excluded from the ST profile, so their `Profile ST ...` columns are empty | Use `IS NULL` / `IS NOT NULL`; blanks never match `= 1` or `> 50` |
+| **Picking the "best" funds** | There are no Selected columns; use the ranks (1 = best) | Write `"Profile LT Rank In Category" <= 5` or `"Profile LT Rank Overall" <= 100` |
+| **Blank scores and ranks** | Benchmark rows and funds a profile couldn't score have empty `Profile ...` columns | Use `IS NULL` / `IS NOT NULL`; blanks never match `<= 5` or `> 50` |
 | **Counting in `reports`** | Every fund is repeated once per run | Filter on `run_time`, or use `count(DISTINCT Ticker)` |
 | **Interactive prompt left open** | A session keeps the data it already loaded | After a new screener run or new eTrade files, `.quit` and start again |
 | **First query is slow** | Excel is read once, then cached in `output/query_cache/` | The first `etrade` query takes about 30 s; later ones are instant until the files change |
@@ -137,7 +137,7 @@ Example joining the report with the Yahoo yearly returns (percent on both sides)
 SELECT r.Ticker, r.Name, y.year, round(y.total_return * 100, 1) AS return_pct
 FROM report r
 JOIN yearly_returns y ON upper(y.ticker) = upper(r.Ticker)
-WHERE r."Profile LT Selected Overall Flag" = 1
+WHERE r."Profile LT Rank Overall" <= 100
 ORDER BY r.Ticker, y.year DESC;
 ```
 
@@ -148,7 +148,7 @@ the description shown by `.queries`.
 
 | Query | What it shows | Needs |
 |---|---|---|
-| `top_both` | funds selected in their category by both LT and ST | |
+| `top_both` | funds in the top 5 of their category for both LT and ST | optional: `top=5` |
 | `sell_candidates` | weakest 3 funds per category on both profiles | |
 | `category_top` | top 15 by LT score in matching categories | `category=growth` |
 | `ticker_history` | one fund's scores and ranks in every kept report | `ticker=VOO` |

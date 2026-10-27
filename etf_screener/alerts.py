@@ -1,10 +1,10 @@
 """Reads the latest screener report and delivers only high-signal rows
 via Slack webhook and/or email.
 
-A fund is alerted when EVERY flag in ALERT_FLAGS below is 1 in the newest
-results_profile_*.xlsx -- by default, selected in its category AND in the
-overall top list by both the long-term (LT) and short-term (ST) profiles.
-Edit ALERT_FLAGS to change the condition.
+A fund is alerted when EVERY rank in ALERT_RULES below is within its cutoff
+in the newest results_profile_*.xlsx -- by default, #1 in its category AND
+near the top overall for both the long-term (LT) and short-term (ST)
+profiles. Edit ALERT_RULES to change the condition.
 
 Email delivery is enabled by setting SMTP-related environment variables
 (see the EMAIL_* variables below). If they are not set, email sending is
@@ -22,13 +22,13 @@ import requests
 
 from input_file import discover_profiles
 
-# A fund is alerted only when ALL of these report columns are 1 (True).
-ALERT_FLAGS = [
-    "Profile LT Selected Flag",          # top top_n_per_category of its category (LT)
-    "Profile LT Selected Overall Flag",  # top top_n_overall across all funds (LT)
-    "Profile ST Selected Flag",          # top top_n_per_category of its category (ST)
-    "Profile ST Selected Overall Flag",  # top top_n_overall across all funds (ST)
-]
+# A fund is alerted only when EVERY rank below is <= its cutoff (1 = best).
+ALERT_RULES = {
+    "Profile LT Rank In Category": 1,    # best LT fund of its category
+    "Profile LT Rank Overall": 100,      # LT top 100 across all funds
+    "Profile ST Rank In Category": 1,    # best ST fund of its category
+    "Profile ST Rank Overall": 50,       # ST top 50 across all funds
+}
 MAX_LINES = 50  # longer lists are cut in the message; the attached report has all
 
 # The report folder comes from the profile YAMLs run_ci.py uses, so the alert
@@ -53,10 +53,10 @@ def find_latest_file(directory: str, pattern: str) -> str | None:
 
 
 def build_alert_message(df: pd.DataFrame) -> tuple[str, pd.DataFrame]:
-    """Rows where every ALERT_FLAGS column is 1, best LT overall rank first."""
+    """Rows where every ALERT_RULES rank is within its cutoff, best LT overall rank first."""
     hits = df
-    for col in ALERT_FLAGS:
-        hits = hits[hits[col].fillna(False).astype(bool)]
+    for col, cutoff in ALERT_RULES.items():
+        hits = hits[pd.to_numeric(hits[col], errors="coerce") <= cutoff]
     hits = hits.sort_values("Profile LT Rank Overall")
     if hits.empty:
         return "", hits
@@ -74,7 +74,7 @@ def build_alert_message(df: pd.DataFrame) -> tuple[str, pd.DataFrame]:
     if len(hits) > MAX_LINES:
         lines.append(f"... and {len(hits) - MAX_LINES} more in the attached report")
 
-    header = f"*{len(hits)} fund(s) meet all of: {', '.join(ALERT_FLAGS)}*"
+    header = f"*{len(hits)} fund(s) meet all of: {', '.join(f'{c} <= {n}' for c, n in ALERT_RULES.items())}*"
     return header + "\n" + "\n".join(lines), hits
 
 
@@ -140,7 +140,7 @@ def main():
         return
 
     df = pd.read_excel(report)  # first sheet: the overview
-    missing = [c for c in ALERT_FLAGS if c not in df.columns]
+    missing = [c for c in ALERT_RULES if c not in df.columns]
     if missing:
         print(f"{os.path.basename(report)} has no {missing} column(s); skipping alerts.")
         return

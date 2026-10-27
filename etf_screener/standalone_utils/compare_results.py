@@ -1,7 +1,8 @@
 """
 Compare N ETF result files (exported .xlsx outputs from main.py) side
-by side: weights/thresholds used for each run, per-ticker
-selection-flag differences, and a full score/rank matrix.
+by side: weights/thresholds used for each run, funds that moved into or
+out of the top TOP_IN_CATEGORY of their category, and a full score/rank
+matrix.
 
 Updated after the scoring.py refactor:
   - The old "Norm_*" columns no longer exist -- they were replaced by
@@ -14,9 +15,8 @@ Updated after the scoring.py refactor:
     the .xlsx file. The old version of this script filtered on
     underscore-style names, which never matched the actual exported
     headers (a pre-existing bug, independent of the scoring refactor).
-  - Profiles now also produce an overall (cross-category) rank and
-    selected-flag, in addition to the per-category ones -- both are
-    now captured here too.
+  - Profiles produce a rank within the category and an overall
+    (cross-category) rank; both are captured here.
   - Profile columns carry the profile key ("Profile LT Score",
     "Profile ST Score", older reports "Profile A Score"). The key is
     dropped on load ("Profile Score"), so reports from any profile can
@@ -50,13 +50,10 @@ SCORE_AND_RANK_PREFIXES = (
     "Quality Valuation Score",
     "Costs Score",
     "Tax Income Score",
-    # Profile composite score, ranks, and selection flags (key dropped,
-    # see PROFILE_COLUMN)
+    # Profile composite score and ranks (key dropped, see PROFILE_COLUMN)
     "Profile Score",
     "Profile Rank In Category",
-    "Profile Selected Flag",
     "Profile Rank Overall",
-    "Profile Selected Overall Flag",
     # Additional comparison metrics
     "Better Worst Diff",
     "Better %",
@@ -66,7 +63,10 @@ SCORE_AND_RANK_PREFIXES = (
 
 
 # "Profile LT Score" -> "Profile Score" (any profile key)
-PROFILE_COLUMN = re.compile(r"^Profile \w+ (Score|Rank In Category|Selected Flag|Rank Overall|Selected Overall Flag)$")
+PROFILE_COLUMN = re.compile(r"^Profile \w+ (Score|Rank In Category|Rank Overall)$")
+
+# A fund "moved" between two reports when it entered or left the top N of its category.
+TOP_IN_CATEGORY = 5
 
 
 def load_recorder(output_dir: str) -> dict:
@@ -99,25 +99,26 @@ def build_comparison_map(output_dir: str, filenames: List[str]) -> Dict[str, Any
     return {fn: build_file_ticker_map(output_dir, fn, recorder) for fn in filenames}
 
 
-def find_flag_differences_pair(comparison_map: Dict[str, Any], file_a: str, file_b: str) -> pd.DataFrame:
+def _in_top(rank) -> bool:
+    return pd.notna(rank) and rank <= TOP_IN_CATEGORY
+
+
+def find_top_changes_pair(comparison_map: Dict[str, Any], file_a: str, file_b: str) -> pd.DataFrame:
+    """Funds that are in the top TOP_IN_CATEGORY of their category in one file but not the other."""
     tickers_a = comparison_map[file_a]["tickers"]
     tickers_b = comparison_map[file_b]["tickers"]
     all_tickers = sorted(set(tickers_a) | set(tickers_b))
     rows = []
     for ticker in all_tickers:
-        flag_a = tickers_a.get(ticker, {}).get("Profile Selected Flag")
-        flag_b = tickers_b.get(ticker, {}).get("Profile Selected Flag")
-        overall_flag_a = tickers_a.get(ticker, {}).get("Profile Selected Overall Flag")
-        overall_flag_b = tickers_b.get(ticker, {}).get("Profile Selected Overall Flag")
-        if flag_a != flag_b or overall_flag_a != overall_flag_b:
+        top_a = _in_top(tickers_a.get(ticker, {}).get("Profile Rank In Category"))
+        top_b = _in_top(tickers_b.get(ticker, {}).get("Profile Rank In Category"))
+        if top_a != top_b:
             rows.append({
                 "Ticker": ticker,
                 "file_a": file_a,
                 "file_b": file_b,
-                "Flag_In_Category_file_a": flag_a,
-                "Flag_In_Category_file_b": flag_b,
-                "Flag_Overall_file_a": overall_flag_a,
-                "Flag_Overall_file_b": overall_flag_b,
+                f"Top_{TOP_IN_CATEGORY}_file_a": top_a,
+                f"Top_{TOP_IN_CATEGORY}_file_b": top_b,
                 "Score_file_a": tickers_a.get(ticker, {}).get("Profile Score"),
                 "Score_file_b": tickers_b.get(ticker, {}).get("Profile Score"),
                 "Rank_In_Category_file_a": tickers_a.get(ticker, {}).get("Profile Rank In Category"),
@@ -128,10 +129,10 @@ def find_flag_differences_pair(comparison_map: Dict[str, Any], file_a: str, file
     return pd.DataFrame(rows)
 
 
-def find_all_flag_differences(comparison_map: Dict[str, Any], filenames: List[str]) -> pd.DataFrame:
+def find_all_top_changes(comparison_map: Dict[str, Any], filenames: List[str]) -> pd.DataFrame:
     all_diffs = []
     for file_a, file_b in combinations(filenames, 2):
-        diff_df = find_flag_differences_pair(comparison_map, file_a, file_b)
+        diff_df = find_top_changes_pair(comparison_map, file_a, file_b)
         if not diff_df.empty:
             all_diffs.append(diff_df)
     if not all_diffs:
@@ -142,7 +143,7 @@ def find_all_flag_differences(comparison_map: Dict[str, Any], filenames: List[st
 def build_ticker_matrix(comparison_map: Dict[str, Any], filenames: List[str]) -> pd.DataFrame:
     """
     One row per ticker, with every concept score, the composite score,
-    both ranks, and both selection flags -- per file, so you can eyeball
+    and both ranks -- per file, so you can eyeball
     how a single ETF's full scoring breakdown shifted between runs
     (e.g. after tweaking concept_weights.performance.return_3y).
     """
@@ -189,16 +190,16 @@ def main():
         print("  weights (profile-level):", comparison_map[fn]["weights"])
         print("  concept_weights (column-level):", comparison_map[fn]["concept_weights"])
 
-    flag_diff_df = find_all_flag_differences(comparison_map, filenames)
-    print("\n=== All pairwise Profile Selected Flag differences (category + overall) ===")
-    print(flag_diff_df.to_string(index=False) if not flag_diff_df.empty else "No differences across any pair.")
+    top_diff_df = find_all_top_changes(comparison_map, filenames)
+    print(f"\n=== Funds entering or leaving the top {TOP_IN_CATEGORY} of their category (every pair of files) ===")
+    print(top_diff_df.to_string(index=False) if not top_diff_df.empty else "No differences across any pair.")
 
     matrix_df = build_ticker_matrix(comparison_map, filenames)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     diff_out_path = os.path.join(output_dir, f"compare_results_report_{timestamp}.xlsx")
     with pd.ExcelWriter(diff_out_path) as writer:
-        flag_diff_df.to_excel(writer, sheet_name="flag_diffs", index=False)
+        top_diff_df.to_excel(writer, sheet_name="top_changes", index=False)
         matrix_df.to_excel(writer, sheet_name="ticker_matrix", index=False)
 
     # Format the Excel file: bold headers and 150% zoom

@@ -282,8 +282,8 @@ def append_benchmark_rows(df: pd.DataFrame, yearly_csv: str) -> pd.DataFrame:
 
     Only the "Yearly Return (YYYY)" and "Volatile Decline/Recovery: ..."
     columns are filled (from the same caches as the funds); every other
-    column -- Morningstar data, scores, ranks, flags, stats -- stays blank,
-    so the rows are never scored, ranked, selected or alerted on.
+    column -- Morningstar data, scores, ranks, stats -- stays blank,
+    so the rows are never scored, ranked or alerted on.
     """
     rows = pd.DataFrame({"Ticker": BENCHMARK_INDEXES}, index=range(len(BENCHMARK_INDEXES)))
     if "Name" in df.columns:

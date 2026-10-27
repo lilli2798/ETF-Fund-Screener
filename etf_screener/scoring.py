@@ -10,10 +10,9 @@ Design notes (locked in from project discussion):
     penalize inherently-higher-risk categories.
   - Concept scoring is split into one function per concept group so
     each stays independently testable and reusable across profiles.
-  - Categorical/flag-style concepts (Sector/Exposure, Manager &
-    Stewardship, Structure & Flags) are intentionally NOT scored 0-100
-    here yet -- they are left as separate raw/flag columns until the
-    filter-vs-score decision is finalized.
+  - Sector, manager and fund-structure fields (Leveraged Fund, Interval
+    Fund, ...) are not scored; they stay in the report as Morningstar's
+    own columns.
 """
 
 from typing import Callable, Dict, List, Optional
@@ -57,7 +56,7 @@ def register_profile_prefilter(name: str):
 
 
 def register_profile_scorer(name: str):
-    """Decorator: register a (DataFrame, top_n) -> DataFrame scorer under `name`."""
+    """Decorator: register a (DataFrame, thresholds) -> DataFrame scorer under `name`."""
     def deco(fn):
         if name in PROFILE_SCORERS:
             print(f"Warning: overwriting existing profile scorer registered under '{name}'.")
@@ -805,35 +804,6 @@ def calculate_tax_income_score(
     return _weighted_average(out, weight_map)
 
 
-# --- 9-11. Flags / not-yet-scored concepts --------------------------------
-# Per project decision: Sector/Exposure, Manager & Stewardship, and
-# Structure & Flags are kept as raw/flag columns for now, NOT folded
-# into a 0-100 score, until the filter-vs-score approach is decided.
-
-def build_sector_exposure_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """Placeholder: attach raw sector/exposure fields as-is, unscored."""
-    out = df.copy()
-    # e.g. concentration checks could go here later as boolean flags,
-    # such as Flag_High_Sector_Concentration.
-    return out
-
-
-def build_manager_stewardship_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """Placeholder: attach raw manager/stewardship fields as-is, unscored."""
-    out = df.copy()
-    # Manager tenure and new manager flags removed - user will manually check for manager changes
-    return out
-
-
-def build_structure_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """Placeholder: attach raw structure/flag fields as-is, unscored."""
-    out = df.copy()
-    for flag_col in ("Leveraged Fund", "Interval Fund", "Fund of Funds", "Tender Offer"):
-        if flag_col in out.columns:
-            out[f"Flag_{flag_col.replace(' ', '_')}"] = out[flag_col].astype(str).str.upper().eq("YES")
-    return out
-
-
 # --- Orchestrator -----------------------------------------------------
 
 def build_concept_scores(
@@ -873,7 +843,6 @@ def build_concept_scores(
       - Quality_Valuation_Score
       - Costs_Score
       - Tax_Income_Score
-      - Sector/Manager/Structure flag columns (unscored, see above)
 
     Missing source columns are skipped gracefully (handled inside each
     calculate_*_score function) so this works even if a data source
@@ -912,9 +881,5 @@ def build_concept_scores(
     out["Tax_Income_Score"] = calculate_tax_income_score(
         out, category_col, weights=cw.get("tax_income")
     )
-
-    out = build_sector_exposure_flags(out)
-    out = build_manager_stewardship_flags(out)
-    out = build_structure_flags(out)
 
     return out

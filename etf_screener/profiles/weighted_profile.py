@@ -77,7 +77,7 @@ def _as_float_series(s: pd.Series) -> pd.Series:
     return pd.to_numeric(s, errors="coerce").astype("float64")
 
 
-def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> pd.DataFrame:
+def compute_score(df: pd.DataFrame, thresholds: dict, key: str) -> pd.DataFrame:
     """
     Weights come from thresholds["weights"] in the profile YAML. This blends the
     already-category-relative concept scores (each 0-100) into a single
@@ -94,9 +94,7 @@ def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> p
 
     score_col = f"Profile_{key}_Score"
     rank_cat_col = f"Profile_{key}_Rank_In_Category"
-    flag_cat_col = f"Profile_{key}_Selected_Flag"
     rank_all_col = f"Profile_{key}_Rank_Overall"
-    flag_all_col = f"Profile_{key}_Selected_Overall_Flag"
 
     scored: pd.DataFrame = df.copy()
     weights = thresholds["weights"]
@@ -172,21 +170,10 @@ def compute_score(df: pd.DataFrame, top_n: int, thresholds: dict, key: str) -> p
         scored[rank_cat_col]
     )
 
-    scored[flag_cat_col] = (
-        scored[rank_cat_col].le(float(top_n)).fillna(False).astype(bool)
-    )
-
     scored[rank_all_col] = scored[score_col].rank(
         method="min", ascending=False
     )
     scored[rank_all_col] = _as_float_series(scored[rank_all_col])
-
-    # top_n_overall (YAML, top level) sets the overall cutoff separately;
-    # if it's not set, the per-category top_n is used for both.
-    top_n_overall = thresholds.get("top_n_overall") or top_n
-    scored[flag_all_col] = (
-        scored[rank_all_col].le(float(top_n_overall)).fillna(False).astype(bool)
-    )
 
     # Console proof (helps catch str regression early)
     print(

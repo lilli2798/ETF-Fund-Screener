@@ -55,7 +55,7 @@ Each profile is one `etf_screener/input_files/profile_*.yaml`, and the YAML is t
 
 Both share the scoring code in `profiles/weighted_profile.py`; only their YAML weights differ. Every fund is ranked, so the highest rank numbers in a profile's columns are its weakest funds.
 
-**Adding a profile:** copy a YAML to `input_files/profile_<name>.yaml` and change `profile:` (e.g. `INC`). `run_ci.py`, `main.py` (Enter), the alerts and the column dictionary pick it up, and the report gets `Profile INC ...` columns; no code changes. Add `enabled: false` to keep a YAML without running it. Profile YAMLs only **score** funds; they never remove one, so every fund in the report has a score from every profile and the order of the files doesn't matter. To make something not count, set its weight to `0.0` (the expense ratio, for example, counts through `weights: costs`). The concept-score columns (Volatility Score, ...) are the first profile's (`profile_long_term`, by file name).
+**Adding a profile:** copy a YAML to `input_files/profile_<name>.yaml` and change `profile:` (e.g. `INC`). `run_ci.py`, `main.py` (Enter) and the column dictionary pick it up, and the report gets `Profile INC ...` columns; no code changes. Add `enabled: false` to keep a YAML without running it. Profile YAMLs only **score** funds; they never remove one, so every fund in the report has a score from every profile and the order of the files doesn't matter. To make something not count, set its weight to `0.0` (the expense ratio, for example, counts through `weights: costs`). The concept-score columns (Volatility Score, ...) are the first profile's (`profile_long_term`, by file name).
 
 ```yaml
 profile: LT
@@ -153,7 +153,7 @@ Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_retur
 
 | Workflow | When | What it does |
 |---|---|---|
-| **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the selected funds (`alerts.py`), commits the sub-sector and volatile caches, attaches the report to the run |
+| **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the funds selected in their category AND overall by both LT and ST (`ALERT_FLAGS` in `alerts.py`), commits the sub-sector and volatile caches, attaches the report to the run |
 | **Update Yearly Returns Cache** | January 2 (or run manually) | Adds last year's returns and any new tickers to the yearly CSV and commits it |
 | **Cleanup Workflow Runs** | Daily, 08:00 UTC | Keeps the last 10 runs of each workflow and the last 10 report artifacts |
 
@@ -168,7 +168,7 @@ ETF-Fund-Screener/
 ├── etf_screener/
 │   ├── main.py                 # Entry point (asks for the profile YAML)
 │   ├── run_ci.py               # Same pipeline without prompts (GitHub)
-│   ├── alerts.py               # Email / Slack of selected funds (GitHub)
+│   ├── alerts.py               # Email / Slack of funds meeting ALERT_FLAGS (GitHub)
 │   ├── config.py               # Project-wide settings (columns, benchmarks, grade maps)
 │   ├── input_file.py           # Loads the profile YAML
 │   ├── data_loading.py         # Reads and merges the Morningstar exports
@@ -192,7 +192,6 @@ ETF-Fund-Screener/
 │   │   └── query.py, queries/*.sql             # DuckDB queries, no import needed
 │   ├── standalone_utils/       # Hand-run tools, not used by the screener
 │   │   ├── compare_results.py                  # Compare selections across result files
-│   │   ├── get_yahoo_dta.py                    # Yahoo metrics for a watchlist (tickers.txt)
 │   │   └── yahoo_get_top_return.py, ...        # Helpers for the tools above
 │   ├── input_files/            # profile_long_term.yaml, profile_short_term.yaml
 │   ├── docs/                   # Glossary, column dictionary, Profile A design

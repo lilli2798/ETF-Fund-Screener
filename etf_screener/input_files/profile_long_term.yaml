@@ -48,18 +48,18 @@ thresholds:
 
   weights:
     # How much historical returns matter (split into long-term and short-term)
-    long_term_return_performance: 0.25 # Aggregates 1Y-20Y returns for consistent long-term performance
+    long_term_return_performance: 0.30 # Aggregates 1Y-20Y returns for consistent long-term performance
     short_term_return_performance: 0.05 # Aggregates 1W-YTD returns for recent momentum
 
     # How much risk-adjusted performance matters
     risk_adjusted: 0.20
 
     # How much volatility/downside risk matters
-    volatility: 0.15
+    volatility: 0.10
 
     # How consistently the fund beat the indexes, year by year and in the
     # S&P 500's volatile periods (crashes and recoveries)
-    resilience: 0.10
+    resilience: 0.15
 
     # How much tracking error matters
     # Lower tracking error = fund follows its benchmark more closely
@@ -70,7 +70,7 @@ thresholds:
 
     # How much portfolio quality and valuation matter
     quality_valuation: 0.10
-    costs: 0.10
+    costs: 0.05
     tax_income: 0.00
 
   # ============================================================================

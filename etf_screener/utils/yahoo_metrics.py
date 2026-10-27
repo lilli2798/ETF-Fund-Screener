@@ -2,16 +2,10 @@
 
 This module is the single source of truth for everything derived from
 Yahoo Finance: sub-sector classification (via top-holdings look-through),
-Sharpe Ratio (1Y/3Y), and sector-relative Z-Scores. The command-line
-wrapper standalone_utils/get_yahoo_dta.py calls get_yahoo_metrics_for_tickers()
-for an ad hoc watchlist.
+Sharpe Ratio (1Y/3Y), and sector-relative Z-Scores.
 
 Design goals:
-  - Callable two ways: pass a list of tickers directly (main.py's CI
-    flow, using tickers already present in the merged Morningstar
-    dataframe), or read tickers from a tickers.txt-style file (standalone
-    local runs via standalone_utils/get_yahoo_dta.py, useful for testing against an
-    arbitrary watchlist independent of the spreadsheet universe).
+  - main.py passes in the tickers of the merged Morningstar dataframe.
   - Every per-ticker Yahoo Finance call is wrapped so a single bad/
     delisted/rate-limited ticker never aborts the whole batch -- failures
     are logged and the ticker gets safe NaN/default placeholders instead.
@@ -189,28 +183,6 @@ def _is_cache_entry_fresh(entry: Dict[str, str], max_age_days: int, ticker: str 
     # on the same day are refreshed over a month instead of all at once.
     spread = zlib.crc32(ticker.encode()) % 30 if ticker else 0
     return (datetime.now() - cached_date) <= timedelta(days=max_age_days + spread)
-
-
-# =========================================================================
-# TICKER INPUT HELPERS
-# =========================================================================
-
-def read_tickers_from_file(path: str) -> List[str]:
-    """Read a tickers.txt-style file: comma/tab/newline separated, '#'
-    comment lines ignored, deduplicated and sorted. Used only by the
-    standalone CLI (standalone_utils/get_yahoo_dta.py) for ad hoc local runs -- the CI
-    flow (main.py) passes tickers in directly from the merged dataframe
-    instead of reading this file.
-    """
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        raw_content = f.read()
-
-    processed = []
-    for line in raw_content.replace(",", "\n").replace("\t", "\n").split("\n"):
-        clean = line.strip().upper()
-        if clean and not clean.startswith("#"):
-            processed.append(clean)
-    return sorted(set(processed))
 
 
 # =========================================================================
@@ -466,8 +438,7 @@ def get_yahoo_metrics_for_tickers(
     Z-scores are computed once at the end across the FULL set of
     `tickers` passed in -- grouped by Yahoo_SubSector -- so the peer
     group is exactly whatever universe the caller provides (the merged
-    Morningstar spreadsheet's tickers, in the CI flow; or tickers.txt's
-    list, in standalone local runs).
+    Morningstar spreadsheet's tickers).
     """
     cfg = cfg or YahooMetricsConfig()
 

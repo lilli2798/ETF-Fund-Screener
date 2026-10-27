@@ -2,7 +2,7 @@
 enabled input_files/profile_*.yaml instead of prompting, so it can
 run headless inside GitHub Actions. All profiles go into one report
 (results_profile_LT_ST_....xlsx) with every fund that passed any profile's
-rules; each profile adds its own score/rank/flag columns."""
+rules; each profile adds its own score/rank columns."""
 import sys
 from pathlib import Path
 

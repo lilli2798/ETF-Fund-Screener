@@ -7,25 +7,31 @@ It provides functions to build, update, and load the cache from a CSV file.
 The cache stores yearly returns for each ticker from 2006-01-01 to the previous year.
 This is separate from the interactive analysis which may only need short-term returns.
 
-Usage:
-    # Build cache from scratch or update with new tickers
-    python yearly_cache_manager.py
+New funds are added automatically: every screener run passes its tickers
+to build_yearly_history_cache(), which downloads only the ones not in the
+file yet (performance.update_yearly_cache). Funds with no complete year yet
+are saved as an empty row so they aren't downloaded every night.
 
-    # Or import and use programmatically
-    from yearly_cache_manager import build_yearly_history_cache
-    build_yearly_history_cache(config)
+Usage (once a year, after the year ends -- the January GitHub job):
+    python yearly_cache_manager.py
+    # adds the finished year for every fund in the file and refills empty rows
 """
 
 import random
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Tuple
 
 import pandas as pd
-import yfinance as yf
 
 from yahoo_config import DEFAULT_CONFIG
+
+# utils/yf_download.py (in etf_screener/) tells Yahoo's "rate limited" answers
+# apart from funds that really have no data.
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from utils.yf_download import download_prices  # noqa: E402
 
 
 # =========================================================================
@@ -101,26 +107,6 @@ def _batch_generator(all_symbols: List[str], batch_size: int):
         print(f"  Batch {batch_num}/{total_batches}: {len(batch)} symbols")
         yield batch, batch_num, total_batches
 
-def _extract_adjusted_close(batch_data: pd.DataFrame, batch: List[str]) -> pd.DataFrame:
-    """Return dividend/split-adjusted closes (tickers as columns) from a
-    yf.download(..., auto_adjust=True) result.
-
-    With auto_adjust=True the adjusted price is in "Close". Don't look for
-    "Adj Close" first: yfinance adds an "Adj Close" column only for tickers
-    that FAILED (e.g. delisted), so picking it would drop every good ticker
-    in the batch.
-    """
-    if isinstance(batch_data.columns, pd.MultiIndex):
-        if "Close" not in batch_data.columns.get_level_values(0):
-            raise ValueError("Close not found in download")
-        return batch_data["Close"].copy()
-    if "Close" not in batch_data.columns:
-        raise ValueError("Close not found in download")
-    single = batch_data[["Close"]].copy()
-    single.columns = [batch[0]] if len(batch) == 1 else ["Close"]
-    return single
-
-
 def download_adj_close(tickers, start, end, config: Dict = None):
     """Download adjusted close prices with rate limiting and error handling.
     
@@ -161,17 +147,12 @@ def download_adj_close(tickers, start, end, config: Dict = None):
         retry_count = 0
         while retry_count < max_retries:
             try:
-                batch_data = yf.download(batch, start=start, end=end, auto_adjust=True, progress=False)
-                
-                if batch_data.empty:
+                # retries Yahoo rate limits; still-failing tickers are reported below
+                batch_adj, batch_failed = download_prices(batch, "Close", start=start, end=end, auto_adjust=True)
+                failed_symbols.extend(batch_failed)
+                if batch_adj.empty:
                     print(f"    No data returned for batch {batch_num}")
                     break
-                
-                batch_adj = _extract_adjusted_close(batch_data, batch)
-                
-                # Handle single ticker case (Series vs DataFrame)
-                if isinstance(batch_adj, pd.Series):
-                    batch_adj = batch_adj.to_frame()
                 
                 adj = pd.concat([adj, batch_adj], axis=1)
                 break
@@ -243,34 +224,6 @@ def save_yearly_history_csv(cache_path: str, df: pd.DataFrame) -> None:
 
 
 # =========================================================================
-# TICKER LOADING FUNCTIONS
-# =========================================================================
-
-def load_tickers_from_file(tickers_file: str) -> List[str]:
-    """Load tickers from tickers.txt file.
-    
-    Args:
-        tickers_file: Path to the tickers.txt file
-    
-    Returns:
-        List of ticker symbols (uppercase, stripped, non-NAN).
-        Returns empty list if file doesn't exist or fails to load.
-    """
-    if not Path(tickers_file).exists():
-        return []
-    try:
-        with open(tickers_file, "r", encoding="utf-8") as f:
-            lines = [line.strip() for line in f.readlines()]
-        return [x.strip().upper() for x in lines if x and x != "NAN"]
-    except Exception:
-        return []
-
-
-# =========================================================================
-# CACHE UPDATE FUNCTIONS
-# =========================================================================
-
-# =========================================================================
 # YEARLY UPDATE FUNCTION
 # =========================================================================
 
@@ -340,41 +293,40 @@ def add_missing_years(config: Dict = None) -> List[int]:
 # MAIN CACHE BUILD FUNCTION
 # =========================================================================
 
-def build_yearly_history_cache(config: Dict = None) -> List[str]:
-    """Build yearly history cache from scratch or update existing cache.
+def build_yearly_history_cache(config: Dict = None, tickers=(), retry_empty: bool = True) -> List[str]:
+    """Add funds to the yearly history cache (or build it from scratch).
     
     Args:
         config: Configuration dictionary containing paths and caching settings
+        tickers: funds to have in the cache; only the ones not in it yet are downloaded
+        retry_empty: also re-download cached funds whose row is empty (the
+            January job does; the nightly screener doesn't, to stay fast)
     
     Returns:
         Tickers whose rows were added or refilled (have data now).
     
     Workflow:
-        1. Read tickers to add from sources/tickers.txt (may list only new ones)
+        1. Take the tickers passed in
         2. Load existing cache if it exists
-        3. Identify tickers to download: not in the cache, or cached with no data
+        3. Identify tickers to download: not in the cache, or (retry_empty) cached with no data
         4. Download data from 2006-01-01 to previous year 12-31 for new tickers
         5. Calculate yearly returns for each complete year
         6. Merge with existing cache and save to sources/etf_yearly_history.csv
-        7. Print tickers Yahoo had no data for
+        7. Save funds Yahoo had no complete year for as empty rows
     
-    Note: This function preserves existing cache data. It adds new tickers and
-    retries tickers whose cached row is entirely empty.
+    Note: This function preserves existing cache data. A batch that fails to
+    download is not saved, so its funds are tried again on the next run.
     """
     if config is None:
         config = DEFAULT_CONFIG
     
-    paths_config = config.get("paths", {})
-    tickers_file = paths_config.get("tickers_file", "sources/tickers.txt")
     cache_config = config.get("caching", {})
     history_start_date = cache_config.get("history_start_date", "2006-01-01")
     cache_path = cache_config.get("yearly_returns_cache_path", "sources/etf_yearly_history.csv")
     
-    # Step 1: tickers.txt lists tickers to ADD -- it can hold just the new
-    # ones. Tickers already in the cache are skipped, and cached tickers that
-    # aren't listed are kept.
-    tickers = load_tickers_from_file(tickers_file)
-    print(f"Found {len(tickers)} tickers in {tickers_file}")
+    # Step 1: tickers already in the cache are skipped; cached tickers not
+    # passed in are kept.
+    tickers = sorted({str(t).strip().upper() for t in tickers if str(t).strip() and str(t).strip().upper() != "NAN"})
     
     # Step 3: Load existing cache to preserve existing data
     cached_df = load_yearly_history_csv(cache_path)
@@ -388,8 +340,7 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
         # Tickers whose cached row is completely empty (e.g. added before
         # they had a full trading history, or a failed download) are retried
         # too -- otherwise they would stay empty forever.
-        # Retry every cached ticker with no data, listed in tickers.txt or not
-        empty_tickers = set(cached_df.index[cached_df.isna().all(axis=1)])
+        empty_tickers = set(cached_df.index[cached_df.isna().all(axis=1)]) if retry_empty else set()
         tickers_to_add = sorted(new_tickers | empty_tickers)
         print(f"Found {len(new_tickers)} new tickers (not in cache) and "
               f"{len(empty_tickers)} cached tickers with no data to retry")
@@ -415,7 +366,8 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
     ending_date_dt = to_date(ending_date)
     
     yearly_data = {}
-    failed_tickers = []
+    failed_tickers = []   # download failed: not saved, tried again next run
+    no_data_tickers = []  # Yahoo has no complete year: saved as an empty row
     
     # Process in batches to overlap download and calculation
     rate_config = _get_rate_limit_config(config)
@@ -433,23 +385,18 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
         while retry_count < max_retries:
             try:
                 # yfinance's `end` is exclusive, so end on Jan 1 to include Dec 31.
-                batch_data = yf.download(batch, start=beginning_date, end=f"{current_year}-01-01", auto_adjust=True, progress=False)
-                
-                if batch_data.empty:
-                    print(f"    No data returned for batch {batch_num}")
-                    break
-                
-                batch_adj = _extract_adjusted_close(batch_data, batch)
-                
-                # Handle single ticker case (Series vs DataFrame)
-                if isinstance(batch_adj, pd.Series):
-                    batch_adj = batch_adj.to_frame()
+                # Rate-limited tickers are retried, and the ones still failing
+                # are left out of the file so the next run tries them again.
+                batch_adj, batch_failed = download_prices(
+                    batch, "Close", start=beginning_date, end=f"{current_year}-01-01", auto_adjust=True,
+                )
+                failed_tickers.extend(batch_failed)
                 
                 # Calculate returns for this batch immediately
                 batch_yearly_data = {}
-                for ticker in batch:
+                for ticker in [t for t in batch if t not in batch_failed]:
                     if ticker not in batch_adj.columns:
-                        failed_tickers.append(ticker)
+                        no_data_tickers.append(ticker)
                         continue
                     
                     batch_yearly_data[ticker] = {}
@@ -476,7 +423,7 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
                             print(f"    Warning: Failed to calculate {year} return for {ticker}: {e}")
                     
                     if not ticker_has_data:
-                        failed_tickers.append(ticker)
+                        no_data_tickers.append(ticker)
                         del batch_yearly_data[ticker]
                 
                 # Merge batch results with yearly_data
@@ -490,7 +437,6 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
                 # Clear batch data from memory to save space
                 del batch_yearly_data
                 del batch_adj
-                del batch_data
                 
                 break
                 
@@ -511,14 +457,14 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
             print(f"  Waiting {wait_time:.1f}s before next batch...")
             time.sleep(wait_time)
     
-    if adj.empty:
-        print("No data downloaded. All tickers failed.")
-        return []
-    
-    # Convert yearly_data to DataFrame and merge with existing cache
+    # Convert yearly_data to DataFrame and merge with existing cache. Funds
+    # with no complete year get an empty row (not already cached).
     new_df = pd.DataFrame.from_dict(yearly_data, orient='index')
+    empty_rows = sorted(set(no_data_tickers) - set(cached_df.index) - set(new_df.index))
+    if empty_rows:
+        new_df = pd.concat([new_df, pd.DataFrame(index=empty_rows, columns=new_df.columns, dtype="float64")])
     
-    if not new_df.empty:
+    if len(new_df.index):  # rows with no year columns still count (empty rows)
         if not cached_df.empty:
             # Append new data to existing cache. Retried empty rows that now
             # have data are replaced; everything else is preserved.
@@ -530,26 +476,28 @@ def build_yearly_history_cache(config: Dict = None) -> List[str]:
             final_merged = new_df
         
         save_yearly_history_csv(cache_path, final_merged)
-        print(f"Processing complete. Successfully processed {len(yearly_data)} tickers")
+        print(f"Processing complete. {len(yearly_data)} tickers with returns, {len(empty_rows)} saved empty (no complete year on Yahoo)")
         print(f"Total tickers in cache: {len(final_merged)}")
     else:
         print("No valid data to save.")
-    added = list(new_df.index)
+    added = list(yearly_data)
     
-    print(f"Failed tickers: {len(failed_tickers)}")
+    if failed_tickers:
+        print(f"Download failed for {len(failed_tickers)} ticker(s); they will be tried again next run.")
     
     # Clear large data structures from memory
     del adj
     del yearly_data
     
-    if failed_tickers:
-        print(f"No Yahoo data for: {', '.join(sorted(set(failed_tickers)))}")
+    if no_data_tickers:
+        shown = sorted(set(no_data_tickers))
+        print(f"No complete year on Yahoo for {len(shown)} ticker(s): {', '.join(shown[:20])}{' ...' if len(shown) > 20 else ''}")
     return added
 
 
 if __name__ == "__main__":
     print("Adding any missing completed years for cached tickers...")
     add_missing_years(DEFAULT_CONFIG)
-    print("\nAdding any new tickers from tickers.txt...")
-    build_yearly_history_cache(DEFAULT_CONFIG)
+    print("\nRetrying cached tickers with no data yet (e.g. funds launched last year)...")
+    build_yearly_history_cache(DEFAULT_CONFIG, tickers=(), retry_empty=True)
     print("\nDone!")

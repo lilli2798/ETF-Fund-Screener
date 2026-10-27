@@ -35,10 +35,11 @@ PURCHASE_RULES = {
     "min_initial_investment": 50_000,  # dollars: funds needing MORE to start are removed ("Minimum Initial Investment")
 }
 
-# Calendar-year returns maintained by yahoo_returns/yearly_cache_manager.py
-# (updated by the yearly GitHub workflow). The most recent N years are
-# attached to the screener output as "Yearly Return (YYYY)" columns, in
-# percent like Morningstar's Total Return columns. Display only -- not scored.
+# Calendar-year returns maintained by yahoo_returns/yearly_cache_manager.py:
+# each screener run adds new funds, the January GitHub job adds the finished
+# year. The most recent N years are attached to the screener output as
+# "Yearly Return (YYYY)" columns, in percent like Morningstar's Total Return
+# columns; their Yearly Beat % / Bottom 10% stats feed the Resilience score.
 YAHOO_RETURNS_DIR: str = str(Path(__file__).resolve().parent / "yahoo_returns")
 YEARLY_RETURNS_CSV: str = str(Path(YAHOO_RETURNS_DIR) / "sources" / "etf_yearly_history.csv")
 YEARLY_RETURN_YEARS: int = 10

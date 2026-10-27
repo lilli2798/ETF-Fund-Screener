@@ -32,9 +32,9 @@ jobs:
         working-directory: .
         run: pip install -r requirements.txt
 
-      # Appends last year's returns for every cached ticker (incl. ^GSPC/^DJI/^IXIC),
-      # downloads any tickers in sources/tickers.txt not in the cache yet, and
-      # retries empty rows.
+      # Appends last year's returns for every cached ticker (incl. ^GSPC/^DJI/^IXIC)
+      # and retries empty rows (funds with no complete year until now). New funds
+      # are added by the daily screener run.
       - name: Update yearly returns cache
         run: python yearly_cache_manager.py
 

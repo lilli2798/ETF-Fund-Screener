@@ -40,6 +40,16 @@ if YAHOO_RETURNS_DIR not in sys.path:
 
 from benchmark_stats import add_better_worst_stats, add_percentile_bucket_counts  # noqa: E402
 from volatile_periods import load_periods  # noqa: E402
+from yahoo_config import DEFAULT_CONFIG as YAHOO_RETURNS_CONFIG  # noqa: E402
+from yearly_cache_manager import build_yearly_history_cache  # noqa: E402
+
+
+def update_yearly_cache(tickers) -> None:
+    """Add any fund (and benchmark index) missing from the yearly returns
+    file, like the volatile-period cache does. Only new funds are
+    downloaded; the January job adds each finished year for all of them."""
+    universe = list(dict.fromkeys([str(t).strip().upper() for t in tickers if str(t).strip()] + BENCHMARK_INDEXES))
+    build_yearly_history_cache(YAHOO_RETURNS_CONFIG, tickers=universe, retry_empty=False)
 
 # Shared stat names -> readable column names (prefixed "Yearly " / "Volatile ")
 STAT_LABELS: Dict[str, str] = {

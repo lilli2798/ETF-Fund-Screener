@@ -103,9 +103,10 @@ def attach_yearly_returns(
     printed to the terminal and saved in run_recorder.yaml:
       - launched_after_<last year>: inception after the last complete
         year, so no value is expected yet
-      - not_in_yearly_file: ticker absent from the CSV (add it to
-        yahoo_returns/sources/tickers.txt)
+      - not_in_yearly_file: ticker absent from the CSV (its download
+        failed this run; it is tried again next run)
       - no_data_in_yearly_file: ticker in the CSV but every year is empty
+        (Yahoo has no complete year; the January job retries it)
     """
     if not os.path.exists(csv_path):
         print(f"  Warning: yearly returns file not found ({csv_path}) -- skipping yearly return columns.")
@@ -154,8 +155,8 @@ def attach_yearly_returns(
     print(f"  Yearly returns {report['years']} attached for {report['funds_with_values']}/{len(df)} funds.")
     labels = {
         new_key: f"launched after {last_year} (expected, no full year yet)",
-        "not_in_yearly_file": "not in yearly file (add to yahoo_returns/sources/tickers.txt, then run yahoo_returns/yearly_cache_manager.py)",
-        "no_data_in_yearly_file": "in yearly file but no data",
+        "not_in_yearly_file": "not in yearly file (download failed; tried again next run)",
+        "no_data_in_yearly_file": "in yearly file but no complete year on Yahoo (retried by the January job)",
     }
     for k, label in labels.items():
         if report[k]:

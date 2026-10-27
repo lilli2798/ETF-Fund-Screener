@@ -108,14 +108,8 @@ How to read them:
 
 Calendar-year returns live in `etf_screener/yahoo_returns/sources/etf_yearly_history.csv` (one row per ticker, one column per year since 2006). The CSV is the master list.
 
-- **New year**: the GitHub job adds last year's returns for every ticker in the CSV on **January 2** - nothing to do.
-- **New fund**: if the screener prints
-  `Missing - not in yearly file (add to yahoo_returns/sources/tickers.txt ...): NEWTKR`,
-  put `NEWTKR` in `yahoo_returns/sources/tickers.txt` (it may contain only the new tickers) and run
-  ```bash
-  python etf_screener/yahoo_returns/yearly_cache_manager.py
-  ```
-  then commit the updated CSV. Tickers already in the CSV are skipped; empty rows are retried.
+- **New fund**: added automatically. Each screener run downloads only the funds not in the CSV yet (like the volatile-period cache), and the nightly GitHub job commits the CSV. A fund with no complete year on Yahoo yet (e.g. launched this year) is saved as an empty row so it isn't downloaded every night.
+- **New year**: the GitHub job adds last year's returns for every ticker in the CSV on **January 2**, and refills the empty rows. To do it by hand: `python etf_screener/yahoo_returns/yearly_cache_manager.py`.
 
 ## Volatile Market Periods
 
@@ -153,8 +147,8 @@ Tables: `report`, `report_no_yahoo`, `etrade`, `yearly_returns`, `volatile_retur
 
 | Workflow | When | What it does |
 |---|---|---|
-| **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the funds selected in their category AND overall by both LT and ST (`ALERT_FLAGS` in `alerts.py`), commits the sub-sector and volatile caches, attaches the report to the run |
-| **Update Yearly Returns Cache** | January 2 (or run manually) | Adds last year's returns and any new tickers to the yearly CSV and commits it |
+| **Daily ETF Screener** | every night (00:00 UTC) | Runs `run_ci.py`, emails / Slacks the funds selected in their category AND overall by both LT and ST (`ALERT_FLAGS` in `alerts.py`), commits the sub-sector, volatile and yearly caches, attaches the report to the run |
+| **Update Yearly Returns Cache** | January 2 (or run manually) | Adds last year's returns to the yearly CSV, refills empty rows, and commits it |
 | **Cleanup Workflow Runs** | Daily, 08:00 UTC | Keeps the last 10 runs of each workflow and the last 10 report artifacts |
 
 - Email / Slack settings are GitHub secrets: `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_USERNAME`, `EMAIL_PASSWORD`, `EMAIL_FROM`, `EMAIL_TO`, `SLACK_WEBHOOK_URL`.
@@ -187,7 +181,7 @@ ETF-Fund-Screener/
 │   │   ├── benchmark_stats.py        # Shared beat/trail and percentile stats
 │   │   ├── yahoo_config.py           # Settings for this folder
 │   │   ├── user_defined_by_date_yahoo_analize.py  # Interactive date-range analysis
-│   │   └── sources/                  # tickers.txt, etf_yearly_history.csv, etf_volatile_history.csv
+│   │   └── sources/                  # etf_yearly_history.csv, etf_volatile_history.csv
 │   ├── db_access/              # SQL on reports, eTrade data and score history
 │   │   └── query.py, queries/*.sql             # DuckDB queries, no import needed
 │   ├── standalone_utils/       # Hand-run tools, not used by the screener

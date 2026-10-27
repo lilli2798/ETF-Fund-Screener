@@ -10,7 +10,7 @@ so the scripts work no matter which directory they are run from.
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent          # etf_screener/yahoo_returns
-SOURCES_DIR = BASE_DIR / "sources"                  # tickers.txt and the returns caches
+SOURCES_DIR = BASE_DIR / "sources"                  # the returns caches
 REPO_DIR = BASE_DIR.parent.parent                   # ETF-Fund-Screener
 
 # Default benchmark indexes for comparison
@@ -36,8 +36,7 @@ DEFAULT_CACHING = {
 
 # Default input/output paths
 DEFAULT_PATHS = {
-    "sources_dir": str(SOURCES_DIR),                       # tickers.txt and cache files
-    "tickers_file": str(SOURCES_DIR / "tickers.txt"),      # Tickers for the yearly returns cache
+    "sources_dir": str(SOURCES_DIR),                       # cache files
     "default_output_dir": str(REPO_DIR / "output" / "yahoo_screen"),    # User-defined script output when using the default input
     "screener_output_dir": str(REPO_DIR / "output" / "etf_screener"),  # ETF screener results; latest results_*.xlsx is the user-defined default input
 }
